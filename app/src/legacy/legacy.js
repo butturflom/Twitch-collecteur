@@ -1794,8 +1794,8 @@ function topStreamersData(q){
   const daysByChan={};
   for(const p of q.pres){
     if(!daysByChan[p.c]) daysByChan[p.c]=new Set();
-    const d=new Date(p.t).toISOString().split('T')[0];
-    daysByChan[p.c].add(d);
+    daysByChan[p.c].add(p.d); // une présence porte déjà son jour (p.d), pas d'horodatage
+
   }
 
   // Indexer les subs pour calculer la croissance
@@ -1804,7 +1804,8 @@ function topStreamersData(q){
   for(const e of q.events){
     if(e.type!=='sub' && e.type!=='gift') continue;
     if(!shownList.includes(e.c)) continue;
-    const d=new Date(e.t).toISOString().split('T')[0];
+    if(!Number.isFinite(e.t)) continue;
+    const d=dayKey(e.t); // jour en heure de Paris, comme le reste du tableau de bord
     subByDay[e.c]=subByDay[e.c]||{};
     subByDay[e.c][d]=(subByDay[e.c][d]||0)+e.n;
   }
