@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Build outputs
+dist/
+app/dist/
+
+# Generated HTML files
+twitch-overlap.html
+twitch-overlap.avant-design.html
+twitch-overlap.vanilla.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Environment configs (keep examples)
+config.local.json
+.env
+.env.local
+.env.*.local
+.neon
+
+# Secrets et fichiers d'exécution du collecteur
+config.json
+en-attente.json
+collecteur.pid
+chaines-cache.json
+arreter.flag
