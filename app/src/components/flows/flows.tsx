@@ -100,31 +100,31 @@ export function Flows() {
     }
   }, [d])
 
-  if (!d) return <Pending />
-
-  // Filtrer les flux selon le type sélectionné
-  const displayFlows = useMemo(() => {
+  // Tous les hooks AVANT le retour anticipé : React exige le même nombre de hooks à chaque rendu. Placés après
+  // `if (!d) return`, ils n'existaient pas au premier rendu (données absentes) puis apparaissaient à l'arrivée des
+  // données : React levait « Rendered more hooks than during the previous render » et l'onglet plantait.
+  const displayFlows = useMemo<FlowRoute[]>(() => {
+    if (!d) return []
     if (flowType === "organic") return d.flowsOrganic
     if (flowType === "raid") return d.flowsRaid
     return d.flows
   }, [flowType, d])
 
-  // Totaux par type (déjà calculés par le backend)
-  const totalOrganic = d.totalOrganic ?? 0
-  const totalRaid = d.totalRaid ?? 0
-
-  // Pour le Sankey, collecter toutes les chaînes
-  const allChannels = useMemo(() => {
+  // Pour le Sankey : nœuds et liens des flux affichés
+  const { nodes, links } = useMemo(() => {
     const channels = new Set<string>()
-    const addChannel = (f: FlowRoute) => {
+    for (const f of displayFlows) {
       channels.add(f.a.c)
       channels.add(f.b.c)
     }
-    displayFlows.forEach(addChannel)
-    return Array.from(channels)
+    return flowsToSankeyNodesAndLinks(displayFlows, Array.from(channels))
   }, [displayFlows])
 
-  const { nodes, links } = flowsToSankeyNodesAndLinks(displayFlows, allChannels)
+  if (!d) return <Pending />
+
+  // Totaux par type (déjà calculés par le backend)
+  const totalOrganic = d.totalOrganic ?? 0
+  const totalRaid = d.totalRaid ?? 0
 
   return (
     <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
