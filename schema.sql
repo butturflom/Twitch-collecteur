@@ -525,6 +525,29 @@ begin
   end loop;
 end $$;
 
+-- Historique d'une chaîne pour le tableau de bord (« Par chaîne » → Historique), lu dans les rollups quotidiens.
+-- 25/11/2026. Lecture seule, avec les droits de l'appelant : la clé publique lit déjà ces tables (politique read_all) ;
+-- la fonction évite seulement au navigateur de télécharger des milliers de lignes page par page.
+--   days   : un objet par jour agrégé (viewers actifs, messages, minutes lues, pic et moyenne de viewers, passages sortants et entrants)
+--   out/in : les trajets les plus fréquents sur la période, vers et depuis les autres chaînes (somme des passages ;
+--            un même viewer revenu plusieurs jours compte plusieurs fois, on ne sait pas dédoublonner d'un jour à l'autre)
+create or replace function channel_history(ch text, days int default 30) returns jsonb
+language sql stable set search_path = public, pg_catalog as $$
+  with p as (select to_char((now() at time zone 'Europe/Paris')::date - least(greatest(days, 1), 366), 'YYYY-MM-DD') as d0),
+  sw as (select * from daily_switches_rollup, p where daily_switches_rollup.d >= p.d0 and (a = ch or b = ch))
+  select jsonb_build_object(
+    'days', coalesce((
+      select jsonb_agg(jsonb_build_object('d', s.d, 'chatters', s.unique_chatters, 'msgs', s.total_messages, 'mins', s.minutes_live,
+                                          'peak', s.peak_viewers, 'avg', s.avg_viewers,
+                                          'out', coalesce((select sum(switches) from sw where sw.d = s.d and sw.a = ch), 0),
+                                          'in', coalesce((select sum(switches) from sw where sw.d = s.d and sw.b = ch), 0)) order by s.d)
+      from daily_streamer_rollup s, p where s.c = ch and s.d >= p.d0), '[]'),
+    'out', coalesce((select jsonb_agg(x order by x.n desc) from (
+      select b as c, sum(switches)::int as n, sum(raid_switch_count)::int as raid from sw where a = ch group by b order by 2 desc limit 8) x), '[]'),
+    'in', coalesce((select jsonb_agg(x order by x.n desc) from (
+      select a as c, sum(switches)::int as n, sum(raid_switch_count)::int as raid from sw where b = ch group by a order by 2 desc limit 8) x), '[]'))
+$$;
+
 -- Insertion d'événements de raid (Étape 2 : table raid_events séparée)
 create or replace function ingest_raid(p jsonb) returns void
 language plpgsql set search_path = public, pg_catalog as $$
@@ -603,6 +626,7 @@ grant execute on function rebuild_bloated_rev_indexes() to service_role;
 grant execute on function set_board_code(text) to service_role;
 grant execute on function run_daily_overlap_rollup(date) to service_role;
 grant execute on function backfill_daily_rollup(int) to service_role;
+grant execute on function channel_history(text, int) to anon, authenticated, service_role;
 grant execute on function add_channels(text, text[]) to anon, authenticated, service_role;
 grant execute on function remove_channels(text, text[]) to anon, authenticated, service_role;
 
