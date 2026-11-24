@@ -1,6 +1,7 @@
-# Twitch Overlap — collecteur Docker (autonome)
-# Nécessite Node.js 22 ou plus récent
-# Fichiers collecteur.mjs et config.json doivent être dans ce dossier
+# Twitch Overlap — collecteur Docker
+# Nécessite Node.js 22 ou plus récent. Construire depuis ce dossier (docker compose le fait).
+# config.json n'est PAS copié dans l'image (il contient les clés Supabase et Twitch) : il est monté au
+# démarrage, voir docker-compose.yml ou « docker run -v …/config.json:/app/config.json:ro ».
 
 FROM node:22-alpine
 
@@ -17,7 +18,6 @@ ENV DOCKER_MODE=1
 
 # Copier les fichiers nécessaires
 COPY collecteur.mjs ./
-COPY config.json ./
 COPY task-queue.js ./
 COPY retry-handler.mjs ./
 COPY metrics.mjs ./
