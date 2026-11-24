@@ -1,0 +1,38 @@
+# Twitch Overlap — Docker Compose
+# Lance l'App Partagée et le Collecteur dans deux conteneurs séparés
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    image: twitch-overlap:app
+    container_name: twitch-overlap-app
+    restart: unless-stopped
+    ports:
+      - "9500:80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      start_period: 5s
+
+  collecteur:
+    build:
+      context: .  # Contexte racine pour avoir accès à config.json
+      dockerfile: collecteur/Dockerfile
+    image: twitch-overlap:collecteur
+    container_name: twitch-overlap-collecteur
+    restart: unless-stopped
+    volumes:
+      # Volume pour les données locales (cache, logs, etc.)
+      - ./collecteur-data:/app/data
+      # Volume pour PID et flags (optionnel)
+      - ./collecteur-pid:/app/.pid
+      # Volume pour config.json (monté pour modification en live)
+      - ./config.json:/app/config.json:ro
+    environment:
+      # Params obligatoires pour le collecteur
+      - NODE_ENV=production

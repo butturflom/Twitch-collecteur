@@ -1,0 +1,9 @@
+{
+  "supabaseUrl": "https://COLLE-ICI-TON-PROJET.supabase.co",
+  "supabaseSecretKey": "COLLE-ICI-LA-CLE-SECRETE-sb_secret_...",
+  "twitchClientId": "",
+  "twitchClientSecret": "",
+  "chainesParDefaut": ["etoiles", "xari", "gotaga", "kamet0"],
+  "joursDetailMinute": 14,
+  "joursPresence": 21
+}
