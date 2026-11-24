@@ -65,6 +65,14 @@ cd app && docker build -t twitch-overlap:app -f Dockerfile .
 cd collecteur && docker build -t twitch-overlap:collecteur -f Dockerfile .
 ```
 
+`config.json` n'est pas dans l'image (il contient les clés) : il faut le monter au démarrage. Sans compose, depuis la racine du projet :
+
+```bash
+docker run -d --name twitch-overlap-collecteur -v "$PWD/config.json:/app/config.json:ro" twitch-overlap:collecteur
+```
+
+Ne jamais faire tourner le collecteur Docker en même temps que celui du PC : les mêmes chaînes seraient écoutées deux fois.
+
 ## Arrêt
 
 ```bash

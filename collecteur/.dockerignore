@@ -1,0 +1,10 @@
+# Rien de secret ni d'exécution n'entre dans le contexte de build (config.json est monté au démarrage)
+config.json
+en-attente.json
+en-attente.json.tmp
+collecteur.pid
+collecteur.log
+chaines-cache.json
+dernier-menage.txt
+arreter.flag
+*.bak

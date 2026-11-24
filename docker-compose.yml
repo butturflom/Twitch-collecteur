@@ -1,8 +1,6 @@
 # Twitch Overlap — Docker Compose
 # Lance l'App Partagée et le Collecteur dans deux conteneurs séparés
 
-version: '3.8'
-
 services:
   app:
     build:
@@ -21,8 +19,8 @@ services:
 
   collecteur:
     build:
-      context: .  # Contexte racine pour avoir accès à config.json
-      dockerfile: collecteur/Dockerfile
+      context: ./collecteur  # le Dockerfile copie les fichiers de ce dossier ; config.json est monté plus bas
+      dockerfile: Dockerfile
     image: twitch-overlap:collecteur
     container_name: twitch-overlap-collecteur
     restart: unless-stopped
