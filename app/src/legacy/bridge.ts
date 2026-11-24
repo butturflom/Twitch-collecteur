@@ -351,6 +351,11 @@ export const useOverlapData = legacyStore<OverlapData>("legacy:overlap")
 export const useFlowsData = legacyStore<FlowsData>("legacy:flows")
 export const useRaidRecommendations = legacyStore<RaidRecommendation[]>("legacy:raid-recommendations")
 
+/** Rosters : une ligne par chaîne suivie, avec l'ensemble des viewers actifs (empreintes) de la période. */
+export interface RosterChannel extends Who { users: Set<string>; msgs: number }
+export interface RostersData { chans: RosterChannel[] }
+export const useRostersData = legacyStore<RostersData>("legacy:rosters")
+
 /** Type pour les données de requête du legacy.js (retour de la fonction Q()) */
 export interface LegacyQuery {
   t0: number
