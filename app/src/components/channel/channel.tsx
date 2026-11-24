@@ -33,6 +33,28 @@ function Switches({ rows }: { rows: SwitchRow[] }) {
   return <DataTable cols={cols} rows={rows} rowKey={(r) => r.when + r.to} />
 }
 
+// Retour visuel après « Copier la commande de raid ». Composant à part : ses hooks ne doivent jamais suivre les
+// « return » anticipés de Channel (sinon React plante avec l'erreur #310 quand les données arrivent).
+function RaidCopiedToast() {
+  const [channel, setChannel] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    let timer = 0
+    const handle = (e: CustomEvent<{ channel: string }>) => {
+      setChannel(e.detail.channel)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setChannel(null), 2000)
+    }
+    window.addEventListener("raid-copied", handle as EventListener)
+    return () => { window.removeEventListener("raid-copied", handle as EventListener); window.clearTimeout(timer) }
+  }, [])
+  if (!channel) return null
+  return (
+    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-lg animate-in fade-in-0" role="status" aria-live="polite">
+      Commande copiée : <code className="rounded bg-white/20 px-1 font-mono">/raid {channel}</code>
+    </div>
+  )
+}
+
 export function Channel() {
   const d = useChannelData()
   if (d === undefined) return null
@@ -121,25 +143,7 @@ export function Channel() {
         )}
       </Section>
 
-      {/* Feedback toast pour la commande de raid copiée */}
-      {(() => {
-        const [show, setShow] = React.useState(false)
-        const [channel, setChannel] = React.useState("")
-        React.useEffect(() => {
-          const handle = (e: CustomEvent<{ channel: string }>) => {
-            setChannel(e.detail.channel)
-            setShow(true)
-            setTimeout(() => setShow(false), 2000)
-          }
-          window.addEventListener("raid-copied", handle as EventListener)
-          return () => window.removeEventListener("raid-copied", handle as EventListener)
-        }, [])
-        return show ? (
-          <div className={cn("fixed bottom-24 left-1/2 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-medium shadow-lg animate-in fade-in-0", "bg-green-600 text-white")} role="status" aria-live="polite">
-            Commande copiée : <code className="font-mono bg-white/20 px-1 rounded">/raid {channel}</code>
-          </div>
-        ) : null
-      })()}
+      <RaidCopiedToast />
 
       <Section className="mt-9" title="Ses viewers actifs écrivent aussi chez">
         {d.also.length ? (
