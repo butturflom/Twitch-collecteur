@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Plus, Edit, Trash2, Users, RefreshCw, ListPlus } from "lucide-react"
+import { Plus, Edit, Trash2, Users, RefreshCw, ListPlus, FileDown, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useRostersData, usePeriodInfo, type RosterChannel } from "@/legacy/bridge"
+import { printRosterReport, rosterCsv } from "./roster-report"
 
 /** Types pour les rosters */
 export interface Roster {
@@ -99,7 +100,21 @@ export interface Reach {
   cannibal: number
   multi: number
   rows: { who: RosterChannel; viewers: number; exclusive: number; msgs: number }[]
+  /** paires du roster qui partagent des viewers, les plus fortes d'abord ; share = communs ÷ audience de la plus petite */
+  pairs: { a: RosterChannel; b: RosterChannel; shared: number; share: number }[]
   missing: string[]
+}
+
+function pairsOf(present: RosterChannel[]): Reach["pairs"] {
+  const out: Reach["pairs"] = []
+  for (let i = 0; i < present.length; i++)
+    for (let j = i + 1; j < present.length; j++) {
+      const [s, l] = present[i].users.size < present[j].users.size ? [present[i], present[j]] : [present[j], present[i]]
+      let shared = 0
+      for (const u of s.users) if (l.users.has(u)) shared++
+      if (shared) out.push({ a: present[i], b: present[j], shared, share: s.users.size ? shared / s.users.size : 0 })
+    }
+  return out.sort((x, y) => y.shared - x.shared)
 }
 
 export function reachOf(channels: string[], byChan: Map<string, RosterChannel>): Reach {
@@ -116,15 +131,14 @@ export function reachOf(channels: string[], byChan: Map<string, RosterChannel>):
       return { who: ch, viewers: ch.users.size, exclusive, msgs: ch.msgs }
     })
     .sort((x, y) => y.viewers - x.viewers)
-  return { net: count.size, gross, cannibal: gross ? 1 - count.size / gross : 0, multi, rows, missing: channels.filter((c) => !byChan.has(c)) }
+  return { net: count.size, gross, cannibal: gross ? 1 - count.size / gross : 0, multi, rows, pairs: pairsOf(present), missing: channels.filter((c) => !byChan.has(c)) }
 }
 
 const pct = (x: number) => (x * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " %"
 
 /** Portée cumulée d'un roster : chiffres réels, détail par chaîne à la demande */
-function NetReachCard({ roster, byChan, ready }: { roster: Roster; byChan: Map<string, RosterChannel>; ready: boolean }) {
+function NetReachCard({ roster, r, ready }: { roster: Roster; r: Reach; ready: boolean }) {
   const [showBreakdown, setShowBreakdown] = useState(false)
-  const r = useMemo(() => reachOf(roster.channels, byChan), [roster.channels, byChan])
 
   if (!roster.channels.length) {
     return <p className="text-xs text-muted-foreground">Ajoutez des chaînes pour calculer la portée cumulée.</p>
@@ -364,6 +378,7 @@ export function Rosters() {
               roster={roster}
               byChan={byChan}
               ready={!!data}
+              period={period?.range || "Période en cours"}
               onEdit={setEditingRoster}
               onDelete={handleDelete}
               onPick={(r) => setPickingId(r.id)}
@@ -410,14 +425,18 @@ export function Rosters() {
 }
 
 /** Carte individuelle d'un roster */
-function RosterCard({ roster, byChan, ready, onEdit, onDelete, onPick }: {
+function RosterCard({ roster, byChan, ready, period, onEdit, onDelete, onPick }: {
   roster: Roster
   byChan: Map<string, RosterChannel>
   ready: boolean
+  period: string
   onEdit: (r: Roster) => void
   onDelete: (r: Roster) => void
   onPick: (r: Roster) => void
 }) {
+  // calculé une fois par carte : l'affichage et les exports montrent exactement les mêmes chiffres
+  const r = useMemo(() => reachOf(roster.channels, byChan), [roster.channels, byChan])
+  const canExport = ready && r.rows.length > 0
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
@@ -441,13 +460,27 @@ function RosterCard({ roster, byChan, ready, onEdit, onDelete, onPick }: {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col">
-        <NetReachCard roster={roster} byChan={byChan} ready={ready} />
+        <NetReachCard roster={roster} r={r} ready={ready} />
       </CardContent>
 
       <CardContent className="border-t border-border pt-3 flex gap-2">
         <Button variant="outline" size="sm" onClick={() => onPick(roster)} className="flex-1">
           <ListPlus className="h-4 w-4 mr-1.5" />
           Choisir les chaînes
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!canExport}
+          onClick={() => void printRosterReport(roster, r, period)}
+          title="Ouvre l'impression : choisissez « Enregistrer en PDF »"
+        >
+          <FileDown className="h-4 w-4 mr-1.5" />
+          PDF
+        </Button>
+        <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => rosterCsv(roster, r, period)} title="Tableur (séparateur ;)">
+          <Download className="h-4 w-4 mr-1.5" />
+          CSV
         </Button>
       </CardContent>
     </Card>
