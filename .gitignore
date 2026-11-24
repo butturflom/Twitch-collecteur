@@ -41,3 +41,8 @@ en-attente.json
 collecteur.pid
 chaines-cache.json
 arreter.flag
+dernier-menage.txt
+
+# Sauvegardes
+*.bak
+*.bak-doctor

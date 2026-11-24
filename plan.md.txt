@@ -1,0 +1,539 @@
+Voici le document de spécifications techniques et fonctionnelles complet, structuré pour servir de référence architecturale et de feuille de route (road map) directement exploitable par toi et Claude Code.
+
+Tu peux l'enregistrer directement sous le nom PLAN.md ou CLAUDE.md à la racine de ton projet.
+
+PLAN ARCHITECTURAL ET ROADMAP PRODUIT : TWITCH OVERLAP V2
+Fichier de référence pour développement et agent IA (Claude Code)
+
+Version Target : 2.0 (SaaS & Cloud Ready, Multi-Rosters, Historique 90 jours via Rollups SQL, Diagrammes de Sankey)
+
+Charte Visuelle : Conforme strict à DESIGN.md ("L'Observatoire")
+
+1. VISION, TARGETS ET CONTRAINTES MAJEURES
+1.1. Vision Produit
+Twitch Overlap est un observatoire analytique des communautés Twitch. Il permet de mesurer le chevauchement d'audience, d'analyser la trajectoire des viewers actifs entre chaînes et d'évaluer la valeur d'engagement réelle des streams à travers une interface sombre, précise et scientifique.
+
+1.2. Cibles Utilisateurs
+Les Agences Marketing & Talent Managers : Mesurer le Net Reach (audience unique cumulée) d'un groupe de streamers (roster), évaluer la complémentarité d'audience et justifier la valeur auprès des annonceurs.
+Les Streamers & Créateurs : Comprendre d'où viennent leurs viewers actifs, où ils partent à la fin du live, planifier les raids stratégiques et mesurer l'impact des collaborations.
+Le Chercheur / Data Analyst : Analyser la dynamique des flux de réseaux, la typologie des messages de chat et la modération à grande échelle.
+1.3. Principes Directeurs & Contraintes
+Privacy By Design (Zero-PII) : Les pseudos sont irréversiblement anonymisés par hachage SHA-256 avec sel dynamique quotidien (hash(username + date + salt)). Le texte des messages n'est jamais conservé en base.
+Filtre sur l'engagement : Seuls les viewers actifs (ayant rédigé au moins 2 messages construits au cours d'une session) sont comptabilisés dans les métriques de migration.
+Scalabilité via Rollups (Pré-agrégation) : Séparation stricte entre les données temps réel chaudes (gardées en mémoire/buffer 48h) et les agrégats historiques consolidés (conservés 90 jours à 1 an sans impacter les quotas de stockage).
+Identité Visuelle Exclusive : Thème sombre uniquement ("L'Observatoire", fond #09090b, accent unique Violet Nébuleuse #8b7cff, JetBrains Mono pour les données comparables). Pas de thème clair.
+2. STRUCTURE DES PAGES ET COMPOSANTS UI
+L'application conserve sa mise en page principale : Barre latérale fixe (248 px), En-tête collant (58 px), Colonne de contenu (max 1 320 px). La Carte reste une vue immersive hors-cadre.
+
+┌────────────────────────────────────────────────────────────────────────┐
+│                              EN-TÊTE COLLANT                           │
+├──────────────┬─────────────────────────────────────────────────────────┤
+│ BARRE        │ 1. CARTE (L'Observatoire - Vue Graphes & Radar Live)     │
+│ LATÉRALE     │ 2. CHEVAUCHEMENT (Matrice d'Audience Croisée & Nomades) │
+│ (248 px)     │ 3. FLUX & MIGRATIONS (Sankey, Raids vs Organique)       │
+│              │ 4. ROSTERS & AGENCES (Audience Cumulée Nette) [V2]      │
+│              │ 5. PAR CHAÎNE & CHAT (Détail Live, Clips, Sentiment)    │
+│              │ 6. RÉGLAGES & COLLECTEUR (Santé DB, API Twitch, Keys)  │
+└──────────────┴─────────────────────────────────────────────────────────┘
+2.1. Détail des Pages
+Page 1 : Carte (L'Observatoire)
+Description : Canvas 2D/3D dynamique représentant les chaînes sous forme d'astres et les flux sous forme de ponts gravitaires.
+Sous-Vues : Toutes les chaînes, Groupes (Clustering), Ma sélection / Roster.
+Fonctionnalités V2 :
+Pulsation live en temps réel liée au débit du chat.
+Liens courbes directionnels avec halos lumineux.
+Panneau latéral repliable pour filtrage par période (24h, 7j, 30j, 90j) et par langue (FR, EN, Autres).
+Page 2 : Chevauchement (Audience Croisée)
+Composants :
+StatCardGroup : Total viewers uniques, Viewers croisés ($>1$ chaîne), Viewers nomades ($>3$ changements).
+Matrice de co-occurrence (Heatmap avec barres de 2 px).
+Liste des parcours les plus nomades (anonymisés).
+Page 3 : Flux & Migrations (Sankey Engine) [Nouveau V2]
+Composants :
+Diagramme de Sankey interactif : Flux de départ (Chaîne Source) $\rightarrow$ Flux d'arrivée (Chaîne Cible).
+Switch Type Toggle : Filtre entre Migrations Organiques (changement individuel spontané < 3h) et Raids Officiels (événement Twitch raid).
+Chronologie des transferts par tranche de 15 minutes.
+Page 4 : Rosters & Agences (Analytics de Groupe) [Nouveau V2]
+Composants :
+Roster Selector : Création et sauvegarde de listes personnalisées de streamers (ex: "Roster FPS Agence A").
+Calculateur de Net Reach : Audience brute totale vs Audience unique réelle (après dédoublonnage des viewers croisés).
+Indice de Cannibalisation : Taux de chevauchement interne au roster.
+Bouton Export : Génération de rapports exécutifs au format CSV et PDF anonymisés.
+Page 5 : Par Chaîne & Chat
+Composants :
+Fiche d'identité de la chaîne avec couleur dominante extraite (useAvatarColor).
+Répartition typologique des messages : Réactions, Hype, Questions, Commentaires, Vagues.
+Corrélation Chat / Clips / Modération (Bans, Timeouts, Suppressions).
+Page 6 : Réglages & Ingestion
+Statut du collecteur, gestion des clés API Twitch, volumétrie de la base de données et exécution manuelle du ménage/rollups.
+3. MODÈLE DE DONNÉES ET ARCHITECTURE DES ROLLUPS (SQL)
+Pour garantir la conservation sur 90 jours sans dépasser les quotas de stockage, les événements bruts minute par minute sont résumés chaque nuit dans des tables agrégées (Rollups).
+
+                           +------------------------+
+                           |   Twitch IRC / API     |
+                           +-----------+------------+
+                                       |
+                                       v
+                           +------------------------+
+                           | Collecteur Node.js     |
+                           +-----------+------------+
+                                       |
+                    +------------------+------------------+
+                    | (Données Brutes - 48h)              | (Agrégats Quotidiens)
+                    v                                     v
+       +-------------------------+            +-------------------------+
+       | presence_events (raw)   |            | daily_switches_rollup   |
+       | switches_raw            |            | daily_streamer_rollup   |
+       | chat_events_raw         |            | daily_roster_rollup     |
+       +------------+------------+            +-------------------------+
+                    |                                      ^
+                    |          [CRON / ROLLUP SQL]         |
+                    +--------------------------------------+
+                               (Agrégation J+1)
+3.1. Schéma des Tables PostgreSQL (Supabase)
+
+-- -----------------------------------------------------------------------------
+-- 1. TABLES DE DIMENSIONS & CONFIGURATION
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS streamers (
+    id VARCHAR(64) PRIMARY KEY, -- Twitch Channel ID ou User Login lowercased
+    login VARCHAR(64) NOT NULL,
+    display_name VARCHAR(64) NOT NULL,
+    profile_image_url TEXT,
+    broadcaster_language VARCHAR(10) DEFAULT 'fr',
+    primary_color VARCHAR(7), -- Extraite par le front (#HEX)
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS rosters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS roster_streamers (
+    roster_id UUID REFERENCES rosters(id) ON DELETE CASCADE,
+    streamer_id VARCHAR(64) REFERENCES streamers(id) ON DELETE CASCADE,
+    PRIMARY KEY (roster_id, streamer_id)
+);
+
+-- -----------------------------------------------------------------------------
+-- 2. TABLES TAMPON (TEMPS RÉEL / RAW - Rétention 48 heures)
+-- -----------------------------------------------------------------------------
+
+-- Table brute des changements de stream identifiés message par message
+CREATE TABLE IF NOT EXISTS switches_raw (
+    id BIGSERIAL PRIMARY KEY,
+    source_channel VARCHAR(64) NOT NULL,
+    target_channel VARCHAR(64) NOT NULL,
+    viewer_hash VARCHAR(64) NOT NULL, -- SHA256(pseudo + salt)
+    time_delta_seconds INT NOT NULL,  -- Temps écoulé entre le msg sur A et le msg sur B
+    is_raid BOOLEAN DEFAULT FALSE,    -- Vrai si synchronisé avec un Raid Twitch API
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_switches_raw_created ON switches_raw(created_at);
+CREATE INDEX idx_switches_raw_pair ON switches_raw(source_channel, target_channel);
+
+-- Table des présences uniques par viewer (Rétention 48h)
+CREATE TABLE IF NOT EXISTS viewer_presence_raw (
+    channel_id VARCHAR(64) NOT NULL,
+    viewer_hash VARCHAR(64) NOT NULL,
+    message_count INT DEFAULT 1,
+    constructed_message_count INT DEFAULT 0,
+    first_seen_at TIMESTAMPTZ NOT NULL,
+    last_seen_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (channel_id, viewer_hash, first_seen_at)
+);
+
+-- Table des évènements de Raid enregistrés via Twitch EventSub / API
+CREATE TABLE IF NOT EXISTS raid_events (
+    id SERIAL PRIMARY KEY,
+    from_broadcaster_id VARCHAR(64) NOT NULL,
+    to_broadcaster_id VARCHAR(64) NOT NULL,
+    viewers_count INT NOT NULL,
+    executed_at TIMESTAMPTZ NOT NULL
+);
+
+-- -----------------------------------------------------------------------------
+-- 3. TABLES ROLLUPS (AGRÉGATS QUOTIDIENS - Rétention 90 jours à 1 an)
+-- -----------------------------------------------------------------------------
+
+-- Agrégat quotidien des flux d'audience entre chaînes
+CREATE TABLE IF NOT EXISTS daily_switches_rollup (
+    date DATE NOT NULL,
+    source_channel VARCHAR(64) NOT NULL,
+    target_channel VARCHAR(64) NOT NULL,
+    organic_switch_count INT DEFAULT 0, -- Migrations naturelles (<3h)
+    raid_switch_count INT DEFAULT 0,    -- Migrations suite à un Raid
+    avg_delta_seconds INT DEFAULT 0,    -- Temps de transfert moyen
+    PRIMARY KEY (date, source_channel, target_channel)
+);
+
+-- Agrégat quotidien de l'activité des chaînes et du chat
+CREATE TABLE IF NOT EXISTS daily_streamer_rollup (
+    date DATE NOT NULL,
+    channel_id VARCHAR(64) NOT NULL,
+    total_unique_active_viewers INT DEFAULT 0, -- Viewers avec >2 msgs construits
+    total_messages INT DEFAULT 0,
+    reaction_messages INT DEFAULT 0,
+    hype_messages INT DEFAULT 0,
+    question_messages INT DEFAULT 0,
+    comment_messages INT DEFAULT 0,
+    wave_messages INT DEFAULT 0,
+    total_bans INT DEFAULT 0,
+    total_timeouts INT DEFAULT 0,
+    total_deleted_messages INT DEFAULT 0,
+    stream_duration_minutes INT DEFAULT 0,
+    PRIMARY KEY (date, channel_id)
+);
+
+-- Agrégat de chevauchement d'audience global (Calculé chaque nuit)
+CREATE TABLE IF NOT EXISTS daily_overlap_matrix (
+    date DATE NOT NULL,
+    channel_a VARCHAR(64) NOT NULL,
+    channel_b VARCHAR(64) NOT NULL,
+    shared_active_viewers INT DEFAULT 0,
+    PRIMARY KEY (date, channel_a, channel_b)
+);
+3.2. Procédure Stockée d'Agrégation Automatique (Cron Job SQL)
+La fonction SQL ci-dessous doit être exécutée chaque nuit (ex: à 03h00 UTC) via Supabase pg_cron pour consolider les données brutes de la veille et purger les tables tampons.
+
+
+CREATE OR REPLACE FUNCTION run_daily_overlap_rollup(target_date DATE)
+RETURNS VOID AS $$
+BEGIN
+    -- 1. Agrégation des switches bruts vers daily_switches_rollup
+    INSERT INTO daily_switches_rollup (date, source_channel, target_channel, organic_switch_count, raid_switch_count, avg_delta_seconds)
+    SELECT 
+        target_date,
+        source_channel,
+        target_channel,
+        COUNT(*) FILTER (WHERE is_raid = FALSE) AS organic_switch_count,
+        COUNT(*) FILTER (WHERE is_raid = TRUE) AS raid_switch_count,
+        COALESCE(AVG(time_delta_seconds)::INT, 0) AS avg_delta_seconds
+    FROM switches_raw
+    WHERE created_at::DATE = target_date
+    GROUP BY source_channel, target_channel
+    ON CONFLICT (date, source_channel, target_channel) DO UPDATE SET
+        organic_switch_count = EXCLUDED.organic_switch_count,
+        raid_switch_count = EXCLUDED.raid_switch_count,
+        avg_delta_seconds = EXCLUDED.avg_delta_seconds;
+
+    -- 2. Agrégation de la matrice de chevauchement d'audience active (Shared viewers)
+    INSERT INTO daily_overlap_matrix (date, channel_a, channel_b, shared_active_viewers)
+    SELECT 
+        target_date,
+        p1.channel_id AS channel_a,
+        p2.channel_id AS channel_b,
+        COUNT(DISTINCT p1.viewer_hash) AS shared_active_viewers
+    FROM viewer_presence_raw p1
+    JOIN viewer_presence_raw p2 
+      ON p1.viewer_hash = p2.viewer_hash 
+     AND p1.channel_id < p2.channel_id
+    WHERE p1.first_seen_at::DATE = target_date
+      AND p1.constructed_message_count >= 2
+      AND p2.constructed_message_count >= 2
+    GROUP BY p1.channel_id, p2.channel_id
+    ON CONFLICT (date, channel_a, channel_b) DO UPDATE SET
+        shared_active_viewers = EXCLUDED.shared_active_viewers;
+
+    -- 3. Nettoyage des tables tampons brutes (Purge des données > 48h)
+    DELETE FROM switches_raw WHERE created_at < (NOW() - INTERVAL '48 hours');
+    DELETE FROM viewer_presence_raw WHERE first_seen_at < (NOW() - INTERVAL '48 hours');
+
+END;
+$$ LANGUAGE plpgsql;
+4. RÈGLES MÉTIER ET ALGORITHMES CRITIQUES
+4.1. Algorithme de Détection d'un "Changement de Stream" (Switch)
+Conditions de validation :
+Un viewer $V$ poste un message sur la Chaîne $A$ à $T_1$.
+Le même viewer $V$ poste un message sur la Chaîne $B$ à $T_2$.
+$T_2 > T_1$ ET $(T_2 - T_1) \le 3\text{ heures}$ (10 800 secondes).
+Le message sur $A$ et le message sur $B$ remplissent tous deux les critères de "Message Construit".
+Attribution Raid vs. Organique :
+Si un événement de Raid a été enregistré de $A$ vers $B$ dans la fenêtre $[T_1 - 5\text{min}, T_1 + 10\text{min}]$, le switch est tagué is_raid = TRUE.
+Sinon, le switch est tagué is_raid = FALSE (migration organique).
+4.2. Classification Heuristique des Messages du Chat
+Pour limiter l'empreinte mémoire et le coût de calcul, aucun LLM n'est appelé en direct. La classification repose sur des expressions régulières et l'analyse syntaxique locale dans le collecteur Node.js :
+
+
+export interface ChatClassification {
+  isConstructed: boolean;
+  type: 'reaction' | 'hype' | 'question' | 'comment' | 'wave' | 'short' | 'command';
+}
+
+export function classifyMessage(
+  text: string, 
+  emotesCount: number, 
+  recentChannelMessages: string[]
+): ChatClassification {
+  const trimmed = text.trim();
+  const words = trimmed.split(/\s+/);
+  
+  // 1. Commandes bot (!discord, !socials, etc.)
+  if (trimmed.startsWith('!')) {
+    return { isConstructed: false, type: 'command' };
+  }
+
+  // 2. Vague (Message identique répété par 3+ personnes en <15s)
+  if (recentChannelMessages.filter(m => m === trimmed).length >= 3) {
+    return { isConstructed: false, type: 'wave' };
+  }
+
+  // 3. Rire / Réaction (ex: "KKKKK", "LMAO", "AHAAHAH", 100% emotes)
+  const laughRegex = /^(hah+a*|lol+|lmao+|k+k+k+|w+w+w+|z+u+l+o+l+)+$/i;
+  if (laughRegex.test(trimmed) || (words.length <= 2 && emotesCount > 0)) {
+    return { isConstructed: false, type: 'reaction' };
+  }
+
+  // 4. Hype (Répétition de caractères ou spam d'emotes)
+  if (words.length === 1 && trimmed.length <= 3) {
+    return { isConstructed: false, type: 'short' };
+  }
+
+  // 5. Questions (Présence d'un '?' ou mots interrogatifs)
+  const questionRegex = /\?|pourquoi|comment|quand|quel|qui|pourquoi/i;
+  if (questionRegex.test(trimmed) && words.length >= 3) {
+    return { isConstructed: true, type: 'question' };
+  }
+
+  // 6. Commentaire (≥ 4 mots construits)
+  if (words.length >= 4) {
+    return { isConstructed: true, type: 'comment' };
+  }
+
+  return { isConstructed: false, type: 'short' };
+}
+4.3. Calcul du Net Reach d'un Roster (Audience Croisée Nette)
+Pour un groupe de streamers $S = {S_1, S_2, \dots, S_n}$ appartenant à un Roster :
+
+$$\text{Audience Brute} = \sum_{i=1}^{n} \text{ViewersUniques}(S_i)$$
+
+$$\text{Net Reach (Audience Nette)} = \left| \bigcup_{i=1}^{n} \text{SetViewersUniques}(S_i) \right|$$
+
+$$\text{Taux de Cannibalisation (%)} = \left( 1 - \frac{\text{Net Reach}}{\text{Audience Brute}} \right) \times 100$$
+
+5. ROADMAP D'EXÉCUTION PAS À PAS (POUR CLAUDE CODE)
+Cette section est découpée en étapes unitaires, étanches et testables. Exécute les étapes une par une avec Claude Code.
+
+ÉTAPE 1 : Refactoring Base de Données & Pipeline de Rollups SQL
+Objectifs : Déployer les nouvelles tables de rollup dans Supabase, écrire la procédure d'agrégation run_daily_overlap_rollup et adapter le schéma pour supporter les périodes 30j et 90j sans saturation.
+
+Fichiers à modifier / créer :
+
+schema.sql (Mettre à jour la structure globale)
+scripts/cron_rollup.sql (Procédure stockée d'agrégation)
+Actions pour Claude Code :
+
+Ajouter les tables daily_switches_rollup, daily_streamer_rollup, daily_overlap_matrix, rosters, roster_streamers et raid_events dans schema.sql.
+Implémenter la fonction PL/pgSQL run_daily_overlap_rollup(target_date) incluant le nettoyage automatisé des données brutes de plus de 48h.
+Vérifier que la clé primaire composite de chaque table de rollup empêche la duplication des agrégats lors de ré-exécutions.
+Critères d'acceptation :
+
+L'exécution de run_daily_overlap_rollup(NOW()::DATE) s'exécute en < 500ms sans erreur.
+Les données brutes > 48h dans switches_raw sont correctement purgées.
+ÉTAPE 2 : Détection des Raids et Intégration API Twitch EventSub
+Objectifs : Différencier formellement les migrations de viewers naturelles des Raids officiels lancés par les streamers.
+
+Fichiers à modifier / créer :
+
+collecteur/twitch-api.js (Ajout des appels API Raid & EventSub)
+collecteur/index.js (Gestion de l'écoute des webhooks / polling raid)
+Actions pour Claude Code :
+
+Ajouter une vérification auprès de l'API Twitch via l'endpoint GET https://api.twitch.tv/helix/raids ou via l'écoute EventSub du topic channel.raid.
+Lors de la réception d'un événement Raid (Streamer A raid Streamer B avec $N$ viewers à $T_{\text{raid}}$) :
+Inserer une ligne dans raid_events.
+Marquer tous les switches $A \rightarrow B$ enregistrés dans la fenêtre $[T_{\text{raid}} - 2\text{min}, T_{\text{raid}} + 10\text{min}]$ avec is_raid = TRUE dans switches_raw.
+Critères d'acceptation :
+
+Lorsqu'un raid se produit entre 2 chaînes écoutées, la table raid_events enregistre l'événement et les switches correspondants affichent is_raid = true.
+ÉTAPE 3 : Création de la Page "Flux & Migrations" (Moteur Sankey)
+Objectifs : Remplacer/compléter la vue tableau par un diagramme de Sankey interactif visualisant les trajectoires de départ et d'arrivée entre streamers.
+
+Fichiers à modifier / créer :
+
+src/pages/FluxPage.jsx
+src/components/SankeyDiagram.jsx (Utilisation de D3-Sankey ou Recharts/Canvas)
+Spécifications Visuelles & UI :
+
+Appliquer les couleurs de DESIGN.md : fond #121217 (dome), liens violets avec gradient source $\rightarrow$ cible.
+Filtres au-dessus du graphe : Toutes les migrations, Organiques uniquement, Raids uniquement.
+Survol d'un nœud streamer : met en surbrillance l'ensemble des flux entrants (vert signal #3ccf86) et sortants (rouge signal #f2636f).
+Critères d'acceptation :
+
+Le diagramme s'affiche de manière fluide pour 50+ chaînes simultanées.
+La bascule "Organique / Raid" filtre dynamiquement les lignes du Sankey.
+ÉTAPE 4 : Module "Rosters & Analytics Agences"
+Objectifs : Permettre aux agences d'éditer des listes de streamers (Rosters) et de calculer leur audience croisée nette (Net Reach).
+
+Fichiers à modifier / créer :
+
+src/pages/RostersPage.jsx
+src/components/RosterManager.jsx
+src/components/NetReachCard.jsx
+src/services/rosterService.js
+Actions pour Claude Code :
+
+Créer le composant de gestion de Rosters (Créer, nommer, ajouter/retirer des chaînes suivies).
+Écrire la fonction de calcul de l'audience croisée nette :
+Récupérer le Set de viewer_hash uniques pour chaque streamer du roster sur la période sélectionnée.
+Calculer l'union des Sets pour déterminer l'Audience Nette.
+Calculer le pourcentage de cannibalisation interne.
+Afficher les résultats sous forme de StatCardGroup (conforme DESIGN.md).
+Critères d'acceptation :
+
+Un utilisateur peut créer un Roster "Talents Valorant", y ajouter 5 streamers et voir instantanément le Net Reach dédoublonné sur 7j / 30j.
+ÉTAPE 5 : Moteur d'Exportation de Rapports (CSV & PDF Executif)
+Objectifs : Fournir aux agences un moyen d'exporter les analyses pour leurs clients sponsors sous forme de bilans synthétiques anonymisés.
+
+Fichiers à modifier / créer :
+
+src/components/ExportReportButton.jsx
+src/utils/pdfGenerator.js (Utilisation de @react-pdf/renderer ou jspdf + html2canvas)
+Spécifications du Rapport PDF Generated :
+
+En-tête : "Rapport d'Audience Croisée & Migration Twitch Overlap".
+Thème sombre institutionnel.
+Résumé des métriques : Audience Nette, Streamer principal, Top 3 des synergies de migration.
+Graphique de co-occurrence et liste anonymisée des indicateurs d'engagement (pas de pseudos bruts).
+Critères d me d'acceptation :
+
+Clic sur "Exporter le rapport PDF" télécharge un fichier PDF parfaitement mis en page en < 3 secondes.
+ÉTAPE 6 : Conteneurisation Cloud du Collecteur (Dockerisation VPS 24/7)
+Objectifs : Extraire le collecteur du PC local sous Windows pour le faire tourner 24h/24 7j/7 sur un petit serveur VPS (ex: Hetzner / DigitalOcean à 5€/mois).
+
+Fichiers à modifier / créer :
+
+Dockerfile
+docker-compose.yml
+.env.example
+scripts/deploy.sh
+Spécifications Dockerfile :
+
+
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+ENV NODE_ENV=production
+CMD ["node", "collecteur/index.js"]
+Critères d'acceptation :
+
+Un simple docker-compose up -d lance le collecteur sur n'importe quel serveur Linux.
+Le collecteur redémarre automatiquement en cas de crash (restart: always).
+La consommation RAM ne dépasse pas 250 MB pour 100 chaînes écoutées.
+6. VALIDATION ET SUIVI DU PROJET
+Chaque étape complétée doit être marquée d'un [X] ci-dessous par l'utilisateur ou Claude Code :
+
+ Étape 1 : Refactoring Base de Données & Pipeline de Rollups SQL
+ Étape 2 : Détection des Raids et Intégration API Twitch EventSub
+ Étape 3 : Création de la Page "Flux & Migrations" (Moteur Sankey)
+ Étape 4 : Module "Rosters & Analytics Agences" (Net Reach)
+ Étape 5 : Moteur d'Exportation de Rapports (CSV & PDF)
+ Étape 6 : Conteneurisation Cloud du Collecteur (Docker 24/7)
+
+FONCTIONNALITÉ 1 : Le "Raid Recommender" (Pour les Streamers)
+Objectif Métier :
+Aider un streamer à choisir instantanément la meilleure cible pour son Raid en fin de live, en se basant sur les flux organiques réels (et non au pif ou par simple copinage), afin de maximiser la rétention de ses viewers.
+
+Spécifications Techniques & UI :
+Emplacement :
+Sur la Fiche de la chaîne (Page Par Chaîne) et un widget compact sur le Dashboard principal quand la chaîne est en live.
+Algorithme de calcul (côté SQL/Supabase) :
+Pour un streamer source $A$ en fin de live, le système analyse la table daily_switches_rollup (ou switches_raw sur les dernières 24h) et calcule un Score de Synergie de Raid : $$\text{Score} = (\text{Volume de switches organiques } A \rightarrow B) \times \left(1 + \frac{\text{Présence réciproque } B \rightarrow A}{\text{Total}}\right)$$
+Filtre de sécurité : Exclure les chaînes qui ne sont pas actuellement LIVE (via le statut Twitch API).
+Interface UI (Conforme DESIGN.md) :
+Un bloc intitulé « Suggestions de Raid Recommandées ».
+Une liste de 3 cartes compactes pour les 3 meilleures cibles, affichant :
+L'avatar et le nom de la chaîne cible (avec sa couleur).
+Le statut : « 🔥 14,2 % de vos viewers actifs se trouvent actuellement sur son chat ».
+Le nombre de viewers en commun sur les dernières 24h (en JetBrains Mono).
+Un bouton secondaire ou primaire : « Copier la commande de Raid (/raid [nom]) ».
+FONCTIONNALITÉ 2 : Le mode "Client View" (Pour les Agences)
+Objectif Métier :
+Permettre à une agence de présenter un rapport propre, professionnel et brand-safe à une marque (annonceur), sans exposer les tripes techniques du collecteur, les réglages de base de données ou les autres rosters concurrents.
+
+Spécifications Techniques & UI :
+Emplacement :
+Une vue dédiée accessible via une URL spécifique ou un bouton de bascule haut de page : /client-view?roster=ID.
+Design & Expérience Utilisateur (UI) :
+Mode épuré : Masquage total de la barre latérale technique, des statuts du collecteur Supabase, des boutons d'ajout de streamer et des logs d'erreurs.
+En-tête neutre ou aux couleurs de l'Agence : Titre de la campagne (ex: « Bilan d'Audience - Campagne Été 2026 - Roster Gaming »).
+Sélecteur de période verrouillable (ex: les 30 derniers jours).
+Contenu de la Vue Client :
+Bloc 1 : Les KPIs Clés (StatCardGroup)
+Audience Brute Cumulée vs Audience Nette (Net Reach).
+Taux de duplication / cannibalisation (ex: « Seulement 14% de chevauchement : excellente complémentarité »).
+Bloc 2 : Le Diagramme de Sankey Simplifié (les flux entre les talents du roster et leur porosité).
+Bloc 3 : Le Bouton "Générer le rapport PDF Exécutif" (cf. Moteur PDF).
+FONCTIONNALITÉ 3 : L'indice de "Sticky-Factor" & Alerte Fuite d'Audience (Pour la Rétention)
+Objectif Métier :
+Permettre au streamer (ou à son producteur) de savoir à quel point son chat retient ses spectateurs par rapport à la concurrence, et d'identifier les moments précis de fuite (ex: pendant les pages de pub ou les pannes de gameplay).
+
+Spécifications Techniques & UI :
+Le Sticky-Factor (Indice de rétention sur 100) :
+Calcul : Pour un streamer $A$, on mesure le ratio entre les viewers qui écrivent exclusivement chez $A$ pendant une session par rapport à ceux qui vont voir ailleurs ($A \rightarrow B$).
+Affichage : Un score sur 100 dans la fiche chaîne, avec un code couleur basé sur les signaux (signal-green si > 70, signal-amber si entre 40 et 70, signal-red si < 40).
+Alerte "Fuite d'Audience" (Graphique temporel) :
+Sur la courbe d'activité du chat (vue par minute), le système croise les pics de départ vers d'autres chaînes avec les métadonnées Twitch (ex: coupure de stream, lancement d'une pub de 3 minutes déclarée via l'API).
+UI : Une zone surlignée en rouge doux sur la courbe temporelle avec une note explicative : « Pic de fuite de 18% des viewers actifs vers [Streamer B] constaté à 21h15 (coïncidence avec une coupure / pub longue) ».
+1. Critique de l'organisation actuelle (Le problème)
+Pas de sas d'entrée (Onboarding) : L'application suppose que l'utilisateur sait déjà ce qu'est un "viewer actif", un "switch" ou un "chevauchement". Il n'y a pas de promesse claire (« Visualisez la porosité des communautés Twitch et optimisez vos stratégies de diffusion »).
+Hiérarchie à plat : Tous les onglets (Carte, Chevauchement, Flux, Réglages) ont le même poids dans la barre latérale. Or, la Carte (L'Observatoire) est ton chef-d'œuvre visuel et signature. Elle devrait être l'élément d'appel principal, pas juste un onglet parmi d'autres.
+Mélange des rôles (Admin vs. Visiteur) : Les réglages du collecteur (URL Supabase, clés secrètes) côtoient les données d'analyse. Dans une optique multi-utilisateurs (agences/marques), un visiteur ne doit jamais voir la machinerie technique.
+2. Proposition de réorganisation : La Nouvelle Architecture de l'Information
+Il faut séparer l'application en deux grands univers distincts :
+
+La Landing Page Publique (Vitrine & Découverte) : Pour les nouveaux visiteurs, les prospects agences et la première connexion.
+L'Espace Applicatif (L'Observatoire) : Le dashboard sécurisé une fois connecté.
+Structure de la nouvelle Landing Page (Ce qui s'affiche à la racine)
+Inspirée des meilleures pratiques du design de produits cartographiques et SaaS [1, 2, 4] :
+
+Above the Fold (Le premier écran) :
+H1 percutant : « Cartographiez les flux invisibles des communautés Twitch. »
+Sous-titre : « Suivez les déplacements des viewers actifs, anticipez les raids et mesurez le Net Reach de vos rosters en temps réel. »
+Appel à l'action (CTA) principal : Bouton violet nébuleuse « Explorer l'observatoire » (ou « Connecter mon tableau de bord »).
+La Section Signature (L'Animation de la Carte) :
+Un aperçu interactif ou une vidéo/animation fluide de la Carte (les astres, les pulsations, les liens courbés qui s'illuminent). C'est indispensable pour capter l'œil en moins de 3 secondes [1, 5].
+Les 3 Piliers de Valeur (Bénéfices) :
+Pour les Streamers (Raid Recommender, Sticky-Factor).
+Pour les Agences (Net Reach, Rapports PDF, Dédoublonnage).
+Pour la Data (Zéro-PII, flux organiques vs raids).
+Footer discret : Accès aux réglages techniques / mode local.
+3. Réorganisation de la Barre Latérale (Dans l'Application)
+Une fois entré dans l'application, la barre latérale de 248 px doit guider l'utilisateur du plus macro (la vue globale) au plus micro (la chaîne individuelle), en isolant la technique.
+
+
+  [LOGO] Twitch Overlap
+  ─────────────────────────────
+  ✦ OBSERVATOIRE (Vue Globale)
+    ├── La Carte (Mode Plein Écran)
+    └── Synthèse & KPIs Globales
+
+  📊 ANALYSE & FLUX
+    ├── Chevauchement & Nomades
+    ├── Flux & Migrations (Sankey)
+    └── Rosters & Agences (Net Reach)
+
+  📺 EXPLORATION FIN, VOD & CHAT
+    ├── Par Chaîne & Fiches
+    └── Modération & Chat Insights
+
+  ⚙️ CONFIGURATION
+    └── Réglages & Source Data
+4. Spécification rapide pour Claude Code (La Landing Page)
+Si tu veux demander à Claude Code de coder cette landing page, voici les consignes exactes à lui passer :
+
+"Claude, nous devons créer une Landing Page d'accueil pour l'application, placée à la racine avant d'accéder au dashboard complet. Elle doit respecter strictement notre DESIGN.md ('L'Observatoire', fond #09090b, accent #8b7cff, typographie Inter + JetBrains Mono).
+
+Structure de la page :
+Un en-tête minimaliste avec le logo et un bouton 'Lancer l'application / Se connecter'.
+Un bloc Hero avec un titre fort, un sous-titre et le bouton principal d'action.
+Un composant d'animation/aperçu de la Carte au centre (un canvas ou une simulation visuelle reprenant l'esthétique des nœuds de la carte avec une lueur douce, montrant l'application en action).
+Une section de 3 colonnes résumant les fonctionnalités clés (Pour les Streamers, Pour les Agences, Privacy & Zéro-PII).
+Comportement : Un clic sur le bouton principal bascule l'état de l'application vers la vue Dashboard principale (en sauvegardant le fait que l'utilisateur est entré)."*
