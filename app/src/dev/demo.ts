@@ -1,9 +1,9 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { LineSpec, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
-declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; statusOf?: () => StatusData } }
+declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; statusOf?: () => StatusData } }
 
 const CH: [string, string][] = [["etoiles", "#4d8dff"], ["xari", "#ff7a45"], ["gotaga", "#2fbf71"], ["kamet0", "#f5b83d"]]
 const MIN = 60000
@@ -309,6 +309,14 @@ function statusDemo(err: boolean): StatusData {
   }
 }
 
+// Rosters : des viewers fictifs (v0, v1…) répartis sur les 4 chaînes avec des recouvrements connus
+// (v0-v3999 : etoiles ; v3000-v6999 : xari ; v6500-v9999 : gotaga ; v0-v499 + v9500-v10999 : kamet0)
+function rostersDemo(): RostersData {
+  const range = (a: number, b: number) => Array.from({ length: b - a }, (_, i) => "v" + (a + i))
+  const U = [range(0, 4000), range(3000, 7000), range(6500, 10000), [...range(0, 500), ...range(9500, 11000)]]
+  return { chans: CH.map(([c, color], i) => ({ c, color, img: "", users: new Set(U[i]), msgs: U[i].length * (3 + i) })) }
+}
+
 export function installDemo() {
   // l'ancien code se charge après le premier rendu : on remplace ses fonctions dès qu'elles existent
   const id = setInterval(() => {
@@ -335,11 +343,12 @@ export function installDemo() {
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
     window.renderFlows = () => window.dispatchEvent(new CustomEvent("legacy:flows", { detail: flowsDemo() }))
+    window.renderRosters = () => window.dispatchEvent(new CustomEvent("legacy:rosters", { detail: rostersDemo() }))
     // pilule d'état : collecteur en ligne ; ?demo&etat=erreur : synchro et API en échec (problèmes affichés avant l'état)
     window.statusOf = () => statusDemo(new URLSearchParams(location.search).get("etat") === "erreur")
     const t = new URLSearchParams(location.search).get("demo")
     if (t === "map") seedMap()
-    window.showTab?.(t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "settings" || t === "map" ? t : "overview")
+    window.showTab?.(t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
     if (t === "game") window.runDiscover("VALORANT", "fr") // montre aussi les résultats de recherche
     // ?demo&hover=0.4 : simule le survol du premier graphique à 40 % de sa largeur (pour vérifier l'infobulle)
     const hv = Number(new URLSearchParams(location.search).get("hover"))

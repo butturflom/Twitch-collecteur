@@ -2420,8 +2420,19 @@ function render(){
   else $('dot').className='dot'+(running&&ws&&ws.readyState===1?' on':apiState&&apiState!=='ok'&&running?' err':'');
   if(tab==='settings'){renderSettings();return}
   const q=Q();
-  ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,overlap:renderOverlap,map:renderMap,flows:renderFlows})[tab](q);
+  // 24/11/2026 : « rosters » manquait dans cette table : sur cet onglet, chaque rafraîchissement levait « is not a function ».
+  ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,overlap:renderOverlap,map:renderMap,flows:renderFlows,rosters:window.renderRosters})[tab](q);
 }
+
+// Onglet « Rosters » : pour chaque chaîne suivie, l'ensemble des viewers actifs (empreintes) de la période et ses messages.
+// React fait les réunions roster par roster (Net Reach). Événement « legacy:rosters », voir app/src/legacy/bridge.ts.
+// Même périmètre que les Recoupements : toute personne qui a écrit au moins un message sur la période (filtre Langue compris).
+function renderRosters(q){
+  const by=usersBy(q.pres,p=>p.c),msgs=new Map();for(const p of q.pres)msgs.set(p.c,(msgs.get(p.c)||0)+p.n);
+  window.dispatchEvent(new CustomEvent('legacy:rosters',{detail:{
+    chans:cfg.chans.map(c=>({...who(c),users:by.get(c)||new Set(),msgs:msgs.get(c)||0})),
+  }}))}
+window.renderRosters = renderRosters
 
 function autoRender(){ // ne redessine pas sous les doigts de quelqu'un qui tape
   const a=document.activeElement;if(a&&a.closest&&a.closest('section')&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))return;
