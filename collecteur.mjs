@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '1.6.12';
+const VERSION = '1.6.13';
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const CFG_PATH = path.join(DIR, 'config.json');
 const PENDING_PATH = path.join(DIR, 'en-attente.json');
@@ -555,8 +555,15 @@ const CHUNK_ROWS = 500, CHUNK_KEYS = ['presence', 'minutes', 'snaps', 'events', 
 const CHUNK_WEIGHT = { words: 25 }; // un bloc de mots d'une chaîne pour une journée pèse beaucoup plus lourd qu'une ligne
 // Petit délai entre les chunks pour laisser respirer la base
 const CHUNK_DELAY_MS = 500;
+// 1.6.13 : clés des tables écrites avec « on conflict … do update ». Deux lignes de même clé dans un même morceau
+// font échouer tout le morceau (erreur 21000) et bloquaient le lot pour toujours : la seconde ouvre un nouveau morceau,
+// où la base la fusionne normalement. Un morceau sans doublon garde le même découpage qu'avant (morceaux déjà enregistrés).
+const CONFLICT_KEY = {
+  minutes: x => `${x.c}|${x.t}`, words: x => `${x.c}|${x.d}`, clips: x => `${x.c}|${x.id}`,
+  ecoute: x => `${x.c}|${x.s}`, switches: x => `${x.u}|${x.d}|${x.a}|${x.b}`,
+};
 function chunks(payload) {
-  const out = []; let cur = {}, n = 0;
+  const out = []; let cur = {}, n = 0, inCur = new Set();
   for (const k of CHUNK_KEYS) {
     let items = payload[k] || [];
     // Dédoubler les présences par (u, c, d, g) pour éviter les conflits ON CONFLICT
@@ -570,9 +577,9 @@ function chunks(payload) {
       });
     }
     for (const x of items) {
-      const w = CHUNK_WEIGHT[k] || 1;
-      if (n && n + w > CHUNK_ROWS) { out.push(cur); cur = {}; n = 0; }
-      (cur[k] ||= []).push(x); n += w;
+      const w = CHUNK_WEIGHT[k] || 1, key = CONFLICT_KEY[k] ? k + '|' + CONFLICT_KEY[k](x) : null;
+      if (n && (n + w > CHUNK_ROWS || (key && inCur.has(key)))) { out.push(cur); cur = {}; n = 0; inCur = new Set(); }
+      (cur[k] ||= []).push(x); n += w; if (key) inCur.add(key);
     }
   }
   if (n || !out.length) out.push(cur);
