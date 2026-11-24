@@ -47,6 +47,8 @@ create table if not exists events (        -- subs, subs offerts, bits, raids, 1
   rev bigint not null default nextval('rev_seq')
 );
 create index if not exists events_rev on events (rev);
+-- 24/11/2026 : doublon exact (non unique) de la contrainte events_unique (t, c, type, frm), créé par migration_events_fix.sql. 9 Mo pour rien.
+drop index if exists events_unique_idx;
 create index if not exists events_t on events (t);
 create index if not exists events_c on events (c);
 create index if not exists events_c_t on events (c, t);
@@ -347,6 +349,34 @@ end $$;
 --   échouait, la base ne se vidait plus et grossissait jusqu'aux 500 Mo de l'offre gratuite. Chaque appel supprime maintenant au plus
 --   max_rows lignes par table et renvoie le nombre de lignes supprimées ; le collecteur le rappelle tant qu'il renvoie plus de 0.
 --   (Un ancien collecteur qui l'appelle sans boucler garde un ménage correct, mais plus lent : max_rows lignes par table et par heure.)
+-- 24/11/2026 : les index *_rev gonflent tout seuls. Chaque mise à jour d'une ligne (présence : à chaque envoi) lui donne un nouveau
+--   rev, toujours plus grand ; la place libérée dans les vieilles pages de l'index n'est jamais réutilisée. presence_rev atteignait
+--   90 Mo pour 470 000 lignes (10 Mo une fois reconstruit). Cette fonction reconstruit un index *_rev quand il pèse plus de 16 Mo ET
+--   plus de 3 fois sa taille normale (environ 22 octets par ligne). Appelée à la fin de cleanup(), donc au plus une fois par heure ;
+--   juste après une reconstruction l'index est petit, les appels suivants ne font rien. REINDEX bloque les écritures de la table
+--   1 à 2 s ; lock_timeout évite d'attendre derrière un envoi en cours (on réessaiera à l'heure suivante). security definer : seul
+--   le propriétaire des tables peut les réindexer, et service_role ne l'est pas.
+create or replace function rebuild_bloated_rev_indexes() returns int
+language plpgsql security definer set search_path = public, pg_catalog set lock_timeout = '3s' as $$
+declare r record; n int := 0;
+begin
+  for r in
+    select i.relname as idx, pg_relation_size(i.oid) as sz, t.reltuples
+    from pg_index x join pg_class i on i.oid = x.indexrelid join pg_class t on t.oid = x.indrelid
+    where t.relnamespace = 'public'::regnamespace and i.relname like '%\_rev'
+  loop
+    if r.sz > 16 * 1024 * 1024 and r.sz > 3 * greatest(r.reltuples, 0) * 22 then
+      begin
+        execute format('reindex index %I', r.idx);
+        n := n + 1;
+      exception when others then
+        raise notice 'reindex % impossible : %', r.idx, sqlerrm; -- verrou pris, on réessaiera
+      end;
+    end if;
+  end loop;
+  return n;
+end $$;
+
 drop function if exists cleanup(int, int);
 drop function if exists cleanup(int, int, int, int);
 create or replace function cleanup(days_minutes int default 14, days_presence int default 21,
@@ -370,6 +400,9 @@ begin
   with x as (delete from clips where ctid in (select ctid from clips where ts < now_ms - 30::bigint*86400000 limit max_rows) returning 1) select count(*) into k from x; total := total + k;
   with x as (delete from ecoute where ctid in (select ctid from ecoute where e < now_ms - 60::bigint*86400000 limit max_rows) returning 1) select count(*) into k from x; total := total + k;
   with x as (delete from ingested_batches where ctid in (select ctid from ingested_batches where at < now_ms - 3::bigint*86400000 limit max_rows) returning 1) select count(*) into k from x; total := total + k;
+  -- Index *_rev gonflés : voir rebuild_bloated_rev_indexes(). Pas de reconstruction si cette passe a supprimé des lignes : le
+  -- collecteur va rappeler cleanup() et l'index serait reconstruit avant la fin du ménage.
+  if total = 0 then perform rebuild_bloated_rev_indexes(); end if;
   return total;
 end $$;
 
@@ -425,147 +458,70 @@ end $$;
 -- PROCÉDURE DE ROLLUP QUOTIDIENNE
 -- ============================================================
 
--- Exécute l'agrégation quotidienne pour une date cible (format AAAA-MM-JJ)
--- Inclut le nettoyage des données brutes > 48h (switches_raw = presence + switches)
--- Clés primaires composites empêchent la duplication lors de ré-exécutions
-create or replace function run_daily_overlap_rollup(target_date date default now()::date) returns void
+-- Agrège UNE journée (heure de Paris) dans daily_switches_rollup, daily_streamer_rollup et daily_overlap_matrix.
+-- Rejouable : chaque table est vidée pour ce jour puis remplie (pas de reste si une paire disparaît).
+-- Lancée chaque nuit par pg_cron (scripts/cron_rollup.sql) pour la veille, AVANT que cleanup() ne supprime les présences de ce
+-- jour : avec joursPresence = 1, la veille reste en base jusqu'au lendemain soir (cleanup garde d >= aujourd'hui - 1, en UTC).
+-- 24/11/2026 : réécrite. L'ancienne version ne pouvait pas tourner : variable « d » homonyme des colonnes (erreur « ambiguous »),
+--   conversion bigint → timestamp invalide pour les raids, auto-jointure de presence sur le seul jour (≈ 10^10 lignes), jointures
+--   presence × minutes × snaps qui multipliaient les messages, et suppression des présences > 48 h qui court-circuitait la rétention
+--   réglée dans config.json (c'est le rôle de cleanup(), plus de suppression ici).
+create or replace function run_daily_overlap_rollup(target_date date default ((now() at time zone 'Europe/Paris')::date - 1)) returns void
 language plpgsql set search_path = public, pg_catalog as $$
 declare
-  d text := to_char(target_date, 'YYYY-MM-DD');
-  d_prev text := to_char(target_date - interval '1 day', 'YYYY-MM-DD');
-  cutoff_48h bigint := (extract(epoch from (now() - interval '48 hours'))*1000)::bigint;
-  start_ms bigint := (extract(epoch from target_date)*1000)::bigint;
-  end_ms bigint := (extract(epoch from (target_date + interval '1 day'))*1000)::bigint;
-  lock_key bigint := hashtext(target_date::text); -- empêche les exécutions concurrentes
-  acquired boolean;
+  jour text := to_char(target_date, 'YYYY-MM-DD');
+  -- bornes du jour en heure de Paris, en millisecondes (minutes.t et snaps.t)
+  t0 bigint := (extract(epoch from (target_date::timestamp at time zone 'Europe/Paris'))*1000)::bigint;
+  t1 bigint := (extract(epoch from ((target_date + 1)::timestamp at time zone 'Europe/Paris'))*1000)::bigint;
 begin
-  -- Vérifier si un rollup est déjà en cours pour cette date
-  acquired := pg_try_advisory_lock(lock_key);
-  if not acquired then
-    return; -- Un rollup est déjà en cours, on s'abandonne
-  end if;
+  -- une seule exécution à la fois pour un même jour ; verrou libéré à la fin de la transaction, même en cas d'erreur
+  if not pg_try_advisory_xact_lock(hashtext('rollup:' || jour)) then return; end if;
+  -- jour déjà purgé par cleanup() : on garde le rollup existant au lieu de l'écraser par du vide (backfill sur une longue période)
+  if not exists (select 1 from presence where presence.d = jour) then return; end if;
 
-  -- 1. daily_switches_rollup : agrégation des switches a→b par jour
-  -- Utilise ON CONFLICT pour être idempotent (ré-exécution sans duplication)
-  -- Les switches raid sont identifiés par la présence d'un événement raid entre a et b
+  -- 1. Passages a → b. raid_switch_count : au plus les viewers envoyés par les raids a → b du jour (même chaîne, même jour :
+  --    on ne sait pas dire quel passage vient du raid, c'est une borne haute).
+  delete from daily_switches_rollup where daily_switches_rollup.d = jour;
   insert into daily_switches_rollup (d, a, b, viewers, switches, organic_switch_count, raid_switch_count)
-  select
-    s.d, s.a, s.b,
-    count(distinct s.u) as viewers,
-    sum(s.n) as switches,
-    sum(s.n) as organic_switch_count,  -- sera ajusté si un raid est détecté
-    0 as raid_switch_count
+  select jour, s.a, s.b, count(*), sum(s.n),
+         sum(s.n) - least(sum(s.n), coalesce(max(r.v), 0)),
+         least(sum(s.n), coalesce(max(r.v), 0))
   from switches s
-  where s.d = d
-  group by s.d, s.a, s.b
-  on conflict (d, a, b) do update set
-    viewers = excluded.viewers,
-    switches = excluded.switches,
-    organic_switch_count = excluded.organic_switch_count,
-    raid_switch_count = excluded.raid_switch_count;
+  left join (select from_channel, to_channel, sum(viewers)::bigint as v from raid_events
+             where ts >= t0 and ts < t1 group by 1, 2) r on r.from_channel = s.a and r.to_channel = s.b
+  where s.d = jour
+  group by s.a, s.b;
 
-  -- Ajuster les counts raid pour les paires ayant eu un événement raid ce jour-là
-  -- Un événement raid de a vers b (from_channel=a, to_channel=b dans raid_events) marque les switches a→b comme raid
-  -- Sans timestamps précis sur les switches, on suppose que tous les switches sont raid
-  with raid_events_today as (
-    select re.from_channel as raider, re.to_channel as target, re.viewers as viewers
-    from raid_events re
-    where to_char((re.ts/1000)::timestamp at time zone 'Europe/Paris', 'YYYY-MM-DD') = d
-  )
-  update daily_switches_rollup r
-  set organic_switch_count = greatest(0, r.switches - re.viewers),
-      raid_switch_count = re.viewers
-  from raid_events_today re
-  where r.a = re.raider and r.b = re.target and r.d = d;
-
-  -- 2. daily_streamer_rollup : agrégation par streamer et par jour
+  -- 2. Par chaîne. Chaque source est agrégée à part puis jointe : pas de multiplication des lignes.
+  --    minutes_live = minutes où le chat de la chaîne a été lu (une ligne par minute dans « minutes ») ;
+  --    pic et moyenne de viewers sur les relevés « en live » seulement.
+  delete from daily_streamer_rollup where daily_streamer_rollup.d = jour;
   insert into daily_streamer_rollup (d, c, unique_chatters, total_messages, minutes_live, peak_viewers, avg_viewers)
-  select
-    p.d as d,
-    p.c as c,
-    count(distinct p.u) as unique_chatters,
-    sum(p.n) as total_messages,
-    count(distinct m.t / 60000) as minutes_live,
-    max(s.v) as peak_viewers,
-    case when count(s.v) > 0 then sum(s.v)::int / count(s.v) else 0 end as avg_viewers
-  from presence p
-  left join minutes m on m.c = p.c and m.t >= (extract(epoch from p.d::timestamp)*1000)::bigint
-                      and m.t < (extract(epoch from (p.d::timestamp + interval '1 day'))*1000)::bigint
-  left join snaps s on s.c = p.c and s.t >= (extract(epoch from p.d::timestamp)*1000)::bigint
-                      and s.t < (extract(epoch from (p.d::timestamp + interval '1 day'))*1000)::bigint
-  where p.d = d
-  group by p.d, p.c
-  on conflict (d, c) do update set
-    unique_chatters = excluded.unique_chatters,
-    total_messages = excluded.total_messages,
-    minutes_live = excluded.minutes_live,
-    peak_viewers = excluded.peak_viewers,
-    avg_viewers = excluded.avg_viewers;
+  select jour, p.c, p.chatters, p.msgs, coalesce(m.mins, 0), coalesce(s.peak, 0), coalesce(s.avg, 0)
+  from (select c, count(distinct u) as chatters, sum(n) as msgs from presence where presence.d = jour group by c) p
+  left join (select c, count(*) as mins from minutes where t >= t0 and t < t1 group by c) m on m.c = p.c
+  left join (select c, max(v) as peak, round(avg(v))::int as avg from snaps where t >= t0 and t < t1 and live = 1 group by c) s on s.c = p.c;
 
-  -- 3. daily_overlap_matrix : viewers communs entre paires de chaînes (a < b)
-  -- Pour chaque paire de chaînes (a,b) avec a < b, on compte :
-  -- - shared_viewers : viewers ayant chaté sur LES DEUX chaînes ce jour-là
-  -- - a_only : viewers seulement sur a (pas sur b)
-  -- - b_only : viewers seulement sur b (pas sur a)
-  with channel_pairs as (
-    select distinct p1.d, p1.c as a, p2.c as b
-    from presence p1
-    join presence p2 on p2.d = p1.d and p2.c > p1.c
-    where p1.d = d
-  ),
-  all_viewers as (
-    select u, d, c from presence where d = d
-  ),
-  paired_viewers as (
-    select
-      cp.d,
-      cp.a,
-      cp.b,
-      av.u,
-      max(case when av.c = cp.a then 1 else 0 end) as on_a,
-      max(case when av.c = cp.b then 1 else 0 end) as on_b
-    from channel_pairs cp
-    join all_viewers av on av.d = cp.d and av.c in (cp.a, cp.b)
-    group by cp.d, cp.a, cp.b, av.u
-  )
+  -- 3. Viewers communs par paire (a < b), uniquement les paires qui en ont au moins un.
+  --    On part des couples (viewer, chaîne) du jour ; un viewer présent sur k chaînes donne k(k-1)/2 paires.
+  delete from daily_overlap_matrix where daily_overlap_matrix.d = jour;
+  with uc as (select distinct u, c from presence where presence.d = jour),
+       tot as (select c, count(*) as n from uc group by c),
+       pairs as (select x.c as a, y.c as b, count(*) as shared
+                 from uc x join uc y on y.u = x.u and y.c > x.c
+                 group by x.c, y.c)
   insert into daily_overlap_matrix (d, a, b, shared_viewers, a_only, b_only)
-  select
-    d, a, b,
-    count(*) filter (where on_a = 1 and on_b = 1) as shared_viewers,
-    count(*) filter (where on_a = 1 and on_b = 0) as a_only,
-    count(*) filter (where on_a = 0 and on_b = 1) as b_only
-  from paired_viewers
-  group by d, a, b
-  on conflict (d, a, b) do update set
-    shared_viewers = excluded.shared_viewers,
-    a_only = excluded.a_only,
-    b_only = excluded.b_only;
-
-  -- 4. NETTOYAGE : suppression des données brutes > 48h (presence + switches)
-  -- Présence : où f (premier message) < cutoff_48h
-  delete from presence
-  where f < cutoff_48h;
-
-  -- Switches : où le switch est ancien (basé sur date d)
-  -- On garde les switches des 2 derniers jours complets + jour en cours
-  delete from switches
-  where d < to_char(now() - interval '2 days', 'YYYY-MM-DD');
-
-  -- Note : minutes, snaps, events, words sont nettoyés par la fonction cleanup() horaire
-  -- qui a des durées de rétention plus longues (14j, 30j, 60j, 30j respectivement)
-  perform pg_advisory_unlock(lock_key);
+  select jour, pr.a, pr.b, pr.shared, ta.n - pr.shared, tb.n - pr.shared
+  from pairs pr join tot ta on ta.c = pr.a join tot tb on tb.c = pr.b;
 end $$;
 
--- Fonction helper pour lancer le rollup sur les 30 derniers jours (backfill)
+-- Rattrapage : agrège les « days » derniers jours terminés (ceux dont il reste des présences en base).
 create or replace function backfill_daily_rollup(days int default 30) returns void
 language plpgsql set search_path = public, pg_catalog as $$
-declare
-  i int;
-  d date;
+declare i int; today date := (now() at time zone 'Europe/Paris')::date;
 begin
   for i in 1..days loop
-    d := (now()::date - i);
-    perform run_daily_overlap_rollup(d);
+    perform run_daily_overlap_rollup(today - i);
   end loop;
 end $$;
 
@@ -632,6 +588,7 @@ drop policy if exists read_all on raid_events; create policy read_all on raid_ev
 revoke all on function ingest(jsonb) from public, anon, authenticated;
 revoke all on function cleanup(int, int, int, int, int) from public, anon, authenticated;
 revoke all on function db_size_mb() from public, anon, authenticated;
+revoke all on function rebuild_bloated_rev_indexes() from public, anon, authenticated;
 revoke all on function set_board_code(text) from public, anon, authenticated;
 revoke all on function check_board_code(text) from public, anon, authenticated;
 revoke all on function add_channels(text, text[]) from public;
@@ -642,6 +599,7 @@ grant execute on function ingest(jsonb) to service_role;
 grant execute on function ingest_raid(jsonb) to service_role;
 grant execute on function cleanup(int, int, int, int, int) to service_role;
 grant execute on function db_size_mb() to service_role;
+grant execute on function rebuild_bloated_rev_indexes() to service_role;
 grant execute on function set_board_code(text) to service_role;
 grant execute on function run_daily_overlap_rollup(date) to service_role;
 grant execute on function backfill_daily_rollup(int) to service_role;
