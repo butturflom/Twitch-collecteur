@@ -288,17 +288,6 @@ const GLOBE_CURSOR = "crosshair"
 const MAP_CURSOR_DEFAULT = "grab"
 const MAP_CURSOR_DRAGGING = "grabbing"
 
-/** Épaisseur de barre progressive selon la valeur (pour MeterList dans la fiche).
- *  4 paliers : ≤10% = 1.5px (traits fins), ≤30% = 2.5px, ≤50% = 3.5px, >50% = 4.5px.
- *  Cela reflète visuellement l'échelle des traits sur la carte (fins à épais). */
-function barHeight(v: number, mx: number): number {
-  const pct = mx > 0 ? v / mx : 0
-  if (pct <= 0.1) return 1.5
-  if (pct <= 0.3) return 2.5
-  if (pct <= 0.5) return 3.5
-  return 4.5
-}
-
 export function MapView() {
   const d = useMapData()
   const stage = useRef<HTMLDivElement>(null), radar = useRef<HTMLDivElement>(null), box = useRef<HTMLDivElement>(null)
@@ -502,7 +491,7 @@ export function MapView() {
                     />
                     {info.links.length > 4 && (
                       <button type="button" aria-expanded={allLinks} onClick={() => setAllLinks((v) => !v)} className="mt-1 inline-flex min-h-6 items-center rounded text-xs font-medium text-zinc-300 transition-colors hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-                        {allLinks ? "Voir moins" : `Voir les ${info.links.length - 4} autres voisines`}
+                        {allLinks ? "Voir moins" : info.links.length === 5 ? "Voir 1 autre voisine" : `Voir les ${info.links.length - 4} autres voisines`}
                       </button>
                     )}
                   </>
