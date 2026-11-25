@@ -123,3 +123,25 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 - **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
+
+## 11. Idées pour la suite (lecture de `Prompt.txt`, 25/11)
+
+Le texte décrit un cockpit spatial pour agences, marques et streameurs. La Carte en est déjà la moitié : planètes, taille, liens, système d'une chaîne choisie. Tri fait le 25/11.
+
+**À développer, dans cet ordre** (tout repose sur des données qu'on a déjà) :
+1. **Alertes de rythme** : une chaîne qui stagne ou qui décolle, calculée sur les rollups quotidiens (`daily_streamer_rollup`). À montrer dans la Vue d'ensemble et sur la planète. Il faut d'abord 14 journées agrégées pour que le signal compte (vers le 8/12).
+2. **Comparaison de 2 à 4 chaînes côte à côte** : viewers, messages, fidélité du chat, croissance, recoupement entre elles. N'existe pas encore (les Rosters comparent des groupes, pas des chaînes).
+3. **Trajectoire simple** : la tendance sur 30 jours, dite comme une tendance (pente, écart à la moyenne), pas comme une prédiction. À faire quand l'historique a 30 jours (vers le 23/12).
+4. **Moins de chiffres au premier regard** : 3 à 5 indicateurs en tête de « Par chaîne », le reste replié. À passer par une critique de design.
+5. **Filtres de la Carte par langue et par jeu principal** : les langues sont déjà connues ; la Carte a déjà des groupes.
+
+**À retenir comme direction, sans l'appliquer tel quel** :
+- « Rendre la donnée désirable » : c'est le rôle de la Carte, qui doit rester lisible avant d'être spectaculaire (principe 2 de `PRODUCT.md`). Les anneaux de croissance et les lunes de collabs ne se rajoutent que si la lecture n'en souffre pas, et après un prototype.
+- Le mode « agence » rejoint la Client View, abandonnée le 24/11 : il faudrait des rosters côté serveur et une authentification.
+
+**À écarter, faute de données ou contre les principes** :
+- **Sponsors, deals, historique de deals, brand safety, audience démographique** : on ne les collecte pas et Twitch ne les donne pas. Un score inventé contredit « honnête sur ses limites ».
+- **Découverte pour marques** (« Affiliates ouverts aux deals ») : c'est un produit multi-utilisateurs avec comptes, hors du périmètre actuel (« une seule personne »).
+- **Prédiction à 90 jours** : trop de bruit sur des données vieilles de quelques semaines.
+
+**Question de fond à trancher plus tard** : le projet reste-t-il un outil personnel (`PRODUCT.md`) ou vise-t-il des agences et des marques (`plan.md.txt`, `Prompt.txt`) ? La réponse change l'ordre des chantiers : l'usage multi-utilisateurs demande d'abord comptes, rosters serveur et vie privée revue.
