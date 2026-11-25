@@ -272,6 +272,7 @@ function flowsDemo(): FlowsData {
 
 // ?demo=map : la Carte a besoin de vraies présences pour que son moteur calcule la disposition. On remplit la base locale
 // EN MÉMOIRE (rien n'est enregistré) : 12 chaînes, 3 000 viewers fictifs répartis en 3 communautés qui se recoupent un peu.
+// ?demo=map&dense : beaucoup de chevauchements entre groupes, pour qu'une chaîne ait plus de 4 voisines (fiche : « Voir les N autres »)
 function seedMap() {
   const s = document.createElement("script")
   s.textContent = `(()=>{const chans=['etoiles','xari','gotaga','kamet0','zerator','mynthos','jbzz','ponce','antoinedaniel','domingo','sardoche','rivenzi'];
@@ -279,7 +280,7 @@ function seedMap() {
     const grp={etoiles:0,zerator:0,mynthos:0,jbzz:0,xari:1,ponce:1,antoinedaniel:1,domingo:1,gotaga:2,kamet0:2,sardoche:2,rivenzi:2};
     const d=dayKey(Date.now()),now=Date.now();let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
     for(let u=0;u<3000;u++){const g=u%3,mine=chans.filter(c=>grp[c]===g),set=new Set([mine[Math.floor(rnd()*4)]]);
-      if(rnd()<.35)set.add(mine[Math.floor(rnd()*4)]);if(rnd()<.08)set.add(chans[Math.floor(rnd()*chans.length)]);
+      if(rnd()<.35)set.add(mine[Math.floor(rnd()*4)]);if(rnd()<${new URLSearchParams(location.search).has("dense") ? 0.35 : 0.08})set.add(chans[Math.floor(rnd()*chans.length)]);
       for(const c of set){const t=now-rnd()*5*3600e3;DB.presence['demo'+u+'|'+c+'|'+d+'|x']={u:'demo'+u,c,d,g:'Just Chatting',f:t,l:t+rnd()*1800e3,n:1+Math.floor(rnd()*20)}}}
     // chaînes en live (viewers du moment, pour la taille des ronds) ; les autres sont hors live
     const lv={zerator:21040,etoiles:14520,xari:6230,ponce:9800,mynthos:3120,jbzz:1840,sardoche:4400,domingo:900};

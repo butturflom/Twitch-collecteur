@@ -430,7 +430,9 @@ function listenGaps(chans,t0){
 /* ---------- graphiques ---------- */
 const tip=$('tip');
 function showTip(e,html){tip.innerHTML=html;tip.style.display='block';const w=tip.offsetWidth,h=tip.offsetHeight;
-  let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;tip.style.left=x+'px';tip.style.top=y+'px'}
+  let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;
+  // borné au cadre : sur téléphone, ni à droite ni à gauche du doigt il n'y a la place d'une bulle large, elle dépassait du cadre (critique du 25/11/2026)
+  x=Math.max(8,Math.min(x,innerWidth-w-8));y=Math.max(8,Math.min(y,innerHeight-h-8));tip.style.left=x+'px';tip.style.top=y+'px'}
 const hideTip=()=>tip.style.display='none';
 function legendHtml(series){return series.length<2?'':'<div class="legend">'+series.map(s=>`<span>${s.c?av(s.c):`<i class="sw" style="background:${s.color}"></i>`}${esc(s.name)}</span>`).join('')+'</div>'}
 // Graphique en courbes pour React (app/src/components/charts/line-chart.tsx) : séries réduites à 500 points au plus,
