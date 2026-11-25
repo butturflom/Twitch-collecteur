@@ -824,6 +824,7 @@ const mapAng=new Map(),mapKep=new Map(),mapRing=new Map(),mapOff=new Map(),mapSy
 let radarRaf=0; // animation du balayage radar (une seule à la fois, arrêtée hors de l'onglet Carte)
 const mapSeenEv=new Set(); // abonnements, bits et raids déjà montrés sur la carte (chacun une seule fois)
 const mapSeenPass=new Set(); // passages en direct d'un chat à l'autre déjà montrés (viewer|de|vers|jour)
+let mapViewChecked=false; // la vue « Ma sélection » est vérifiée une fois à l'ouverture (voir renderMap)
 let mapGlobeOn=false;delete cfg.mapGlobe; // mode Globe (glisser = tourner l'univers en 3D) : gardé tant que la page reste ouverte, jamais d'une visite à l'autre (l'ancien réglage enregistré est oublié)
 const mapPassLog=[]; // les 5 derniers passages vus sur la carte (gardés quand la carte se redessine), affichés dans le menu
 let mapIntroKey='',mapIntroAt=-1e9; // période et langue du dernier tracé des liens à l'apparition (vidé à l'ouverture de l'onglet Carte), et son heure
@@ -950,6 +951,9 @@ function renderMap(q){
   // Vues : « Toutes les chaînes » (vue principale : toutes les chaînes suivies qui ont au moins un viewer actif sur la
   // période, sans groupes, liens d'une seule couleur) ; « Groupes » (chaînes d'au moins 5 viewers actifs, une couleur par
   // groupe détecté) ; « Ma sélection » (seulement les chaînes cochées, quelle que soit la langue choisie).
+  // la vue choisie est gardée d'une visite à l'autre ; mais « Ma sélection » sans au moins 2 chaînes encore suivies ouvrait une carte
+  // vide (critique du 25/11/2026) : à l'ouverture, on revient alors à « Toutes ». Un clic volontaire sur « Ma sélection » n'est pas touché.
+  if(!mapViewChecked){mapViewChecked=true;if(cfg.mapMode==='sel'&&(cfg.mapSel||[]).filter(c=>cfg.chans.includes(c)).length<2){cfg.mapMode='all';saveCfg()}}
   const view=['all','groups','sel'].includes(cfg.mapMode)?cfg.mapMode:'all',grouped=view==='groups',picked=new Set(cfg.mapSel||[]);
   // Filtre « En live » : seulement les chaînes en live en ce moment (combinable avec chaque vue)
   const liveOnly=!!cfg.mapLive,isLive=c=>!!(info[c]&&info[c].live);
@@ -1162,7 +1166,7 @@ function renderMap(q){
     for(const x of L){if(x.lo>hi)flush();cur.push(x);hi=Math.max(hi,x.hi)}flush()};
   lanes();
   // points calculés une fois par image (Pos est appelé très souvent) : pv change dès que le temps avance ou qu'une place change
-  let pv=0,P3v=-1;const P3=new Array(n);
+  let pv=0,P3v=-1,drawnSig='';const P3=new Array(n); // drawnSig : l'état de la dernière image dessinée (voir la boucle : en pause, rien n'est repeint tant qu'il ne change pas)
   const pt3=i=>{if(P3v!==pv){P3v=pv;P3.fill(null)}return P3[i]||(P3[i]=planet(i)?sat3(i):body3(i))};
   // repère normalisé -> vu à l'écran (carte de base) : rotation à la main (q), puis perspective
   const ID=[1,0,0,0];
@@ -1711,7 +1715,13 @@ function renderMap(q){
     if(now-actAt>10000){act=readActivity();actAt=now;schedule(now);Rt=liveR()}
     for(let i=0;i<n;i++)R[i]+=(Rt[i]-R[i])*Math.min(1,dt*1.5); // la taille suit en douceur un changement de période ou de filtre
     if(spin){spinGlobe(spin.x*dt,spin.y*dt);const k=Math.exp(-dt*2.6);spin.x*=k;spin.y*=k;if(Math.hypot(spin.x,spin.y)<.03)spin=null;touch()} // élan du globe
-    orbitStep(dt);if(now-lastDraw>33){lastDraw=now;draw()} // environ 30 images par seconde suffisent à une dérive lente
+    // environ 30 images par seconde suffisent à une dérive lente. En pause, si rien ne bouge (ni survol, ni geste, ni élan, ni
+    // intro, ni animation, ni taille qui se règle) et que l'état est celui de la dernière image, on ne repeint pas : mesuré avant
+    // ce changement, la carte réécrivait environ 7 000 attributs par seconde même arrêtée.
+    orbitStep(dt);
+    const sig=hover+'|'+mapView.sel+'|'+mapView.k+'|'+mapView.tx+'|'+mapView.ty+'|'+mapView.rot+'|'+mapView.q.join(',')+'|'+pv+'|'+mapGlobeOn;
+    const idle=cfg.mapPause&&!drag&&!spin&&!intro&&!items.length&&sig===drawnSig&&!R.some((r,i)=>Math.abs(Rt[i]-r)>.01);
+    if(now-lastDraw>33&&!idle){lastDraw=now;drawnSig=sig;draw()}
     const A=(now%TURN)/TURN*360;
     for(let i=0;i<n;i++){const s=S[i],p=parts[i].ping,age=((A-s.a+360)%360)/360*TURN;
       if(age<ECHO){const u=age/ECHO;setA(p,{cx:s.x.toFixed(1),cy:s.y.toFixed(1),r:(s.r+3+u*9).toFixed(1),'stroke-opacity':(.22*(1-u)*(1-u)).toFixed(3)});p.dataset.on='1'}
