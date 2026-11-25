@@ -341,13 +341,13 @@ function reachDemo(chans: string[], days: number): PeriodReach {
 }
 
 // Fidélité du chat : la part de viewers actifs partis ailleurs dépend de la chaîne (haut, milieu, bas du classement fictif des chaînes suivies) ;
-// &sticky=bas ou &sticky=haut force le rang, &sticky=peu : trop peu de viewers actifs pour mesurer
+// &sticky=bas ou &sticky=haut force le rang, &sticky=petit : petite chaîne (score fragile), &sticky=peu : trop peu de viewers actifs pour mesurer
 function stickyDemo(c: string, n: number, mode: string | null): ChannelSticky {
   const k = Math.max(1, CH.findIndex(([x]) => x === c) + 1)
   const rate = mode === "bas" ? 0.16 : mode === "haut" ? 0.03 : [0.03, 0.07, 0.15, 0.1][(k - 1) % 4]
   const days = Array.from({ length: n }, (_, i) => {
     const t = new Date(Date.now() - (n - i) * 86400000)
-    const actives = mode === "peu" ? 12 : Math.round((900 + 350 * k) * (0.85 + (i / n) * 0.3))
+    const actives = mode === "peu" ? (i < 3 ? 4 : 0) : mode === "petit" ? 4 : Math.round((900 + 350 * k) * (0.85 + (i / n) * 0.3))
     return { d: t.toLocaleDateString("sv-SE"), actives, leavers: Math.round(actives * rate * (0.8 + ((i * 7) % 5) / 12)) }
   })
   return { days, actives: days.reduce((s, d) => s + d.actives, 0), leavers: days.reduce((s, d) => s + d.leavers, 0), net: { n: 12, q1: 89.1, med: 93, q3: 96.3 } }
