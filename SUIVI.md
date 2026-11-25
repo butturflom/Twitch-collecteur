@@ -229,3 +229,16 @@ Après toute modification de `app/src`, Claude lance `npm run build` dans `app/`
 - **Effacement** : `node oublier.mjs pseudo` (fonction SQL `forget_user`, avec la même migration).
 - **Conformité** : `CONFORMITE.md` (données, mesures, points à faire valider par un juriste, règle de 24 h de Twitch à vérifier).
 - **Stockage** (25/11) : 285 Mo (272 MB affichés), `presence` 145 Mo, `events` 40 Mo, `minutes` 33 Mo. Rollups : 23/11 et 24/11, 958 et 957 lignes, crons réussis à 03 h 30 et 03 h 40 UTC.
+
+## 16. Outils 3D, HUD et contremaître (25/11, soir)
+
+| Outil | Rôle | Installé comme | Points d'attention |
+|---|---|---|---|
+| `three-js` (Mindrally) | Conseils Three.js et React Three Fiber | skill, `.claude/skills/three-js` | Court et générique (suppose Tailwind, TypeScript). Ne crée **aucune dépendance** : `three` et `@react-three/fiber` ne sont pas dans `app/package.json` |
+| `react-three-fiber` (freshtechbro) | R3F, drei, shaders, projet de départ | skill, `.claude/skills/react-three-fiber` | Contient un `starter_r3f/` et deux scripts Python de génération |
+| `ui-ux-pro-max` (nextlevelbuilder) | Typographie, palettes, glassmorphism, accessibilité, base de règles interrogeable | skill, `.claude/skills/ui-ux-pro-max` | Demande Python 3 (testé : `search.py` répond). Tests retirés (387 Ko). Ses sorties sont des suggestions : `DESIGN.md` prime |
+| Playwright MCP | Piloter un vrai navigateur pour vérifier un rendu | `.mcp.json`, `npx @playwright/mcp@latest --browser chrome` | À viser sur `npm run dev` (`?demo=`), pas sur le HTML en `file://`. Premier lancement : Claude demande d'approuver le serveur |
+| Spline MCP | Sculpter une scène 3D dans Spline | `.mcp.json`, serveur hébergé `https://mcp.spline.design/mcp` | Compte Spline requis, authentification par `/mcp` → spline → Authenticate. Produit un fichier Spline, pas du code ; à tester pour le chargement depuis `file://` avant de s'y fier |
+| `/contremaitre` | Boîte à idées (`IDEES.md`), évaluation de la plus-value, plan et délégation par modèle | skill du projet | Plus-value /25, coût S, M, L, verdict faire, planifier, prototype ou écarter |
+
+**Décision à prendre avant tout code 3D** : le moteur de la Carte est impératif dans `legacy.js`, par choix. Three.js ne s'y substitue pas sans prototype isolé qui mesure le poids dans le fichier HTML unique, les performances sur le PC de l'utilisateur et la lisibilité (principe 2 de `PRODUCT.md`). À passer par `/contremaitre`.
