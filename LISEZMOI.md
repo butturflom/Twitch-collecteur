@@ -280,3 +280,14 @@ Relance le collecteur et recharge le tableau de bord. Pas de mise à jour de `sc
 - Une fois supprimées, les lignes ne font pas baisser tout de suite la taille annoncée par Supabase : la place libérée est réutilisée pour les nouvelles données.
 
 Relance le collecteur et recharge le tableau de bord.
+
+## Tableau de bord du 25/11/2026
+
+Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en entier dans le SQL Editor de Supabase** : il ajoute deux fonctions de lecture, `channel_stickiness` (fidélité du chat) et `channels_rhythm` (alertes de rythme). Rien n'est supprimé.
+
+- **Page d'accueil** au premier chargement ; le bouton « Explorer l'observatoire » l'écarte pour de bon. `?accueil` à la fin de l'adresse la rouvre.
+- **Barre latérale en quatre groupes** : Observatoire (Carte, Vue d'ensemble), Analyse et flux, Exploration, Configuration.
+- **Par chaîne** : en tête, 5 indicateurs ; « Communauté et événements » se déplie au clic. Nouveau bloc **Son univers** (voisines, rang par taille, chaînes juste au-dessus). Dans **Historique**, la **fidélité du chat** : sur 100, la part des viewers actifs qui n'ont écrit chez aucune autre chaîne suivie juste après. Elle se compare aux chaînes de taille voisine ; en dessous de 200 viewers actifs, elle est donnée comme fragile.
+- **Vue d'ensemble** : bloc **Rythme des chaînes** (celles qui décollent ou ralentissent). Il faut 14 journées agrégées : il le dit tant qu'elles manquent.
+- **Rosters** : **Comparer des chaînes**, 2 à 4 côte à côte, avec l'audience nette du groupe et les viewers en commun.
+- **Carte** : filtre **Jeu principal** à côté de la langue.

@@ -189,7 +189,7 @@ Une nuit neutre, presque sans teinte, éclairée par un seul violet froid, plus 
 
 ### Signal colors
 - **Rouge live** (`live-red`) : uniquement l'état « en direct » (point pulsant et pastille LIVE). Il ne sert à rien d'autre.
-- **Vert signal** (`signal-green`), **Ambre signal** (`signal-amber`), **Rouge signal** (`signal-red`) : variations positives, alertes et variations négatives (`Delta`, tendances) ; le vert marque aussi « Données anonymisées ».
+- **Vert signal** (`signal-green`), **Ambre signal** (`signal-amber`), **Rouge signal** (`signal-red`) : variations positives, alertes et variations négatives (`Delta`, tendances) ; le vert marque aussi « Données anonymisées ». Les jetons `signal-amber` et `signal-red` sont câblés dans `index.css` depuis le 25/11/2026. **Fidélité du chat** : vert dans le quart haut des chaînes comparées, ambre dans le quart bas, aucune couleur entre les deux ; une phrase dit toujours l'état, la couleur ne porte jamais seule.
 - **Bleu signal** (`signal-blue`) : deuxième série des graphiques et échelles séquentielles.
 
 ### Channel colors
@@ -218,7 +218,7 @@ Chaque chaîne a une couleur, extraite de la teinte dominante de son logo (`useA
 - **Note** (400, 12 px/1,625, crépuscule, 900 px max) : l'explication sous chaque bloc ; les termes clés passent en gras brume.
 - **Table head** (500, 11 px, casse de phrase, sans interlettrage, crépuscule) : en-têtes de colonnes, en Inter.
 - **Data** (JetBrains Mono, 12,5 px, chiffres tabulaires) : toutes les valeurs de tableau, alignées à droite.
-- **Label** (Inter 500, 12 px, casse de phrase, sans interlettrage, crépuscule) : titres de groupes de navigation (Analyse, Audience), libellé Période, titres de section du menu de la Carte, bandeau de la Carte.
+- **Label** (Inter 500, 12 px, casse de phrase, sans interlettrage, crépuscule) : titres de groupes de navigation (Observatoire, Analyse et flux, Exploration), libellé Période, titres de section du menu de la Carte, bandeau de la Carte.
 
 ### Named Rules
 **La règle du chiffre en mono.** Un nombre qu'on compare (tableau, mesure de carte, compteur) est en JetBrains Mono avec `tabular-nums`. Seules les grandes valeurs d'indicateur restent en Inter semi-gras, mais toujours en chiffres tabulaires.
@@ -305,7 +305,7 @@ Chaque graphique a une légende à gauche et la bascule Graphique / Tableau à d
 - **Error:** bordure rouge signal et anneau rouge signal à 40 %.
 
 ### Navigation
-La barre latérale a des groupes titrés en libellé (Analyse, Audience, Configuration). Les éléments font 36 px, en 13,5 px 500, avec des icônes de 17 px. Au repos ils sont en brume avec une icône zinc-500 ; au survol ils prennent un fond blanc à 4 %. L'élément actif a un fond blanc à 7 %, un filet, une icône violet clair et une barre de 3 px en violet avec sa lueur, collée au bord gauche. En pied : l'encart « Données anonymisées » et le bouton secondaire « Ajouter un streamer ». L'en-tête montre le fil d'Ariane, la pilule d'état de l'écoute (point d'état et texte en chiffres tabulaires) et les deux boutons d'écoute.
+La barre latérale a des groupes titrés en libellé (Observatoire : Carte et Vue d'ensemble ; Analyse et flux ; Exploration ; Configuration). Les éléments font 36 px, en 13,5 px 500, avec des icônes de 17 px. Au repos ils sont en brume avec une icône zinc-500 ; au survol ils prennent un fond blanc à 4 %. L'élément actif a un fond blanc à 7 %, un filet, une icône violet clair et une barre de 3 px en violet avec sa lueur, collée au bord gauche. En pied : l'encart « Données anonymisées » et le bouton secondaire « Ajouter un streamer ». L'en-tête montre le fil d'Ariane, la pilule d'état de l'écoute (point d'état et texte en chiffres tabulaires) et les deux boutons d'écoute.
 
 ### Map (signature)
 La Carte est la seule surface autorisée à pousser l'atmosphère : galaxie en volume, planètes en facettes aux tons de chaque chaîne, planète centrale avec une double lueur douce, liens entre chaînes, échos radar fins et pâles. Ses textes restent dans le système : noms en petites pilules sombres translucides avec un filet blanc (filet violet quand l'élément est sélectionné) et bandeau en libellé sur une pilule de verre. Ses couleurs propres sont des jetons : **lien de carte** (`map-link`, #e6e1ff) pour les traits et leurs exemples dans la légende, **or d'étoile** (`star-gold`) et **cœur d'étoile** (`star-core`) pour la couronne des étoiles, **voile de carte** (`map-veil`) pour le voile radial qui garde les traits lisibles sur le cœur clair de la galaxie.

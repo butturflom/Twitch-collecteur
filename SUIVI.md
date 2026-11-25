@@ -11,6 +11,8 @@
 - **Raid Recommender** : fait, section « Recommandations de raid » dans Par chaîne.
 - **Barre latérale** : quatre groupes selon le plan (Observatoire, Analyse et flux, Exploration, Configuration), fusionnée le 25/11 (PR #24).
 - **Export PDF et CSV, Net Reach des rosters, onglet Flux** : faits (PR #10, #8, #7).
+- **Nouveautés du 25/11** : page d'accueil (une fois par navigateur), fidélité du chat (Sticky-Factor, comparée aux chaînes de taille voisine), comparaison de 2 à 4 chaînes (Rosters), alertes de rythme (Vue d'ensemble), « Son univers » et 5 indicateurs de tête (Par chaîne), filtre de la Carte par jeu principal. Détail : §13.
+- **Fonctions SQL déployées en base le 25/11** : `channel_stickiness` et `channels_rhythm` (ajouts seuls). Elles sont aussi dans `schema.sql`, à rejouer sur toute nouvelle base.
 - **Docker** : build réparé (PR #5). **VPS** : mis de côté par l'utilisateur.
 - **Carte** : critique n°7 à 28/40, aucune modification retenue. **Vue d'ensemble** : critique n°7 à 27/40, seul le bug Phase 3 traité (PR #22, fusionnée).
 
@@ -27,6 +29,12 @@
 | #24 | `sidebar-plan-3` | Barre latérale : groupes selon le plan V2 (§3) | fusionnée le 25/11 |
 | #25 | `sticky-factor` | Fidélité du chat (Sticky-Factor) | fusionnée le 25/11 |
 | #26 | `landing-page` | Page d'accueil (plan §4) | fusionnée le 25/11 |
+| #27 | `suivi-landing-fusionnee` | Direction agences et streamers (PRODUCT.md, §12) | fusionnée le 25/11 |
+| #28, #29 | `comparer-chaines`, `fidelite-petites-chaines` | Comparer 2 à 4 chaînes ; fidélité dès 30 viewers actifs | fusionnées le 25/11 |
+| #30 à #35 | `alertes-rythme`, `mon-univers`, `par-chaine-essentiel`, `fidelite-voisines`, suivi | Alertes de rythme, son univers, l'essentiel de Par chaîne, fidélité comparée aux voisines (#33 est passée par #35) | fusionnées le 25/11 |
+| #36 | `carte-filtre-jeu` | Carte : filtre par jeu principal | fusionnée le 25/11 |
+| #37 | `regle-build-auto` | CLAUDE.md : reconstruction automatique du tableau de bord | ouverte |
+| — | `docs-maj-25-11` | Cette mise à jour de la documentation | ouverte |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -72,6 +80,7 @@ Plus rien n'attend l'utilisateur.
 - **Chaque matin, après 03 h 40 UTC** : `select d, count(*) from daily_overlap_matrix group by d order by d;` doit gagner une journée par nuit. Les crons se lisent dans `cron.job_run_details`.
 - **Historique 30 jours** : à juger quand 7 journées sont agrégées (vers le 30/11). **90 jours** : pas avant environ 90 jours de données ; on ne peut vérifier que la cohérence des totaux.
 - **Phase 3 (Top des chaînes, communautés investies)** : le rendu réel n'a pas été vu, les données de démo sont vides. À regarder dans votre navigateur (#22 est fusionnée).
+- **Alertes de rythme** : vers le 8/12 (14 journées agrégées), vérifier que les alertes sont plausibles et ajuster `lib/rhythm.ts`.
 - **Stockage** : suivre les 271 Mo. Alerte à 400 Mo.
 
 ## 7. Modèles, effort et tokens
@@ -120,7 +129,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 10. Journal
 
-- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée.
+- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée. Puis #27 à #36 : direction agences et streamers, comparaison de chaînes, fidélité (voisines, petites chaînes), alertes de rythme (fonction déployée), son univers, essentiel de Par chaîne, filtre de la Carte par jeu. Hook de build local.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
 
@@ -182,15 +191,21 @@ Les conseils du §12 étaient écrits pour les agences seules : c'était incompl
 3. **En attendant**, rendre le produit lisible pour une petite chaîne : seuils adaptés, vue « mon univers ». Cela se code sans attendre l'hébergement et sert aussi aux gros.
 4. **Gratuit ou payant** : à décider avec la demande. Les streamers payent peu : l'outil des agences peut financer le service, les streamers en bénéficient en version simple.
 
-## 13. Chantiers lancés le 25/11 après le tri de `Prompt.txt`
+## 13. Chantiers du 25/11 après le tri de `Prompt.txt` (tous fusionnés)
 
-| PR | Chantier | État |
+| Chantier | Où | Notes |
 |---|---|---|
-| #28, #29 | Comparer 2 à 4 chaînes (Rosters) ; fidélité du chat dès 30 viewers actifs | fusionnées |
-| #30 | Alertes de rythme (Vue d'ensemble) : « décolle », « ralentit » | ouverte. **Fonction SQL `channels_rhythm` à déployer** (ajout seul) ; le bloc dit « pas encore 14 journées » jusque vers le 8/12 |
-| #31 | Son univers (Par chaîne) : voisines et chaînes juste au-dessus | ouverte |
-| #32 | Par chaîne : 5 indicateurs au premier regard, le reste replié | ouverte |
-| #33 | Fidélité comparée aux chaînes de taille voisine | ouverte, bâtie sur #31 (à fusionner après elle). Non vue au rendu : la démo a 4 chaînes, il en faut 6 |
+| Comparer 2 à 4 chaînes | Rosters → « Comparer des chaînes » | Audience nette du groupe, doublons, tableau côte à côte, recoupements deux à deux. `?compare=a,b` en démo |
+| Fidélité du chat (Sticky-Factor) | Par chaîne → Historique | Score dès 30 viewers actifs, fragile sous 200. Comparée aux 8 chaînes de taille voisine (sinon au réseau). Vert dans le quart haut, ambre dans le quart bas |
+| Alertes de rythme | Vue d'ensemble → « Rythme des chaînes » | Écart ≥ 15 % et hors variations habituelles (2 erreurs types), 30 viewers actifs par jour minimum. Il faut 14 journées agrégées : premières alertes vers le 8/12. Seuils dans `app/src/lib/rhythm.ts` |
+| Son univers | Par chaîne | Voisines autour de la chaîne, rang par taille, 3 chaînes juste au-dessus. `app/src/lib/universe.ts` |
+| L'essentiel de Par chaîne | Par chaîne | 5 indicateurs de tête ; « Communauté et événements » replié (`to2-ch-more`) |
+| Filtre par jeu principal | Carte → menu de filtres | Jeu le plus relevé de chaque chaîne sur la période ; 8 jeux proposés ; `cfg.mapGame`. Clic non testé au rendu |
+| Page d'accueil | Au premier chargement | Posée par-dessus le tableau de bord (`to2-landing-seen`, `?accueil` la rouvre, jamais en démo) |
 
-**Reste de la liste** : trajectoire à 30 jours (vers le 23/12). Le filtre de la Carte par langue existait déjà ; celui par jeu principal est dans la PR « Carte : filtre par jeu principal ». Les seuils des alertes (15 %, 2 erreurs types, 30 viewers actifs) sont dans `app/src/lib/rhythm.ts` : à ajuster avec de vraies alertes.
-**Pas fait** : critique Impeccable de Par chaîne (coût) ; à lancer si l'on veut revoir l'ordre des sections.
+**Reste** : trajectoire à 30 jours (vers le 23/12, il faut l'historique) ; comparer le résultat des alertes de rythme aux vraies chaînes quand elles apparaîtront (vers le 8/12) et ajuster les seuils ; critique de design de « Par chaîne » (non lancée, coût) ; essayer le filtre par jeu de la Carte dans un vrai navigateur.
+**Piège de fusion** : une PR dont la base est une autre branche déjà fusionnée (#33) est fusionnée dans cette branche, pas dans `main`. Viser `main`, ou fusionner la PR de base en dernier avant de retarder la suivante.
+
+## 14. Reconstruction automatique
+
+Après toute modification de `app/src`, Claude lance `npm run build` dans `app/` (règle de `CLAUDE.md`, PR #37). Un hook git local (`.git/hooks/post-merge`, non versionné) le fait aussi après un `git pull` qui change `app/`. À recréer si le dépôt est cloné ailleurs.
