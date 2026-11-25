@@ -13,14 +13,8 @@
       {
         "rule": "overused-font",
         "value": "inter",
-        "createdAt": "2026-11-21T02:12:13.084Z",
-        "reason": "DESIGN.md (système verrouillé) fixe Inter comme police du texte ; choix du projet, pas une décision de cette session, l'utilisateur n'a pas été interrogé"
-      },
-      {
-        "rule": "overused-font",
-        "value": "Inter",
         "createdAt": "2026-11-23T00:00:00.000Z",
-        "reason": "/fonts intégrés localement pour fonctionnement hors ligne - commentaire ligne 6-8 de index.css confirme l'intention"
+        "reason": "DESIGN.md fixe Inter comme police du texte (système de design du projet, repris dans le rapport PDF) ; le détecteur le signale partout, y compris sur l'ensemble de l'application"
       }
     ]
   }
