@@ -205,6 +205,9 @@ export interface FlowsData {
   totalRaid?: number     // Total des flux de raid
   gapOrganic?: string    // Délai médian des flux organiques
   gapRaid?: string       // Délai médian des flux de raid
+  /** Passages par jour et par paire (SQL flows_by_day). Absent si pas de base, base pas à jour ou erreur. Les viewers sont distincts
+   *  par jour et par paire : ils ne s'additionnent pas d'un jour à l'autre. `raid` est une borne haute ; organic + raid = passages. */
+  byDay?: { d: string; a: Who; b: Who; viewers: number; passages: number; organic: number; raid: number }[]
 }
 
 export interface SettingsData {

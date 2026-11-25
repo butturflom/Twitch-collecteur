@@ -687,6 +687,43 @@ language sql stable set search_path = public, pg_catalog as $$
       from s group by c order by 2 desc limit 8) x), '[]'))
 $$;
 
+-- Passages entre chaînes, jour par jour (chantier C1, « carte des migrations » de l'onglet Flux). Lecture seule, 26/11/2026.
+-- Lue dans daily_switches_rollup : le classement organique / raid est donc exactement celui de run_daily_overlap_rollup, pas un second calcul.
+-- CE QUE CHAQUE COLONNE COMPTE
+--   viewers   : viewers DISTINCTS (empreintes distinctes) qui sont passés de source à cible CE JOUR-LÀ. Ne s'additionne pas d'un jour à l'autre
+--               (la même personne revenue le lendemain compte deux fois) ni d'une paire à l'autre (un viewer parti vers deux chaînes compte deux fois).
+--   passages  : somme brute des passages source → cible du jour (une même personne peut passer plusieurs fois) ; passages >= viewers.
+--   organique : passages hors raid = passages - raid.
+--   raid      : passages attribués à un raid source → cible du jour. C'est une BORNE HAUTE : le rollup retient au plus les viewers envoyés par
+--               les raids de cette paire ce jour-là, sans pouvoir dire quel passage précis vient du raid. organique + raid = passages.
+--   Il n'y a pas de passages « de type inconnu » : le rollup n'en a pas (tout passage est rangé organique ou raid).
+-- CE QUE LA FONCTION NE COMPTE PAS
+--   - ni pseudo ni message : seulement des identifiants de chaîne et des compteurs ;
+--   - pas la journée en cours (le rollup tourne la nuit, pour la veille) ni les jours jamais agrégés (rien avant la mise en route du rollup) ;
+--   - uniquement les paires ordonnées source → cible (a → b et b → a sont deux lignes) et seulement les chaînes suivies par le collecteur ;
+--   - les passages sont ceux de « switches » (même personne, message suivant chez une autre chaîne, moins de 3 h après), pas la présence simultanée.
+-- Les top_n paires les plus fortes de chaque jour (classées par viewers, puis passages), top_n entre 1 et 50 (12 par défaut) ; fenêtre limitée
+-- à 90 jours après d0. Protégée comme les autres lectures : il faut le bon code (en-tête x-board-code, donc board_ok(), ou le paramètre code,
+-- comme add_channels). Sans bon code : zéro ligne, sans erreur. security definer : la vérification du code est faite explicitement ici.
+create or replace function flows_by_day(code text, d0 date, d1 date, top_n int default 12)
+returns table (jour text, source text, cible text, viewers int, passages int, organique int, raid int)
+language sql stable security definer set search_path = public, pg_catalog as $$
+  with ok as (
+    select (board_ok() or (code is not null and length(code) >= 8 and exists (
+      select 1 from private_settings p where p.k = 'board_code' and p.v = encode(sha256(convert_to(code, 'UTF8')), 'hex')))) as v
+  ),
+  r as (
+    select s.d, s.a, s.b, s.viewers, s.switches, s.organic_switch_count, s.raid_switch_count,
+           row_number() over (partition by s.d order by s.viewers desc, s.switches desc, s.a, s.b) as k
+    from daily_switches_rollup s, ok
+    where ok.v and s.d >= to_char(d0, 'YYYY-MM-DD') and s.d <= to_char(least(d1, d0 + 90), 'YYYY-MM-DD')
+  )
+  select r.d, r.a, r.b, r.viewers, r.switches, r.organic_switch_count, r.raid_switch_count
+  from r
+  where r.k <= least(greatest(coalesce(top_n, 12), 1), 50)
+  order by r.d, r.k
+$$;
+
 -- Insertion d'événements de raid (Étape 2 : table raid_events séparée)
 create or replace function ingest_raid(p jsonb) returns void
 language plpgsql set search_path = public, pg_catalog as $$
@@ -804,6 +841,8 @@ grant execute on function backfill_daily_rollup(int) to service_role;
 grant execute on function channel_history(text, int) to anon, authenticated, service_role;
 grant execute on function period_reach(text[], int) to anon, authenticated, service_role;
 grant execute on function network_history(int) to anon, authenticated, service_role;
+revoke all on function flows_by_day(text, date, date, int) from public;
+grant execute on function flows_by_day(text, date, date, int) to anon, authenticated, service_role;
 revoke all on function build_daily_hll(text) from public, anon, authenticated;
 grant execute on function build_daily_hll(text) to service_role;
 grant select on daily_hll to anon, authenticated;

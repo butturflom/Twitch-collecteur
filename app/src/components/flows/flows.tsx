@@ -4,6 +4,7 @@ import { ChannelAvatar } from "@/components/channel-avatar"
 import { ChannelCell, DataTable, Empty, MeterList, Section, muted, panel, type Col, Pending } from "@/components/overview/parts"
 import { Kpis } from "@/components/shared/blocks"
 import { SankeyDiagram, type SankeyNode, type SankeyLink } from "@/components/charts/sankey"
+import { FlowsMap, daysFromByDay, mapOrder } from "@/components/flows/flows-map"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useFlowsData, type FlowsData, type FlowRoute, triggerFlowsRender } from "@/legacy/bridge"
@@ -120,6 +121,21 @@ export function Flows() {
     return flowsToSankeyNodesAndLinks(displayFlows, Array.from(channels))
   }, [displayFlows])
 
+  // Carte des migrations : une journée à la fois, à partir de byDay (absent tant que la base n'est pas à jour : pas de carte)
+  const byDay = d?.byDay
+  const mapDays = useMemo(() => (byDay?.length ? daysFromByDay(byDay) : []), [byDay])
+  const mapOrder_ = useMemo(() => mapOrder(mapDays), [mapDays])
+  const hasMap = mapDays.length > 0
+
+  // byDay arrive en second (le Sankey s'affiche d'abord) : la mention « indisponibles » n'apparaît qu'après quelques secondes sans données
+  const [lateMap, setLateMap] = useState(false)
+  useEffect(() => {
+    setLateMap(false)
+    if (!d || hasMap) return
+    const id = setTimeout(() => setLateMap(true), 4000)
+    return () => clearTimeout(id)
+  }, [!!d, hasMap]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!d) return <Pending />
 
   // Totaux par type (déjà calculés par le backend)
@@ -184,15 +200,29 @@ export function Flows() {
         ]}
       />
 
-      <Section className="mt-4" title="Diagramme de flux">
-        {links.length > 0 ? (
-          <div className={cn(panel, "p-2")}>
-            <SankeyDiagram nodes={nodes} links={links} height={180} />
-          </div>
-        ) : (
-          <Empty>Aucun flux à afficher pour ce type.</Empty>
+      {/* Sankey (la période) et, à côté, la carte des migrations (un jour à la fois). Sans byDay : le Sankey seul, comme avant. */}
+      <div className={cn("mt-4", hasMap && "grid gap-x-4 gap-y-9 lg:grid-cols-2 [&>*]:mt-0 [&>*]:min-w-0")}>
+        <Section title="Diagramme de flux">
+          {links.length > 0 ? (
+            <div className={cn(panel, "p-2")}>
+              <SankeyDiagram nodes={nodes} links={links} height={180} />
+            </div>
+          ) : (
+            <Empty>Aucun flux à afficher pour ce type.</Empty>
+          )}
+        </Section>
+        {hasMap && (
+          <Section
+            title="Carte des migrations"
+            note={<>Une flèche = des viewers actifs qui écrivent chez A, puis chez B moins de 3 h après, <b>le même jour</b>. À droite, vers une chaîne placée plus bas ; à gauche, vers une chaîne placée plus haut. Épaisseur : même échelle pour toutes les journées. Les 12 plus gros trajets du jour ; tous types confondus.</>}
+          >
+            <div className={cn(panel, "p-4")}>
+              <FlowsMap days={mapDays} order={mapOrder_} onlyActive />
+            </div>
+          </Section>
         )}
-      </Section>
+      </div>
+      {!hasMap && lateMap && <p className="mt-2 px-0.5 text-xs text-dusk">Carte des migrations : données par jour indisponibles.</p>}
 
       <Section className="mt-4" title="Migrations de viewers actifs" note="Une migration = quelqu'un qui écrit chez A, puis chez B moins de 3 h après son dernier message chez A.">
         {displayFlows.length ? (

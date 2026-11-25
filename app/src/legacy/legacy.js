@@ -2337,7 +2337,7 @@ function renderFlows(q, flowType = "all"){
   // Flux à afficher selon le type sélectionné
   const displayFlows = flowType === "organic" ? flowsOrganic : flowType === "raid" ? flowsRaid : flows;
 
-  window.dispatchEvent(new CustomEvent('legacy:flows',{detail:{
+  const detail={
     total:totalAll, routes:flows.length, medianGap:gaps.length?dur(median(gaps)):'',
     raidCount:raids.length,raidViewers:raids.reduce((s,r)=>s+(r.n||0),0),
     totalOrganic, totalRaid,
@@ -2348,8 +2348,30 @@ function renderFlows(q, flowType = "all"){
     flowsRaid:flowsRaid.slice(0,20).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:dur(median(f.gaps))})),
     balance:[...bal].map(([c,o])=>({...who(c),in:o.in,out:o.out,net:o.in-o.out})).sort((a,b)=>b.net-a.net),
     raids:raids.slice(0,50).map(r=>({when:when(r.t),from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0})),
-    flowType}}));
+    flowType};
+  // Passages par jour (chantier C1) : champ « byDay » ajouté à l'événement. Le Sankey reçoit d'abord, tout de suite et sans attendre, les
+  // mêmes données qu'avant ; la base est interrogée à part (résultat gardé 10 min : le rollup ne change que la nuit) et l'événement est
+  // réémis avec byDay à l'arrivée. Échec ou base pas à jour : pas de byDay, aucune erreur visible.
+  const fd0=dayKey(q.t0||Date.now()-89*DAY),fd1=dayKey(Date.now()),fk=fd0+'|'+fd1,fc=flowsDayCache;
+  const fresh=fc.key===fk&&Date.now()-fc.at<(fc.data?600000:120000);
+  if(fresh&&fc.data)detail.byDay=flowsDayRows(fc.data);
+  fc.last={fk,detail};
+  window.dispatchEvent(new CustomEvent('legacy:flows',{detail}));
+  if(!fresh&&isCloud()&&fc.pending!==fk){fc.pending=fk;
+    flowsByDay(fd0,fd1).then(rows=>{fc.pending=null;fc.key=fk;fc.at=Date.now();fc.data=rows;
+      const L=fc.last;if(rows&&tab==='flows'&&L&&L.fk===fk)window.dispatchEvent(new CustomEvent('legacy:flows',{detail:{...L.detail,byDay:flowsDayRows(rows)}}))
+    }).catch(()=>{fc.pending=null})}
 }
+// Passages par jour et par paire de chaînes (fonction SQL flows_by_day, voir schema.sql) : viewers distincts du jour, passages, part
+// organique et part raid (borne haute). null si pas de base Supabase, base pas à jour ou erreur : l'onglet garde son comportement actuel.
+const flowsDayCache={key:'',at:0,data:null,pending:'',last:null};
+async function flowsByDay(d0,d1){
+  if(!isCloud())return null;
+  try{const rows=await sbReq('rpc/flows_by_day',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:cfg.sbCode||'',d0,d1})});
+    return (rows||[]).map(r=>({d:r.jour,a:who(r.source),b:who(r.cible),viewers:r.viewers,passages:r.passages,organic:r.organique,raid:r.raid}))}
+  catch(e){return null}}
+// même filtre Langue que les autres données de l'onglet
+function flowsDayRows(rows){if((cfg.lang||'*')==='*')return rows;const S=new Set(shown());return rows.filter(r=>S.has(r.a.c)&&S.has(r.b.c))}
 // état de la connexion à l'API Twitch (aussi repris après « Générer le jeton »)
 const apiStatusLbl=()=>!apiReady()?'API non configurée.':apiState==='ok'?'API connectée.':apiState?'Erreur : '+apiState:'API configurée, test au prochain démarrage.';
 // Réglages : l'ancien code rassemble l'état, React affiche (événement « legacy:settings », voir app/src/legacy/bridge.ts)

@@ -245,7 +245,8 @@ function overlapDemo(): OverlapData {
   }
 }
 
-function flowsDemo(): FlowsData {
+// exportée pour le prototype C0 (dev/flows-map-demo.tsx, ?demo=flows-map)
+export function flowsDemo(): FlowsData {
   const W = CH.map(([x, col]) => ({ c: x, color: col, img: "" }))
   // ZéroTator -> Etoiles: 4120 (raid), Kamet0 -> Xari: 980 (raid)
   // Autres flux sont organiques
@@ -268,6 +269,27 @@ function flowsDemo(): FlowsData {
     ],
     flowType: "all",
   }
+}
+
+// Passages par jour et par paire (format de FlowsData.byDay, fictifs) : les n derniers jours, les paires de flowsDemo avec un poids
+// qui varie d'un jour à l'autre ; la paire « raid » (Etoiles > Xari) porte surtout des raids, l'une des autres un peu.
+function byDayDemo(nDays: number): NonNullable<FlowsData["byDay"]> {
+  const P = flowsDemo()
+  const raid = new Set(P.flowsRaid.map((f) => f.a.c + ">" + f.b.c))
+  const out: NonNullable<FlowsData["byDay"]> = []
+  for (let k = nDays - 1; k >= 0; k--) {
+    const dt = new Date(Date.now() - k * 86400000)
+    const d = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
+    P.flows.forEach((f, i) => {
+      const w = 0.04 + 0.06 * (1 + Math.sin(k * 1.7 + i * 2.3)) // 4 % à 16 % du total de la paire
+      const viewers = Math.round(f.n * w)
+      if (viewers < 3) return
+      const passages = Math.round(viewers * 1.35)
+      const r = raid.has(f.a.c + ">" + f.b.c) ? Math.round(passages * 0.85) : i === 2 ? Math.round(passages * 0.12) : 0
+      out.push({ d, a: f.a, b: f.b, viewers, passages, organic: passages - r, raid: r })
+    })
+  }
+  return out
 }
 
 // ?demo=map : la Carte a besoin de vraies présences pour que son moteur calcule la disposition. On remplit la base locale
@@ -322,7 +344,7 @@ function rostersDemo(): RostersData {
 }
 
 // Historique : n jours agrégés fictifs (courbes qui montent avec un creux le week-end), pour voir la section « Historique » de Par chaîne
-function historyDemo(c: string, n: number): ChannelHistory {
+export function historyDemo(c: string, n: number): ChannelHistory {
   const k = Math.max(1, CH.findIndex(([x]) => x === c) + 1)
   const days = Array.from({ length: n }, (_, i) => {
     const t = new Date(Date.now() - (n - i) * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.35 : 1
@@ -391,7 +413,13 @@ export function installDemo() {
     }
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
-    window.renderFlows = () => window.dispatchEvent(new CustomEvent("legacy:flows", { detail: flowsDemo() }))
+    // &byday=non : base pas à jour (pas de byDay, donc pas de carte) ; &byday=14 : 14 journées (3 par défaut)
+    window.renderFlows = () => {
+      const q = new URLSearchParams(location.search).get("byday")
+      const d = flowsDemo()
+      if (q !== "non") d.byDay = byDayDemo(Math.max(1, Math.min(60, Number(q) || 3)))
+      window.dispatchEvent(new CustomEvent("legacy:flows", { detail: d }))
+    }
     // &histo=non : base pas à jour ; &histo=1 : une seule journée agrégée
     const histo = () => new URLSearchParams(location.search).get("histo")
     window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
@@ -413,7 +441,8 @@ export function installDemo() {
     window.statusOf = () => statusDemo(new URLSearchParams(location.search).get("etat") === "erreur")
     const t = new URLSearchParams(location.search).get("demo")
     if (t === "map") seedMap()
-    window.showTab?.(t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
+    // ?demo=flows-map : onglet Flux, remplacé par le prototype C0 de la carte des migrations (voir App.tsx)
+    window.showTab?.(t === "flows-map" ? "flows" : t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
     if (t === "game") window.runDiscover("VALORANT", "fr") // montre aussi les résultats de recherche
     // ?demo&hover=0.4 : simule le survol du premier graphique à 40 % de sa largeur (pour vérifier l'infobulle)
     const hv = Number(new URLSearchParams(location.search).get("hover"))

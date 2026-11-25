@@ -204,6 +204,11 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 | C1. Fonction SQL additive `flows_by_day(code, d0, d1)` : passages par jour et par paire, top N, avec part organique et raid. Dans `schema.sql`, rejouable (`create or replace`), derrière `board_ok()` comme les autres | `schema.sql`, `app/src/legacy/legacy.js` (appel RPC, événement `legacy:flows` enrichi) | Sonnet 5.5, high | Test sur la base dans une transaction annulée, avec le bon code et un mauvais code (0 ligne) |
 | C2. Composant React « carte des migrations » avec curseur de date, à côté du Sankey (le Sankey reste pour la période) | `app/src/components/flows/flows-map.tsx`, `flows.tsx` | Sonnet 5.5, high | `npm run build`, Playwright `?demo=flows` |
 
+**Statut (26/11)** :
+- C0 : prototype isolé livré (démo `?demo=flows-map`), verdict partiel : lisible, pas encore prouvé sur les vraies données.
+- C1 : fonction SQL `flows_by_day` et appel dans l'onglet Flux livrés (PR #53). Testée en transaction annulée : mauvais code → 0 ligne. Reste à relancer `schema.sql` en base et vérifier l'onglet Flux avec le bon code.
+- C2 : en cours (Sonnet high). Carte masquée tant que `byDay` est absent, Sankey inchangé.
+
 **Variante tuyaux (25/11)** : si le prototype C0 réussit en tuyaux, les trajets A→B→C deviennent une étape C3, après C2 : une tâche de nuit (Sonnet high, `schema.sql` rejouable, testée en transaction annulée) qui calcule, à partir des passages bruts de la veille, les trajets à deux sauts par jour et les garde dans une table agrégée. Sans cette table, on ne montre que des paires, jamais un parcours. Les planètes des nœuds réutilisent `ChannelAvatar` (déjà en planète dès 20 px). Décision prise le 25/11 : `DESIGN.md` l. 321 ne réserve plus l'atmosphère à la Carte ; le ciel étoilé la remplace sur toutes les pages. Les tuyaux peuvent donc être dessinés dans Flux, à condition de passer le critère de lisibilité du prototype.
 
 Critère de fin : la carte se lit sans survol sur 14 journées, chaque arc donne son nombre de viewers uniques et la part organique, et le libellé dit « viewers actifs qui écrivent, par jour ». **Abandon** : si, sur 14 journées, la carte ne dit rien de plus que le Sankey, on ne la livre pas et on garde le Sankey.
