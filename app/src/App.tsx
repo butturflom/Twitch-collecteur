@@ -53,6 +53,13 @@ export default function App() {
     document.title = PAGES[tab][0] + " · Twitch Overlap"
   }, [tab])
 
+  // Un écran vide (« Les données n'arrivent pas ») peut rouvrir la page d'accueil, sans toucher au drapeau « déjà vue »
+  useEffect(() => {
+    const onLanding = () => setLanding(true)
+    window.addEventListener("to2:landing", onLanding)
+    return () => window.removeEventListener("to2:landing", onLanding)
+  }, [])
+
   useEffect(() => {
     if (!navOpen) return
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false)

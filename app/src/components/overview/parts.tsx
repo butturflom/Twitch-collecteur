@@ -45,7 +45,15 @@ export function Pending({ stuck }: { stuck?: ReactNode }) {
         {stuck ?? (
           <>
             Les données n'arrivent pas. Vérifie la source des données et la connexion dans{" "}
-            <a href="#" data-goto="settings" className="text-primary-soft underline underline-offset-2">Réglages</a>.
+            <a href="#" data-goto="settings" className="text-primary-soft underline underline-offset-2">Réglages</a>.{" "}
+            Pour revoir l'explication,{" "}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("to2:landing"))}
+              className="rounded-sm text-primary-soft underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              reviens à la page d'accueil
+            </button>.
           </>
         )}
       </Empty>
