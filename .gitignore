@@ -52,3 +52,6 @@ dernier-menage.txt
 
 # Sortie d'audit Hallmark (non suivie)
 .hallmark/run.txt
+
+# Dossiers des clients (secrets : clés Supabase, sel des empreintes)
+clients/
