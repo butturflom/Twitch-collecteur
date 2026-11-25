@@ -291,6 +291,7 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Vue d'ensemble** : bloc **Rythme des chaînes** (celles qui décollent ou ralentissent). Il faut 14 journées agrégées : il le dit tant qu'elles manquent.
 - **Rosters** : **Comparer des chaînes**, 2 à 4 côte à côte, avec l'audience nette du groupe et les viewers en commun.
 - **Carte** : filtre **Jeu principal** à côté de la langue.
+- **Ambiance spatiale** (soir du 25/11) : un ciel étoilé discret derrière toutes les pages sauf la Carte, des panneaux « console » (légèrement translucides, halo violet très doux), des avatars en petites planètes, et, en tête de **Recoupements**, une constellation des paires les plus proches. Aucun chiffre ne change. Rien à faire côté collecteur ni base.
 
 ## Agences : un dossier par client et un rapport mensuel (25/11/2026)
 
