@@ -2,7 +2,7 @@
 // ses éléments dans la page). Elle s'affiche une seule fois : le clic sur le bouton principal enregistre le drapeau « entré » dans le
 // localStorage. ?accueil la rouvre ; en démo (?demo) elle ne s'affiche jamais.
 // Texte du plan, mis au tutoiement du produit ; rien n'y est inventé (pas de chiffre, de témoignage ni de fonction absente).
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import type { TabId } from "@/legacy/bridge"
 import { LandingMap } from "./landing-map"
@@ -43,6 +43,8 @@ const PILLARS = [
 ]
 
 export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
+  const racine = useRef<HTMLDivElement>(null)
+  useEffect(() => { racine.current?.focus() }, [])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onEnter()
     window.addEventListener("keydown", onKey)
@@ -51,10 +53,12 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
 
   return (
     <div
+      ref={racine}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="Accueil de Twitch Overlap"
-      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-background text-foreground animate-in fade-in-0 slide-in-from-bottom-1 duration-300"
+      className="fixed inset-0 z-[60] outline-none overflow-y-auto overscroll-contain bg-background text-foreground animate-in fade-in-0 slide-in-from-bottom-1 duration-300"
     >
       <header className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-6">
         <div className="flex items-center gap-2.5">
@@ -62,7 +66,7 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
             <circle cx="9" cy="12" r="6" strokeWidth="1.8" style={{ stroke: "var(--primary)" }} />
             <circle cx="15" cy="12" r="6" strokeWidth="1.8" style={{ stroke: "var(--primary-soft)" }} />
           </svg>
-          <span className="text-sm font-semibold tracking-[-0.015em]">Twitch Overlap</span>
+          <span className="text-sm font-semibold tracking-[-0.015em] whitespace-nowrap">Twitch Overlap</span>
         </div>
         <Button variant="secondary" className="border border-white/10 transition-colors duration-200" onClick={() => onEnter()}>
           Ouvrir le tableau de bord
@@ -78,30 +82,31 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
             <p className="mt-5 max-w-[52ch] text-[1.0625rem]/[1.6] text-pretty text-muted-foreground">
               Suis les déplacements des viewers actifs (ceux qui écrivent dans le chat) d’une chaîne à l’autre, anticipe les raids et mesure le Net Reach de tes groupes de chaînes.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button autoFocus className="h-11 px-5 text-[15px] shadow-action" onClick={() => onEnter()}>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap">
+              <Button className="h-11 w-full px-5 text-[15px] shadow-action sm:w-auto" onClick={() => onEnter()}>
                 Ouvrir le tableau de bord
               </Button>
               <Button
                 variant="ghost"
-                className="h-11 px-4 text-[15px]"
+                className="h-11 w-full px-4 text-[15px] sm:w-auto lg:hidden"
                 onClick={() => document.getElementById("landing-piliers")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })}
               >
                 Voir ce que ça mesure
               </Button>
             </div>
           </div>
-          <figure className="mx-auto w-full max-w-[520px]">
+          <figure className="mx-auto w-full max-w-[300px] sm:max-w-[520px]">
             <LandingMap className="w-full" />
-            <figcaption className="mt-3 text-center text-xs text-dusk">Illustration. La Carte de ton tableau de bord affiche tes vraies chaînes.</figcaption>
+            <figcaption className="mt-3 text-center text-xs text-balance text-dusk">Illustration. La Carte de ton tableau de bord affiche tes vraies chaînes.</figcaption>
           </figure>
         </div>
 
         <div id="landing-piliers" className="mx-auto max-w-[1120px] px-6 pb-20">
+          <h2 className="mb-4 text-[15px] text-muted-foreground">Ce que ça mesure</h2>
           <div className="grid gap-x-12 gap-y-10 border-t border-border pt-10 md:grid-cols-3">
             {PILLARS.map((p) => (
               <div key={p.title}>
-                <h2 className="max-w-[26ch] text-[15px] leading-[1.45] font-semibold tracking-[-0.015em] text-balance md:min-h-[2.9em]">{p.title}</h2>
+                <h3 className="max-w-[26ch] text-[15px] leading-[1.45] font-semibold tracking-[-0.015em] text-balance md:min-h-[2.9em]">{p.title}</h3>
                 <p className="mt-2 max-w-[42ch] text-[13.5px]/[1.6] text-pretty text-muted-foreground">{p.text}</p>
                 <p className="mt-3 text-xs text-dusk">{p.where}</p>
               </div>

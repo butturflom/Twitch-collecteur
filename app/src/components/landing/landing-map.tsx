@@ -28,8 +28,7 @@ export function LandingMap({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 520 520"
-      role="img"
-      aria-label="Illustration : des chaînes Twitch en orbite autour d’un astre central, reliées par des traits clairs."
+      aria-hidden="true"
       className={className}
     >
       <defs>
