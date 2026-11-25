@@ -10,6 +10,7 @@ import { API_NOTE, CLIPS_NOTE, ChannelPicker, Clips, Hero, Kpis, Moments, NO_CLI
 import { fmt, fmt1, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { History } from "./history"
+import { MoreKpis } from "./more"
 import { useChannelData, type SwitchRow } from "@/legacy/bridge"
 
 // Copy raid command to clipboard and show feedback
@@ -66,9 +67,7 @@ export function Channel() {
       <Hero ch={d.ch} />
       <Kpis items={d.main} />
 
-      <Section title="Communauté et événements">
-        <Kpis items={d.more} compact />
-      </Section>
+      <MoreKpis items={d.more} />
 
       <Two>
         <Section title="Messages par minute"><LineChart spec={d.msgChart} label="Messages par minute" /></Section>
