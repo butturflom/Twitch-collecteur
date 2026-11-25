@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Aujourd'hui, une seule personne : le propriétaire du projet, qui l'utilise pour lui-même, par curiosité. Il suit une liste de chaînes Twitch qu'il choisit (100 au maximum) et ouvre le tableau de bord sur son ordinateur pour comprendre ces communautés : qui regarde quoi, comment les audiences se recoupent, comment vit chaque chat. Direction décidée le 25/11/2026 : faire évoluer l'outil vers les agences et les talent managers (suivre un roster de 10 à 50 créateurs, mesurer l'audience réellement unique du groupe, produire des rapports pour leurs clients). Tant que les comptes, le partage et la vie privée ne sont pas revus (voir SUIVI.md, §12), le produit reste mono-utilisateur.
+Aujourd'hui, une seule personne : le propriétaire du projet, qui l'utilise pour lui-même, par curiosité. Il suit une liste de chaînes Twitch qu'il choisit (100 au maximum) et ouvre le tableau de bord sur son ordinateur pour comprendre ces communautés : qui regarde quoi, comment les audiences se recoupent, comment vit chaque chat. Direction décidée le 25/11/2026 : faire évoluer l'outil vers les agences et les talent managers, et aussi vers les streamers, des petits aux gros (suivre un roster de 10 à 50 créateurs, mesurer l'audience réellement unique du groupe, produire des rapports pour leurs clients). Tant que les comptes, le partage et la vie privée ne sont pas revus (voir SUIVI.md, §12), le produit reste mono-utilisateur.
 
 ## Product Purpose
 

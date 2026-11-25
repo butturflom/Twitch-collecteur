@@ -162,3 +162,22 @@ Le texte décrit un cockpit spatial pour agences, marques et streameurs. La Cart
 - **Positionnement** : ne pas promettre ce qu'on ne mesure pas (sponsors, deals, brand safety, démographie). Promettre l'audience unique, la cannibalisation, les flux et la fidélité.
 
 **Effet sur les chantiers** : les alertes de rythme, la comparaison de chaînes et le rapport de roster servent déjà les agences. Les filtres de Carte et la trajectoire aussi. Les comptes et le multi-utilisateur attendent le résultat de l'étape 1.
+
+### 12 bis. Les streamers, des petits aux gros (précision de l'utilisateur, 25/11)
+
+Les conseils du §12 étaient écrits pour les agences seules : c'était incomplet. Les streamers sont une seconde cible, avec d'autres besoins et d'autres freins.
+
+**Ce qui change selon la taille**
+- **Gros et moyens streamers** : se situer face à leurs concurrents directs et à leurs collabs, voir où vont leurs viewers à la fin d'un live, choisir une cible de raid. Déjà couvert : Recommandations de raid, Flux, fidélité du chat, comparaison de chaînes.
+- **Petits streamers** : comprendre où ils en sont et quoi améliorer. Ce qui leur parle : rétention (fidélité du chat), part de viewers qui reviennent, distance aux chaînes un cran au-dessus, chaînes proches où chercher des raids. Même base de données, mais lecture simplifiée.
+
+**Trois trous réels**
+1. **Seuils trop hauts pour les petites chaînes.** La fidélité du chat exige 200 viewers actifs sur la période (`STICKY_MIN`) et se compare au quart du réseau suivi : une petite chaîne n'a donc aucun score. Les alertes et la trajectoire auront le même défaut. À prévoir : seuils qui s'adaptent à la taille, et une comparaison « chaînes de taille voisine » plutôt qu'avec tout le réseau.
+2. **Une vue « mon univers ».** La Carte et Par chaîne montrent les chaînes suivies. Il manque un point d'entrée « ma chaîne » : elle au centre, ses voisines, les chaînes un peu plus grosses, une progression lisible.
+3. **Installation impossible pour un non-technicien.** Aujourd'hui, il faut une base Supabase à soi, une clé Twitch et un collecteur qui tourne sur un PC. Un petit streamer n'y arrivera pas. Il faudrait un service hébergé : on entre sa chaîne et quelques chaînes voisines, rien à installer.
+
+**Ordre conseillé (mis à jour)**
+1. **Agences d'abord, en service** (§12 : valider la demande, une base par client). Elles tolèrent l'installation, payent, et sont peu nombreuses à servir à la main.
+2. **Streamers ensuite, sur un service hébergé**, quand il existe : un collecteur et une base partagés, des droits par utilisateur. C'est le même chantier de fond que le multi-utilisateur des agences (authentification, droits par client, hébergement 24/24, RGPD). Le faire une fois pour les deux cibles.
+3. **En attendant**, rendre le produit lisible pour une petite chaîne : seuils adaptés, vue « mon univers ». Cela se code sans attendre l'hébergement et sert aussi aux gros.
+4. **Gratuit ou payant** : à décider avec la demande. Les streamers payent peu : l'outil des agences peut financer le service, les streamers en bénéficient en version simple.
