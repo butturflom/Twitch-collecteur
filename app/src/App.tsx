@@ -28,7 +28,7 @@ const PAGES: Record<TabId, [string, string]> = {
 }
 
 /** Onglets qui montrent le ciel étoilé (la Carte a le sien). Pour étendre le décor à d'autres pages, ajouter leur identifiant ici. */
-const SKY_TABS: TabId[] = ["overview"]
+const SKY_TABS: TabId[] = ["overview", "channel", "game", "chat", "overlap", "flows", "settings", "rosters"]
 
 // Zones gérées par l'ancien code : rendues une seule fois, React n'y touche plus jamais.
 const LegacyFilters = memo(() => <div className="legacy" dangerouslySetInnerHTML={{ __html: filtersHtml }} />)
