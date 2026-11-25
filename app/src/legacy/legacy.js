@@ -827,7 +827,8 @@ let radarRaf=0; // animation du balayage radar (une seule à la fois, arrêtée 
 const mapSeenEv=new Set(); // abonnements, bits et raids déjà montrés sur la carte (chacun une seule fois)
 const mapSeenPass=new Set(); // passages en direct d'un chat à l'autre déjà montrés (viewer|de|vers|jour)
 let mapViewChecked=false; // la vue « Ma sélection » est vérifiée une fois à l'ouverture (voir renderMap)
-let mapGlobeOn=false;delete cfg.mapGlobe; // mode Globe (glisser = tourner l'univers en 3D) : gardé tant que la page reste ouverte, jamais d'une visite à l'autre (l'ancien réglage enregistré est oublié)
+let mapGlobeOn=false;delete cfg.mapGlobe;delete cfg.mapPause; // la pause non plus n'est pas gardée : une carte qui rouvre figée sans le dire paraît cassée (critique du 25/11/2026)
+// mode Globe (glisser = tourner l'univers en 3D) : gardé tant que la page reste ouverte, jamais d'une visite à l'autre (l'ancien réglage enregistré est oublié)
 const mapPassLog=[]; // les 5 derniers passages vus sur la carte (gardés quand la carte se redessine), affichés dans le menu
 let mapIntroKey='',mapIntroAt=-1e9; // période et langue du dernier tracé des liens à l'apparition (vidé à l'ouverture de l'onglet Carte), et son heure
 // Vues « Toutes les chaînes » et « Ma sélection » : une seule couleur pour les ronds (violet de l'application) et pour les liens
@@ -1274,7 +1275,7 @@ function renderMap(q){
     if(els.view)els.view({k,tx:mapView.tx,ty:mapView.ty,rot:mapView.rot,q:mapView.q}); // le fond en volume suit le globe, le zoom et le déplacement (galaxy.tsx)
     const cap=els.radar.querySelector('.cap');
     if(cap){const d=Math.round(((mapView.rot*180/Math.PI)%360+360)%360)%360,g=Math.round(2*Math.acos(Math.min(1,Math.abs(mapView.q[0])))*180/Math.PI);
-      cap.textContent=(mapGlobeOn?' · mode Globe':'')+(d?` · rotation ${String(d).padStart(3,'0')}°`:'')+(g?` · globe ${String(g).padStart(3,'0')}°`:'')}
+      cap.textContent=(cfg.mapPause?' · en pause':'')+(mapGlobeOn?' · mode Globe':'')+(d?` · rotation ${String(d).padStart(3,'0')}°`:'')+(g?` · globe ${String(g).padStart(3,'0')}°`:'')}
     const tw=twEl,Lg=logoAt(); // la planète Twitch suit la carte, et tourne avec l'univers (twDraw)
     if(tw)tw.setAttribute('transform',`translate(${Lg.x.toFixed(1)},${Lg.y.toFixed(1)}) scale(${(TWR*rk).toFixed(3)})`);
     twDraw();
@@ -1393,8 +1394,17 @@ function renderMap(q){
     // milieu du contenu (ronds + noms) placé au centre de l'écran ; o = décalage vu à l'écran, ramené dans le repère non tourné
     const o={x:(k*bx0-mL+k*bx1+mR)/2,y:k*(by0+by1)/2},t=txFor(c0,W/2-o.x,H/2-o.y,k);
     animateTo(k,t.tx,t.ty)}
-  function centerOn(id){const i=idx.get(id),k=Math.max(mapView.k,1.6),t=txFor(Pos(i),W/2,H/2,k);animateTo(k,t.tx,t.ty)}
-  function select(id,center){mapView.sel=id||null;touch();if(id&&center)centerOn(id);else draw();renderInfo()}
+  // La fiche de la chaîne choisie (React, map.tsx) couvre le bas à gauche : 380 px de large et 46 % de la hauteur au plus. On garde
+  // la chaîne choisie hors de cette zone (critique du 25/11/2026). Sur écran étroit (téléphone), la fiche est repliée : rien à éviter.
+  const sheetBox=()=>innerWidth<640?null:{w:Math.min(380,W-24)+12,h:Math.min(.46*H,H-70)+12};
+  function freeCenter(){const b=sheetBox();if(!b)return{x:W/2,y:H/2};
+    return W-b.w>=260?{x:(b.w+W)/2,y:H/2}:{x:W/2,y:(H-b.h)/2}} // à droite de la fiche s'il y a la place, sinon au-dessus
+  function centerOn(id){const i=idx.get(id),k=Math.max(mapView.k,1.6),fc=freeCenter(),t=txFor(Pos(i),fc.x,fc.y,k);animateTo(k,t.tx,t.ty)}
+  // chaîne choisie d'un clic sur la carte (sans recentrage) : si la fiche va la couvrir, on décale la vue du minimum
+  function reveal(id){const b=sheetBox(),i=idx.get(id);if(!b||i==null||!S[i])return;
+    const s=S[i],r=s.r+14,hit=s.x-r<b.w&&s.y+r>H-b.h;if(!hit)return;
+    const right=b.w+r-s.x,up=s.y+r-(H-b.h),nx=right<=up?s.x+right:s.x,ny=right<=up?s.y:s.y-up,t=txFor(Pos(i),nx,ny,mapView.k);animateTo(mapView.k,t.tx,t.ty)}
+  function select(id,center){mapView.sel=id||null;touch();if(id&&center)centerOn(id);else{draw();if(id)reveal(id)}renderInfo()}
   const markGroups=()=>notify({grp:mapView.grp});
   function setGroup(g){mapView.grp=g;mapView.grpId=g==null?null:gl[g][0].id;mapView.sel=null;renderInfo();markGroups();fitIds(g==null?null:gl[g].map(x=>x.id))}
   // Recentrer (toujours possible) : la chaîne choisie revient au centre (zoom gardé, au moins 1,6) ; sinon le groupe mis en
@@ -1415,7 +1425,7 @@ function renderMap(q){
     const A=by.get(id),links=neighbours(id).slice(0,6);
     notify({info:{...who(id),sub:roleTxt(id)+' · '+(grouped?(gnum.get(id)?'groupe '+gnum.get(id):'isolée')+' · ':'')+(liveV(id)?fmt(liveV(id))+' en live · ':'hors live · ')+fmt(A.size)+' viewers actifs',
       links:links.map(l=>({...who(l.o),share:l.n/A.size,n:l.n,out:passN(id,l.o),inn:passN(l.o,id)}))}})}
-  const tipHtml=id=>{const A=by.get(id),links=neighbours(id).slice(0,3);
+  const tipHtml=id=>{const A=by.get(id),links=id===mapView.sel?[]:neighbours(id).slice(0,3); // chaîne déjà choisie : la fiche donne les voisines, la bulle ne les répète pas
     return `<div class="tiph">${av(id,'md')}<div><b>${esc(id)}</b><div class="lbl">${roleTxt(id)} · ${grouped?'groupe '+(gnum.get(id)||'—')+' · ':''}${liveV(id)?fmt(liveV(id))+' en live · ':'hors live · '}${fmt(by.get(id).size)} viewers actifs</div></div></div>`
       +(links.length?'<div class="lbl">Part de ses viewers actifs qu\'on voit aussi chez</div>':'')
       +links.map(({o,n})=>{const out=passN(id,o),inn=passN(o,id);
@@ -1510,7 +1520,7 @@ function renderMap(q){
     if(done)e.preventDefault()});
   // commandes appelées par React : boutons + − ⤢ ◎, « Aller à une chaîne », groupes, fiche
   // Lecture / pause du mouvement des orbites (bouton ⏯ ou touche P / Espace) ; le choix est gardé d'une visite à l'autre
-  const togglePause=()=>{cfg.mapPause=!cfg.mapPause;saveCfg();notify({paused:!!cfg.mapPause})};
+  const togglePause=()=>{cfg.mapPause=!cfg.mapPause;draw();notify({paused:!!cfg.mapPause})}; // draw : le bandeau dit « en pause »
   // mode Globe : glisser fait tourner l'univers en 3D au lieu de déplacer la vue (gardé d'une visite à l'autre)
   const toggleGlobe=()=>{mapGlobeOn=!mapGlobeOn;svg.classList.toggle('globe',mapGlobeOn);notify({globe:mapGlobeOn});draw()};
   const api={togglePause,toggleGlobe,zoomIn:()=>zoomAt(W/2,H/2,1.5),zoomOut:()=>zoomAt(W/2,H/2,1/1.5),fit:()=>fitIds(mapView.grp==null?null:gl[mapView.grp].map(x=>x.id)),recenter,

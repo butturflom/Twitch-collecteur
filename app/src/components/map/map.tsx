@@ -137,12 +137,12 @@ function Side({ d, api, grp, sel, log }: { d: MapData; api: MapApi | null; grp: 
           <button type="button" aria-pressed={grp == null} onClick={() => api?.group(null)} className={cn("rounded-lg border px-3 py-1.5 text-left text-xs font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none", grp == null ? "border-primary/40 bg-primary/10 text-white shadow-lg shadow-primary/20" : "border-white/[.06] bg-zinc-950/40 text-zinc-400 hover:border-white/15 hover:text-zinc-100")}>Tous les groupes</button>
           {d.groups.map((g) => (
             <div key={g.i} className={cn("rounded-lg border p-2 transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200", grp === g.i ? "border-primary/40 bg-primary/10 shadow-xl shadow-primary/30" : "border-white/[.06] bg-zinc-950/40 hover:border-white/15")}>
-              <button type="button" aria-pressed={grp === g.i} onClick={() => api?.group(g.i)} className="flex w-full items-center gap-2 rounded text-left text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none">
+              <button type="button" aria-pressed={grp === g.i} onClick={() => api?.group(g.i)} className="flex min-h-6 w-full items-center gap-2 rounded text-left text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none">
                 <i className="size-2.5 rounded-full" style={{ background: g.color }} />Groupe {g.i + 1}
                 <span className="ml-auto font-normal text-dusk tabular-nums"><span className="text-zinc-300">{g.members.length}</span> chaînes · <span className="text-zinc-300">{fmt(g.viewers)}</span> viewers</span>
               </button>
               <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1">
-                {g.members.map((m) => <button key={m.c} type="button" onClick={() => api?.select(m.c)} className="inline-flex items-center gap-1 rounded text-xs text-zinc-300 transition-colors duration-200 hover:text-primary-soft focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"><ChannelAvatar {...m} size={16} />{m.c}</button>)}
+                {g.members.map((m) => <button key={m.c} type="button" onClick={() => api?.select(m.c)} className="inline-flex min-h-6 items-center gap-1 rounded text-xs text-zinc-300 transition-colors duration-200 hover:text-primary-soft focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"><ChannelAvatar {...m} size={16} />{m.c}</button>)}
               </div>
             </div>
           ))}
@@ -150,7 +150,7 @@ function Side({ d, api, grp, sel, log }: { d: MapData; api: MapApi | null; grp: 
             <div className="rounded-lg border border-white/[.06] bg-zinc-950/40 p-2">
               <div className="flex items-center gap-2 text-xs text-zinc-400"><i className="size-2.5 rounded-full bg-zinc-500" />Isolées : aucun lien fort</div>
               <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1">
-                {d.solo.map((m) => <button key={m.c} type="button" onClick={() => api?.select(m.c)} className="inline-flex items-center gap-1 rounded text-xs text-zinc-300 transition-colors duration-200 hover:text-primary-soft focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"><ChannelAvatar {...m} size={16} />{m.c}</button>)}
+                {d.solo.map((m) => <button key={m.c} type="button" onClick={() => api?.select(m.c)} className="inline-flex min-h-6 items-center gap-1 rounded text-xs text-zinc-300 transition-colors duration-200 hover:text-primary-soft focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"><ChannelAvatar {...m} size={16} />{m.c}</button>)}
               </div>
             </div>
           )}
@@ -454,7 +454,7 @@ export function MapView() {
               <button type="button" className={cn(ctl, help && "border-primary/40 text-primary-soft")} aria-haspopup="dialog" aria-expanded={help} title="Aide : lire, signaux, manipuler (?)" aria-label="Aide de la carte" onClick={() => setHelp((h) => !h)}><CircleQuestionMark /></button>
             </div>
             {help && <MapHelp d={d} onClose={() => setHelp(false)} />}
-            <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "max-lg:hidden")}>
+            <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "hidden")}>
               {st.hidden && <p className="rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-1 text-right text-xs text-zinc-400 tabular-nums backdrop-blur-sm">{st.hidden}</p>}
               <Legend groups={!!d.groups} />
             </div>
