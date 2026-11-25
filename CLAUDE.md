@@ -17,11 +17,15 @@ npm run dev                  # Vite, avec mode démo : http://localhost:5173/?de
 npm run build                # tsc --noEmit + vite build + scripts/publier.mjs → ../twitch-overlap.html
 npm run preview
 
+# Agences : dossier d'un client (clients/, non versionné) et rapport mensuel PDF/CSV
+node scripts/nouveau-client.mjs "Agence" chaine1 chaine2
+node scripts/rapport-mensuel.mjs clients/<agence> [jours]
+
 # Docker (app sur le port 9500 via app/server.js + collecteur, config.json monté en lecture seule)
 docker compose up -d
 ```
 
-Pas de tests ni de lint. La seule vérification automatique est le contrôle de types `tsc --noEmit` lancé par `npm run build`. Les scripts racine `diagnostic_phase1.mjs`, `test_charge.mjs` et `calculate_limit.mjs` sont des outils de diagnostic et de charge lancés à la main avec `node`. Ce ne sont pas des suites de tests.
+Pas de tests ni de lint. La seule vérification automatique est le contrôle de types `tsc --noEmit` lancé par `npm run build`. Les scripts racine `diagnostic_phase1.mjs`, `test_charge.mjs` et `calculate_limit.mjs` sont des outils de diagnostic et de charge lancés à la main avec `node`. Ce ne sont pas des suites de tests. `scripts/rapport-mensuel.mjs` (rapport d'un client) recopie les chiffres et le style de `app/src/components/rosters/roster-report.ts` : les garder alignés.
 
 ## Architecture
 

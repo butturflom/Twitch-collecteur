@@ -20,6 +20,7 @@ Jamais stocké : le texte des messages, les pseudos en clair, les adresses IP, l
 - **Durées courtes** : l'identifiant pseudonymisé disparaît après 1 jour ; seuls des agrégats restent.
 - **Lecture protégée** (25/11/2026) : la clé publique ne lit plus rien toute seule. La base rend ses lignes seulement si la requête porte le code du tableau de bord (`codeTableau`, 96 bits). Voir `migration_lecture_protegee.sql`.
 - **Droit à l'effacement** : `node oublier.mjs pseudo` retire un viewer à partir de son pseudo (l'empreinte est recalculée avec le sel).
+- **Un sel par client** (25/11/2026) : `scripts/nouveau-client.mjs` tire un sel et un code du tableau propres à chaque dossier client ; les empreintes d'un client ne sont pas comparables à celles d'un autre. `clients/` n'est pas versionné (clés, sel).
 - **Écriture fermée** : seule la clé secrète (sur le PC) écrit ; la liste des chaînes se modifie avec le code du tableau.
 
 ## 3. Ce qui reste à faire valider
