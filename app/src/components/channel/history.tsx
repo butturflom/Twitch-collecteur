@@ -37,7 +37,7 @@ function Routes({ rows, note }: { rows: HistoryRoute[]; note: string }) {
   )
 }
 
-export function History({ ch, color }: { ch: string; color: string }) {
+export function History({ ch, color, chans }: { ch: string; color: string; chans?: string[] }) {
   const [days, setDays] = useState<30 | 90>(30)
   const [st, setSt] = useState<State>({ s: "loading" })
   const [uniq, setUniq] = useState<PeriodReach | null>(null) // viewers uniques sur la période (esquisses HyperLogLog)
@@ -85,7 +85,7 @@ export function History({ ch, color }: { ch: string; color: string }) {
               <span className="text-dusk"> · estimation à ± 2,3 %, une même personne n'est comptée qu'une fois</span>
             </p>
           )}
-          <Sticky ch={ch} days={days} />
+          <Sticky ch={ch} days={days} chans={chans} />
           <Two>
             <Section title="Viewers (pic et moyenne par jour)" note="Relevés de l'API Twitch pendant les lives.">
               <LineChart spec={spec(st.h, [{ name: "Pic", color, key: "peak" }, { name: "Moyenne", color: "#9a9aa8", key: "avg" }], "")} label="Viewers par jour" />

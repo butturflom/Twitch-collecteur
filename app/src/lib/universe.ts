@@ -21,3 +21,11 @@ export function peersOf(sized: Sized[], c: string, k: number): Sized[] {
   const me = sized[i].n
   return sized.filter((x) => x.c !== c).sort((a, b) => Math.abs(Math.log(a.n / me)) - Math.abs(Math.log(b.n / me))).slice(0, k)
 }
+
+/** Quartiles d'une série (interpolation linéaire). null s'il y a moins de n valeurs. */
+export function quartiles(values: number[], min = 5): { q1: number; med: number; q3: number } | null {
+  if (values.length < min) return null
+  const v = [...values].sort((a, b) => a - b)
+  const at = (p: number) => { const i = (v.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return v[lo] + (v[hi] - v[lo]) * (i - lo) }
+  return { q1: at(0.25), med: at(0.5), q3: at(0.75) }
+}
