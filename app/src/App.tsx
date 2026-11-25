@@ -11,6 +11,7 @@ import { Flows } from "@/components/flows/flows"
 import { Settings } from "@/components/settings/settings"
 import { MapView } from "@/components/map/map"
 import { Rosters } from "@/components/rosters/rosters"
+import { Landing, markLandingSeen, shouldShowLanding } from "@/components/landing/landing"
 import { cn } from "@/lib/utils"
 import { filtersHtml, loadLegacy, sectionsHtml, usePeriodInfo, type TabId } from "@/legacy/bridge"
 
@@ -33,6 +34,7 @@ const LegacySections = memo(() => <div className="legacy" dangerouslySetInnerHTM
 export default function App() {
   const [tab, setTab] = useState<TabId>("overview")
   const [navOpen, setNavOpen] = useState(false)
+  const [landing, setLanding] = useState(shouldShowLanding) // page d'accueil, une seule fois (drapeau dans le localStorage)
   const period = usePeriodInfo()
 
   useEffect(() => {
@@ -65,10 +67,18 @@ export default function App() {
       setTab(t)
     }
   }
+  const enter = (t?: TabId) => {
+    markLandingSeen()
+    setLanding(false)
+    if (t) go(t)
+  }
   const [title, sub] = PAGES[tab]
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground antialiased">
+    <>
+    {/* l'accueil est posée par-dessus : le tableau de bord se charge dessous (l'ancien code a besoin de ses éléments), inerte tant qu'elle est là */}
+    {landing && <Landing onEnter={enter} />}
+    <div inert={landing} className="min-h-screen bg-background font-sans text-foreground antialiased">
       <AppSidebar
         active={tab}
         open={navOpen}
@@ -101,5 +111,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </>
   )
 }

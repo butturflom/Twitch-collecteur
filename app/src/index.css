@@ -366,3 +366,9 @@ body {
   .scroll-cue tr > :first-child { position: sticky; left: 0; z-index: 1; background: var(--c-141419); }
   .scroll-cue[data-scrolled] tr > :first-child { box-shadow: 10px 0 14px -10px var(--black-90), inset -1px 0 0 var(--white-6); }
 }
+
+/* Page d'accueil : tout le système d'astres tourne très lentement (un seul mouvement) ; rien ne bouge avec prefers-reduced-motion. */
+@keyframes landing-orbit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-orbit { transform-box: view-box; transform-origin: center; animation: landing-orbit 240s linear infinite; }
+}

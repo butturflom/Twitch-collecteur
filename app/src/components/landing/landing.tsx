@@ -1,0 +1,128 @@
+// Page d'accueil (plan V2, §4) : posée PAR-DESSUS le tableau de bord, qui continue de se charger dessous (l'ancien code a besoin de
+// ses éléments dans la page). Elle s'affiche une seule fois : le clic sur le bouton principal enregistre le drapeau « entré » dans le
+// localStorage. ?accueil la rouvre ; en démo (?demo) elle ne s'affiche jamais.
+// Texte du plan, mis au tutoiement du produit ; rien n'y est inventé (pas de chiffre, de témoignage ni de fonction absente).
+import { useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import type { TabId } from "@/legacy/bridge"
+import { LandingMap } from "./landing-map"
+
+const KEY = "to2-landing-seen"
+
+export function shouldShowLanding(): boolean {
+  try {
+    const q = new URLSearchParams(location.search)
+    if (q.has("accueil")) return true
+    if (q.has("demo")) return false
+    return localStorage.getItem(KEY) !== "1"
+  } catch {
+    return false // stockage indisponible : on ne bloque pas l'accès au tableau de bord
+  }
+}
+
+export function markLandingSeen() {
+  try { localStorage.setItem(KEY, "1") } catch { /* le choix vaut pour cette visite */ }
+}
+
+const PILLARS = [
+  {
+    title: "Ce que les stats publiques ne montrent pas",
+    text: "Quels viewers regardent plusieurs chaînes, où ils vont quand un live se termine, et ce que le chat dit vraiment de l’ambiance.",
+    where: "Dans l’app : Chevauchement, Flux, Chat.",
+  },
+  {
+    title: "Prépare tes raids, mesure ton audience",
+    text: "Des recommandations de raid d’après les flux réels, la fidélité du chat, et le Net Reach d’un groupe de chaînes sans compter deux fois le même viewer.",
+    where: "Dans l’app : Par chaîne, Rosters, rapports PDF et CSV.",
+  },
+  {
+    title: "Anonyme par construction",
+    text: "Les pseudos sont remplacés par une empreinte avant l’envoi, et le texte des messages n’est jamais conservé. Les raids reçus sont comptés à part.",
+    where: "Dans l’app : Réglages, encart « Données anonymisées ».",
+  },
+]
+
+export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onEnter()
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onEnter])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Accueil de Twitch Overlap"
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-background text-foreground animate-in fade-in-0 slide-in-from-bottom-1 duration-300"
+    >
+      <header className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-6">
+        <div className="flex items-center gap-2.5">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
+            <circle cx="9" cy="12" r="6" strokeWidth="1.8" style={{ stroke: "var(--primary)" }} />
+            <circle cx="15" cy="12" r="6" strokeWidth="1.8" style={{ stroke: "var(--primary-soft)" }} />
+          </svg>
+          <span className="text-sm font-semibold tracking-[-0.015em]">Twitch Overlap</span>
+        </div>
+        <Button variant="secondary" className="border border-white/10 bg-zinc-900/70 transition-colors duration-200 hover:bg-zinc-800" onClick={() => onEnter()}>
+          Ouvrir le tableau de bord
+        </Button>
+      </header>
+
+      <main>
+        <section className="mx-auto grid max-w-[1120px] items-center gap-10 px-6 pt-8 pb-16 lg:grid-cols-[1.05fr_1fr] lg:pt-14 lg:pb-20">
+          <div>
+            <h1 className="max-w-[16ch] text-[2.5rem]/[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-[3.25rem]/[1.05]">
+              Cartographie les flux invisibles des communautés Twitch.
+            </h1>
+            <p className="mt-5 max-w-[52ch] text-[1.0625rem]/[1.6] text-pretty text-muted-foreground">
+              Suis les déplacements des viewers actifs d’une chaîne à l’autre, anticipe les raids et mesure le Net Reach de tes groupes de chaînes.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button autoFocus className="h-11 px-5 text-[15px] shadow-action" onClick={() => onEnter()}>
+                Explorer l’observatoire
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-11 px-4 text-[15px]"
+                onClick={() => document.getElementById("landing-piliers")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              >
+                Voir ce que ça mesure
+              </Button>
+            </div>
+            <p className="mt-4 text-xs text-dusk">Tes données restent dans ta base Supabase. Aucun compte à créer.</p>
+          </div>
+          <figure className="mx-auto w-full max-w-[520px]">
+            <LandingMap className="w-full" />
+            <figcaption className="mt-3 text-center text-xs text-dusk">Illustration. La Carte de ton tableau de bord affiche tes vraies chaînes.</figcaption>
+          </figure>
+        </section>
+
+        <section id="landing-piliers" className="mx-auto max-w-[1120px] px-6 pb-20">
+          <div className="grid gap-x-12 gap-y-10 border-t border-border pt-10 md:grid-cols-3">
+            {PILLARS.map((p) => (
+              <div key={p.title}>
+                <h2 className="max-w-[26ch] text-[15px] leading-[1.45] font-semibold tracking-[-0.015em] text-balance md:min-h-[2.9em]">{p.title}</h2>
+                <p className="mt-2 max-w-[42ch] text-[13.5px]/[1.6] text-pretty text-muted-foreground">{p.text}</p>
+                <p className="mt-3 text-xs text-dusk">{p.where}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-3 px-6 py-5 text-xs text-dusk">
+          <span>Twitch Overlap · analyse d’audience</span>
+          <button
+            type="button"
+            onClick={() => onEnter("settings")}
+            className="rounded-md text-primary-soft underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            Réglages et source des données
+          </button>
+        </div>
+      </footer>
+    </div>
+  )
+}

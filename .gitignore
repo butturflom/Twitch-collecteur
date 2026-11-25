@@ -49,3 +49,6 @@ dernier-menage.txt
 
 # Autorisations personnelles de Claude Code (non versionnées)
 .claude/settings.local.json
+
+# Sortie d'audit Hallmark (non suivie)
+.hallmark/run.txt
