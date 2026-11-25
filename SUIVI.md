@@ -26,7 +26,7 @@
 | #23 | `suivi-2026-11-25` | Ce fichier, règles de lecture, permissions | fusionnée le 25/11 (après #24) |
 | #24 | `sidebar-plan-3` | Barre latérale : groupes selon le plan V2 (§3) | fusionnée le 25/11 |
 | #25 | `sticky-factor` | Fidélité du chat (Sticky-Factor) | fusionnée le 25/11 |
-| — | `landing-page` | Page d'accueil (plan §4) | ouverte |
+| #26 | `landing-page` | Page d'accueil (plan §4) | fusionnée le 25/11 |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -44,7 +44,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 | Fonctionnalité 2 : Client View | Abandonnée | Il faudrait des rosters côté serveur et une authentification. |
 | Fonctionnalité 3 : Sticky-Factor | Fait (PR #25), fonction déployée | Score sur 100 dans Par chaîne → Historique, comparé aux quartiles des chaînes suivies : les seuils du plan (70 et 40) colorieraient tout en vert (minimum observé le 24/11 : 72). L'alerte « fuite pendant les pubs » est impossible sans jeton du diffuseur. |
 | §3 : barre latérale | Fait (PR #24) | Observatoire, Analyse et flux, Exploration, Configuration. La Carte est en tête. « Par jeu » est rangé dans Exploration, que le plan ne prévoyait pas. |
-| §4 : landing page | Codée, PR ouverte (`landing-page`) | Posée par-dessus le tableau de bord, une seule fois (drapeau `to2-landing-seen`, `?accueil` la rouvre). Texte du plan mis au tutoiement, sans chiffre ni fonction inventés. |
+| §4 : landing page | Fait (PR #26) | Posée par-dessus le tableau de bord, une seule fois (drapeau `to2-landing-seen`, `?accueil` la rouvre). Texte du plan mis au tutoiement, sans chiffre ni fonction inventés. |
 | Roadmap « Complet », §4 et §5 | Non commencé | Reporté par l'utilisateur. |
 
 ## 4. Décisions prises (ne pas reposer)
@@ -60,12 +60,12 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
 
 1. **Sticky-Factor** : la fonction `channel_stickiness` est déployée en base (ajout seul) et la PR #25 est fusionnée.
-2. **Landing page** : lancée à la demande de l'utilisateur (PR ouverte). Elle s'affiche une fois par navigateur ; `?accueil` la rouvre.
+2. **Landing page** : lancée à la demande de l'utilisateur, PR #26 fusionnée. Elle s'affiche une fois par navigateur ; `?accueil` la rouvre.
 3. **Deux copies du collecteur** : `collecteur.mjs` (racine) fait foi pour le PC. La copie `collecteur/` n'est pas touchée tant que le VPS est de côté. Avant de le relancer, y reporter les réglages de la racine (délai de `sb()` à 60 s) et vérifier la file de relance, le `/metrics` et le compteur global propres à la copie Docker. Dette notée, aucun changement de code.
 4. **Permissions** : les refus de lecture sont versionnés (`.claude/settings.json`), les autorisations `git push` et `gh pr create` restent en local (`.claude/settings.local.json`).
 5. **`.hallmark/run.txt`** : ignoré (ajouté au `.gitignore`).
 
-Rien d'autre n'attend l'utilisateur que la relecture de la PR de la landing page.
+Plus rien n'attend l'utilisateur.
 
 ## 6. Vérifications à refaire
 
@@ -120,6 +120,64 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 10. Journal
 
-- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page codée (PR ouverte).
+- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
+
+## 11. Idées pour la suite (lecture de `Prompt.txt`, 25/11)
+
+Le texte décrit un cockpit spatial pour agences, marques et streameurs. La Carte en est déjà la moitié : planètes, taille, liens, système d'une chaîne choisie. Tri fait le 25/11.
+
+**À développer, dans cet ordre** (tout repose sur des données qu'on a déjà) :
+1. **Alertes de rythme** : une chaîne qui stagne ou qui décolle, calculée sur les rollups quotidiens (`daily_streamer_rollup`). À montrer dans la Vue d'ensemble et sur la planète. Il faut d'abord 14 journées agrégées pour que le signal compte (vers le 8/12).
+2. **Comparaison de 2 à 4 chaînes côte à côte** : viewers, messages, fidélité du chat, croissance, recoupement entre elles. N'existe pas encore (les Rosters comparent des groupes, pas des chaînes).
+3. **Trajectoire simple** : la tendance sur 30 jours, dite comme une tendance (pente, écart à la moyenne), pas comme une prédiction. À faire quand l'historique a 30 jours (vers le 23/12).
+4. **Moins de chiffres au premier regard** : 3 à 5 indicateurs en tête de « Par chaîne », le reste replié. À passer par une critique de design.
+5. **Filtres de la Carte par langue et par jeu principal** : les langues sont déjà connues ; la Carte a déjà des groupes.
+
+**À retenir comme direction, sans l'appliquer tel quel** :
+- « Rendre la donnée désirable » : c'est le rôle de la Carte, qui doit rester lisible avant d'être spectaculaire (principe 2 de `PRODUCT.md`). Les anneaux de croissance et les lunes de collabs ne se rajoutent que si la lecture n'en souffre pas, et après un prototype.
+- Le mode « agence » rejoint la Client View, abandonnée le 24/11 : il faudrait des rosters côté serveur et une authentification.
+
+**À écarter, faute de données ou contre les principes** :
+- **Sponsors, deals, historique de deals, brand safety, audience démographique** : on ne les collecte pas et Twitch ne les donne pas. Un score inventé contredit « honnête sur ses limites ».
+- **Découverte pour marques** (« Affiliates ouverts aux deals ») : c'est un produit multi-utilisateurs avec comptes, hors du périmètre actuel (« une seule personne »).
+- **Prédiction à 90 jours** : trop de bruit sur des données vieilles de quelques semaines.
+
+
+## 12. Direction : viser les agences (décidée par l'utilisateur le 25/11)
+
+**Ce qu'on a déjà et que les agences n'ont pas ailleurs** : l'audience réellement unique d'un groupe de chaînes (Net Reach par esquisses HyperLogLog), le chevauchement et la cannibalisation entre créateurs, les flux de viewers entre chaînes, la fidélité du chat, des rapports PDF et CSV. Les sites publics ne donnent pas cela. C'est le point d'entrée.
+
+**Conseil, dans l'ordre**
+1. **Valider la demande avant de construire.** Montrer le rapport de roster (PDF) à 3 à 5 agences ou talent managers, avec des données réelles de leurs créateurs, et noter ce qu'ils demandent en plus. Un bon test : « ce rapport vous ferait-il payer ou changer une décision ? » C'est le chantier le moins cher et il évite de bâtir un SaaS sans client.
+2. **Commencer en service, pas en SaaS.** Pour un premier client : une base Supabase dédiée (une par agence), son roster, un rapport mensuel livré par vous. Pas de comptes ni de multi-utilisateur au départ : le code actuel reste valable.
+3. **Ne passer au multi-utilisateur que sur demande réelle**, avec ce qu'il faut : authentification, rosters côté serveur, une base ou un schéma par client, hébergement 24/24 du collecteur (le VPS mis de côté redevient nécessaire), sauvegardes.
+
+**Blocages à lever avant tout partage** (dans l'état actuel du code)
+- **La clé publique lit toutes les tables** : donner l'accès à quelqu'un, c'est lui donner tout. À remplacer par des droits par client (RLS, ou une base par client).
+- **Vie privée** : les pseudos sont remplacés par une empreinte avec un sel fixe, ce qui est de la donnée pseudonymisée, pas anonyme. Suivre des chaînes tierces au profit d'un client commercial demande de vérifier le cadre RGPD (base légale, information, durées) avec un juriste.
+- **Conditions de Twitch** : relire les conditions du programme développeur sur le stockage, l'agrégation et la redistribution des données avant de vendre un service qui s'appuie dessus.
+- **Coûts et limites** : le palier gratuit Supabase (500 Mo) ne tient pas plusieurs clients ; l'API Twitch a des quotas ; un collecteur par client ou une base commune partitionnée.
+- **Positionnement** : ne pas promettre ce qu'on ne mesure pas (sponsors, deals, brand safety, démographie). Promettre l'audience unique, la cannibalisation, les flux et la fidélité.
+
+**Effet sur les chantiers** : les alertes de rythme, la comparaison de chaînes et le rapport de roster servent déjà les agences. Les filtres de Carte et la trajectoire aussi. Les comptes et le multi-utilisateur attendent le résultat de l'étape 1.
+
+### 12 bis. Les streamers, des petits aux gros (précision de l'utilisateur, 25/11)
+
+Les conseils du §12 étaient écrits pour les agences seules : c'était incomplet. Les streamers sont une seconde cible, avec d'autres besoins et d'autres freins.
+
+**Ce qui change selon la taille**
+- **Gros et moyens streamers** : se situer face à leurs concurrents directs et à leurs collabs, voir où vont leurs viewers à la fin d'un live, choisir une cible de raid. Déjà couvert : Recommandations de raid, Flux, fidélité du chat, comparaison de chaînes.
+- **Petits streamers** : comprendre où ils en sont et quoi améliorer. Ce qui leur parle : rétention (fidélité du chat), part de viewers qui reviennent, distance aux chaînes un cran au-dessus, chaînes proches où chercher des raids. Même base de données, mais lecture simplifiée.
+
+**Trois trous réels**
+1. **Seuils trop hauts pour les petites chaînes.** La fidélité du chat exige 200 viewers actifs sur la période (`STICKY_MIN`) et se compare au quart du réseau suivi : une petite chaîne n'a donc aucun score. Les alertes et la trajectoire auront le même défaut. À prévoir : seuils qui s'adaptent à la taille, et une comparaison « chaînes de taille voisine » plutôt qu'avec tout le réseau.
+2. **Une vue « mon univers ».** La Carte et Par chaîne montrent les chaînes suivies. Il manque un point d'entrée « ma chaîne » : elle au centre, ses voisines, les chaînes un peu plus grosses, une progression lisible.
+3. **Installation impossible pour un non-technicien.** Aujourd'hui, il faut une base Supabase à soi, une clé Twitch et un collecteur qui tourne sur un PC. Un petit streamer n'y arrivera pas. Il faudrait un service hébergé : on entre sa chaîne et quelques chaînes voisines, rien à installer.
+
+**Ordre conseillé (mis à jour)**
+1. **Agences d'abord, en service** (§12 : valider la demande, une base par client). Elles tolèrent l'installation, payent, et sont peu nombreuses à servir à la main.
+2. **Streamers ensuite, sur un service hébergé**, quand il existe : un collecteur et une base partagés, des droits par utilisateur. C'est le même chantier de fond que le multi-utilisateur des agences (authentification, droits par client, hébergement 24/24, RGPD). Le faire une fois pour les deux cibles.
+3. **En attendant**, rendre le produit lisible pour une petite chaîne : seuils adaptés, vue « mon univers ». Cela se code sans attendre l'hébergement et sert aussi aux gros.
+4. **Gratuit ou payant** : à décider avec la demande. Les streamers payent peu : l'outil des agences peut financer le service, les streamers en bénéficient en version simple.
