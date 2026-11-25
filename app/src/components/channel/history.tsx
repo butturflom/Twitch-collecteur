@@ -5,6 +5,7 @@ import { ChannelAvatar } from "@/components/channel-avatar"
 import { LineChart } from "@/components/charts/line-chart"
 import { Empty, MeterList, Section, panel } from "@/components/overview/parts"
 import { Two } from "@/components/shared/blocks"
+import { Segmented } from "@/components/shared/segmented"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { ChannelHistory, HistoryRoute, LineSpec, PeriodReach } from "@/legacy/bridge"
@@ -59,18 +60,7 @@ export function History({ ch, color }: { ch: string; color: string }) {
     return () => { live = false }
   }, [ch, days])
 
-  const toggle = (
-    <div className="flex items-center gap-1 rounded-lg bg-card p-1 shadow-sm" role="group" aria-label="Durée de l'historique">
-      {([30, 90] as const).map((n) => (
-        <button
-          key={n} type="button" aria-pressed={days === n} onClick={() => setDays(n)}
-          className={cn("px-3 py-1 text-xs font-medium rounded-md transition-colors", days === n ? "bg-accent text-foreground shadow" : "text-muted-foreground hover:text-foreground")}
-        >
-          {n} jours
-        </button>
-      ))}
-    </div>
-  )
+  const toggle = <Segmented value={days} onChange={setDays} label="Durée de l'historique" options={[[30, "30 jours"], [90, "90 jours"]]} />
 
   return (
     <div className="mt-9">

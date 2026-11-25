@@ -9,15 +9,18 @@ import { cn } from "@/lib/utils"
 import { pct } from "@/lib/format"
 import type { Who } from "@/legacy/bridge"
 
-export function Section({ title, note, badge, children, className }: { title: string; note?: ReactNode; badge?: string; children: ReactNode; className?: string }) {
+export function Section({ title, note, badge, action, children, className }: { title: string; note?: ReactNode; badge?: string; /** contrôle à droite du titre (bascule de durée, par exemple) */ action?: ReactNode; children: ReactNode; className?: string }) {
+  const head = (
+    <h2 className={cn("flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.015em]", !action && "mb-3")}>
+      <span aria-hidden className="size-1.5 rounded-[2px] bg-primary shadow-pip" />
+      {title}
+      {badge && <Badge variant="secondary" className="text-[11px] h-4.5 px-2">{badge}</Badge>}
+    </h2>
+  )
   return (
     // un <div> et pas un <section> : l'ancien code masque toutes les <section> qui ne sont pas l'onglet affiché
     <div role="region" aria-label={title} className={cn("mt-9 first:mt-0", className)}>
-      <h2 className="mb-3 flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.015em]">
-        <span aria-hidden className="size-1.5 rounded-[2px] bg-primary shadow-pip" />
-        {title}
-        {badge && <Badge variant="secondary" className="text-[11px] h-4.5 px-2">{badge}</Badge>}
-      </h2>
+      {action ? <div className="mb-3 flex items-center justify-between gap-4">{head}{action}</div> : head}
       {children}
       {note && <p className="mt-2.5 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk [&_b]:font-semibold [&_b]:text-muted-foreground">{note}</p>}
     </div>
@@ -98,7 +101,7 @@ export function ChannelCell({ who, limited, link = true }: { who: Who; limited?:
     <span className="inline-flex max-w-full min-w-0 items-center gap-2 max-sm:flex-wrap max-sm:gap-y-1">
       <ChannelAvatar {...who} />
       {link ? (
-        <button type="button" data-open={who.c} title={who.c.length > 18 ? who.c : undefined} className="max-w-[18ch] max-sm:max-w-[11ch] cursor-pointer truncate font-medium decoration-dusk decoration-dotted underline-offset-4 hover:text-primary-soft hover:underline">
+        <button type="button" data-open={who.c} title={who.c.length > 18 ? who.c : undefined} className="-my-0.5 min-w-6 max-w-[18ch] max-sm:max-w-[11ch] cursor-pointer truncate py-0.5 font-medium decoration-dusk decoration-dotted underline-offset-4 hover:text-primary-soft hover:underline">
           {who.c}
         </button>
       ) : (

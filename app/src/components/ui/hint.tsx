@@ -33,8 +33,9 @@ export function Hint({ children, trigger, label, className, side = "top" }: {
         onPointerLeave={(e) => e.pointerType === "mouse" && hoverClose()}
         className={cn(
           "inline-flex shrink-0 cursor-help items-center rounded-sm align-middle text-dusk transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:text-foreground",
-          // zone de toucher d'au moins 24 px autour de l'icône, sans changer la mise en page
-          !trigger && "relative before:absolute before:-inset-1.5 before:content-['']",
+          // zone de toucher d'au moins 24 px autour de l'icône (ou, pour un libellé, au-dessus et au-dessous), sans changer la mise en page
+          "relative before:absolute before:content-['']",
+          trigger ? "before:-inset-y-1.5" : "before:-inset-1.5",
           className,
         )}
       >
