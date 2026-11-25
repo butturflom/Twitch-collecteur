@@ -538,7 +538,7 @@ begin
 end $$;
 
 -- Historique d'une chaîne pour le tableau de bord (« Par chaîne » → Historique), lu dans les rollups quotidiens.
--- 25/11/2026. Lecture seule, avec les droits de l'appelant : la clé publique lit déjà ces tables (politique read_all) ;
+-- 25/11/2026. Lecture seule, avec les droits de l'appelant : la clé publique lit déjà ces tables (politique read_all, protégée par le code du tableau depuis le 25/11) ;
 -- la fonction évite seulement au navigateur de télécharger des milliers de lignes page par page.
 --   days   : un objet par jour agrégé (viewers actifs, messages, minutes lues, pic et moyenne de viewers, passages sortants et entrants)
 --   out/in : les trajets les plus fréquents sur la période, vers et depuis les autres chaînes (somme des passages ;
@@ -724,30 +724,64 @@ alter table rosters enable row level security;
 alter table roster_streamers enable row level security;
 alter table raid_events enable row level security;
 
-drop policy if exists read_all on presence;         create policy read_all on presence for select to anon, authenticated using (true);
-drop policy if exists read_all on minutes;          create policy read_all on minutes for select to anon, authenticated using (true);
-drop policy if exists read_all on snaps;            create policy read_all on snaps for select to anon, authenticated using (true);
-drop policy if exists read_all on events;           create policy read_all on events for select to anon, authenticated using (true);
-drop policy if exists read_all on words;            create policy read_all on words for select to anon, authenticated using (true);
-drop policy if exists read_all on vods;             create policy read_all on vods for select to anon, authenticated using (true);
-drop policy if exists read_all on chan_meta;        create policy read_all on chan_meta for select to anon, authenticated using (true);
-drop policy if exists read_all on clips;            create policy read_all on clips for select to anon, authenticated using (true);
-drop policy if exists read_all on ecoute;           create policy read_all on ecoute for select to anon, authenticated using (true);
-drop policy if exists read_all on switches;         create policy read_all on switches for select to anon, authenticated using (true);
-drop policy if exists read_all on collector_status; create policy read_all on collector_status for select to anon, authenticated using (true);
-drop policy if exists read_all on channels;         create policy read_all on channels for select to anon, authenticated using (true);
+-- ---------- Lecture protégée par le code du tableau de bord (25/11/2026) ----------
+-- Avant : la clé publique (qui se trouve dans le navigateur) lisait toutes les tables. Maintenant : une ligne n'est lisible que si la
+-- requête porte l'en-tête « x-board-code » avec le code du tableau (celui de config.json, « codeTableau », déjà posé en base par le
+-- collecteur sous forme d'empreinte). Le navigateur envoie l'en-tête tout seul quand le code est saisi dans Réglages.
+-- Sans code ou avec un mauvais code : zéro ligne, sans erreur. Le collecteur (clé secrète) et les tâches cron ne passent pas par ces règles.
+create or replace function board_ok() returns boolean
+language sql stable security definer set search_path = public, pg_catalog as $$
+  select coalesce((
+    select exists (select 1 from private_settings s where s.k = 'board_code' and s.v = encode(sha256(convert_to(h.code, 'UTF8')), 'hex'))
+    from (select nullif(current_setting('request.headers', true), '')::json ->> 'x-board-code' as code) h
+    where length(h.code) >= 8
+  ), false)
+$$;
+revoke all on function board_ok() from public;
+grant execute on function board_ok() to anon, authenticated, service_role;
+
+-- Droit à l'effacement : supprime les lignes d'un viewer à partir de son empreinte (voir oublier.mjs, qui la calcule avec le sel de config.json).
+-- Réservé à la clé secrète. Les agrégats (esquisses HyperLogLog, matrice de chevauchement) ne contiennent aucune empreinte : rien à y retirer.
+create or replace function forget_user(h text) returns jsonb
+language plpgsql security definer set search_path = public, pg_catalog as $$
+declare a int; b int;
+begin
+  if h is null or length(h) < 8 then raise exception 'empreinte invalide'; end if;
+  delete from presence where u = h; get diagnostics a = row_count;
+  delete from switches where u = h; get diagnostics b = row_count;
+  return jsonb_build_object('presence', a, 'switches', b);
+end $$;
+revoke all on function forget_user(text) from public, anon, authenticated;
+grant execute on function forget_user(text) to service_role;
+
+-- Deux fonctions sans chemin de recherche fixé (alerte de sécurité Supabase)
+alter function add_streamers_batch(text[]) set search_path = public, pg_catalog;
+alter function hll_card(float8, int) set search_path = public, pg_catalog;
+
+drop policy if exists read_all on presence;         create policy read_all on presence for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on minutes;          create policy read_all on minutes for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on snaps;            create policy read_all on snaps for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on events;           create policy read_all on events for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on words;            create policy read_all on words for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on vods;             create policy read_all on vods for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on chan_meta;        create policy read_all on chan_meta for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on clips;            create policy read_all on clips for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on ecoute;           create policy read_all on ecoute for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on switches;         create policy read_all on switches for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on collector_status; create policy read_all on collector_status for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on channels;         create policy read_all on channels for select to anon, authenticated using ((select public.board_ok()));
 -- Depuis la 1.3, la clé publique ne peut plus modifier la liste directement : il faut le code (add_channels / remove_channels)
 drop policy if exists add_chan on channels;
 drop policy if exists del_chan on channels;
 
 -- Politiques pour les nouvelles tables
-drop policy if exists read_all on daily_switches_rollup; create policy read_all on daily_switches_rollup for select to anon, authenticated using (true);
-drop policy if exists read_all on daily_streamer_rollup; create policy read_all on daily_streamer_rollup for select to anon, authenticated using (true);
-drop policy if exists read_all on daily_overlap_matrix; create policy read_all on daily_overlap_matrix for select to anon, authenticated using (true);
-drop policy if exists read_all on daily_hll; create policy read_all on daily_hll for select to anon, authenticated using (true);
-drop policy if exists read_all on rosters; create policy read_all on rosters for select to anon, authenticated using (true);
-drop policy if exists read_all on roster_streamers; create policy read_all on roster_streamers for select to anon, authenticated using (true);
-drop policy if exists read_all on raid_events; create policy read_all on raid_events for select to anon, authenticated using (true);
+drop policy if exists read_all on daily_switches_rollup; create policy read_all on daily_switches_rollup for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on daily_streamer_rollup; create policy read_all on daily_streamer_rollup for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on daily_overlap_matrix; create policy read_all on daily_overlap_matrix for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on daily_hll; create policy read_all on daily_hll for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on rosters; create policy read_all on rosters for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on roster_streamers; create policy read_all on roster_streamers for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on raid_events; create policy read_all on raid_events for select to anon, authenticated using ((select public.board_ok()));
 
 revoke all on function ingest(jsonb) from public, anon, authenticated;
 revoke all on function cleanup(int, int, int, int, int) from public, anon, authenticated;

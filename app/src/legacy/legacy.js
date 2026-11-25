@@ -246,7 +246,9 @@ const dbKey=()=>cfg.mode==='cloud'?'db-cloud':'db';
 const isCloud=()=>cfg.mode==='cloud'&&!!cfg.sbUrl&&!!cfg.sbKey;
 const cloud={status:null,syncing:false,last:0,err:'',progress:0,timer:null,gen:0};
 const sbBase=()=>cfg.sbUrl.trim().replace(/\/+$/,'');
-function sbH(extra={}){const h={apikey:cfg.sbKey,...extra};if(!cfg.sbKey.startsWith('sb_'))h.Authorization='Bearer '+cfg.sbKey;return h}
+// x-board-code : le code du tableau de bord (« codeTableau » de config.json). La base ne rend ses lignes qu'avec ce code (fonction SQL board_ok) :
+// la clé publique, visible dans le navigateur, ne lit plus rien toute seule.
+function sbH(extra={}){const h={apikey:cfg.sbKey,...extra};if(!cfg.sbKey.startsWith('sb_'))h.Authorization='Bearer '+cfg.sbKey;if(cfg.sbCode)h['x-board-code']=cfg.sbCode;return h}
 async function sbReq(path,opts={}){const r=await fetch(sbBase()+'/rest/v1/'+path,{...opts,headers:sbH(opts.headers)});
   if(!r.ok)throw new Error('Supabase '+r.status+' '+(await r.text()).slice(0,140));const t=await r.text();return t?JSON.parse(t):null}
 const CLOUD_TABLES=['presence','minutes','snaps','events','words','vods','chan_meta','clips','ecoute','switches'];
@@ -275,6 +277,11 @@ async function cloudSync(){
   const syncFromMs = Date.now() - 60*DAY; // recalculé à chaque sync
   try{
     DB.revs=DB.revs||{};
+    // la base protège la lecture par le code du tableau : sans lui (ou avec un mauvais), elle rend zéro ligne sans erreur, et le tableau
+    // paraîtrait vide. On le dit clairement. Une base pas encore à jour n'a pas cette fonction : on passe.
+    try{if(await sbReq('rpc/board_ok',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})===false)
+      throw new Error('Code du tableau manquant ou incorrect : colle le « codeTableau » de config.json dans Réglages → Source des données')}
+    catch(e){if(/^Code du tableau/.test(e.message))throw e}
     let total=0;
     for(const t of CLOUD_TABLES)for(;;){
       let rows;
@@ -843,6 +850,8 @@ function mapAction(a,v,on){
   if(a==='game'){cfg.mapGame=v;saveCfg();mapView.sel=null;render();return} // jeu principal (« * » : tous)
   if(a==='view'){cfg.mapMode=v;saveCfg();mapView.sel=null;render();return}
   if(a==='live'){cfg.mapLive=v==='live';saveCfg();mapView.sel=null;render();return} // seulement les chaînes en live en ce moment
+  if(a==='min'){cfg.mapMin=+v||0;saveCfg();mapView.sel=null;render();return} // audience minimale (viewers actifs sur la période ; 0 : aucune)
+  if(a==='reset'){cfg.mapLive=false;cfg.mapGame='*';cfg.mapMin=0;cfg.lang='*';saveCfg();buildChanSel();mapView.sel=null;render();return} // tous les filtres d'un coup (la langue est commune à tous les onglets)
   if(a==='pick'){const S=new Set(cfg.mapSel||[]);for(const c of [].concat(v))on?S.add(c):S.delete(c);cfg.mapSel=[...S];saveCfg();mapIntroKey='';render();return}
   if(a==='pins'){delete cfg.mapPins;saveCfg();mapView.touched=Date.now();render();return} // chaînes déplacées remises à leur place calculée
   if(a==='relayout'){delete cfg.mapPins;saveCfg();mapRelayout=true;[mapAng,mapKep,mapRing,mapOff,mapSysOff].forEach(m=>m.clear());/* orbites reprises au début */Object.assign(mapView,{k:1,tx:0,ty:0,rot:0,q:[1,0,0,0]});mapIntroKey='';mapView.touched=Date.now();render();return} // tout recalculé, vue d'ensemble, liens retracés
@@ -962,7 +971,12 @@ function renderMap(q){
   // Filtre « En live » : seulement les chaînes en live en ce moment (combinable avec chaque vue)
   const liveOnly=!!cfg.mapLive,isLive=c=>!!(info[c]&&info[c].live);
   const by=usersBy(q.pres,p=>p.c),pool=view==='sel'?cfg.chans.filter(c=>picked.has(c)):shown();
-  const activeAll=pool.filter(c=>by.get(c)&&by.get(c).size>=(grouped?5:1));
+  const activeAll0=pool.filter(c=>by.get(c)&&by.get(c).size>=(grouped?5:1));
+  // Filtre « Audience minimale » : seuil sur les viewers actifs de la période. On ne propose que les seuils qui laissent au moins 3 chaînes
+  // (une carte en demande 3) et qui en écartent vraiment ; le seuil choisi reste affiché même s'il ne convient plus, pour pouvoir le quitter.
+  const minSel=[10,50,200].includes(cfg.mapMin)?cfg.mapMin:0,minN=t=>activeAll0.filter(c=>by.get(c).size>=t).length;
+  const minsPanel=[10,50,200].filter(t=>t===minSel||(minN(t)>=3&&minN(t)<activeAll0.length));
+  const activeAll=activeAll0.filter(c=>by.get(c).size>=minSel);
   // Filtre « Jeu principal » : le jeu le plus relevé de chaque chaîne sur la période (relevés en live). On propose les 8 jeux les plus
   // présents parmi les chaînes affichées ; un jeu qui n'existe plus sur la période (période changée) revient à « Tous » sans effacer le choix.
   const gc=new Map();for(const s of q.snaps||[]){if(!s.live||!s.g)continue;const m=gc.get(s.c)||new Map();m.set(s.g,(m.get(s.g)||0)+1);gc.set(s.c,m)}
@@ -973,8 +987,10 @@ function renderMap(q){
   const active=activeAll.filter(c=>gameSel==='*'||mainGame.get(c)===gameSel),liveN=active.filter(isLive).length;
   const nodes=active.filter(c=>!liveOnly||isLive(c)).map(c=>({id:c,size:by.get(c).size}));
   // ---------- menu de gauche (React) : période, langue, vue, chaînes cochées, recherche, groupes ----------
-  const lg=cfg.lang||'*',nl=k=>cfg.chans.filter(c=>inLang(c,k)).length,known=cfg.chans.some(c=>langOf(c));
+  // les effectifs par langue comptent les chaînes qui ont des viewers actifs sur la période (ce que la carte peut montrer), pas toutes les chaînes suivies
+  const lg=cfg.lang||'*',nl=k=>cfg.chans.filter(c=>inLang(c,k)&&by.get(c)&&by.get(c).size>=(grouped?5:1)).length,known=cfg.chans.some(c=>langOf(c));
   const panel={open:mapSideOpen(),view,picked:picked.size,live:{on:liveOnly,count:liveN,total:active.length},
+    mins:minsPanel.length?[{key:'0',label:'Toutes',count:activeAll0.length,on:minSel===0},...minsPanel.map(t=>({key:String(t),label:t+'+',count:minN(t),on:t===minSel}))]:null,
     periods:[...$('period').children].map(b=>({key:b.dataset.p,label:b.textContent,on:b.classList.contains('on')})),
     langs:known?LANGS.filter(([k])=>k==='*'||k===lg||nl(k)).map(([k,label])=>({key:k,label,count:nl(k),on:k===lg})):null,
     games:gamesPanel,
@@ -984,7 +1000,8 @@ function renderMap(q){
   // pas assez de chaînes, même sans le filtre « En live » : ce message d'abord (ex. « Ma sélection » sans chaîne cochée),
   // sinon c'est le filtre « En live » qui en laisse trop peu
   const need=view==='sel'?2:3;
-  if(active.length<need){panel.empty=view==='sel'?(picked.size?'Parmi les chaînes cochées, il en faut au moins 2 avec un viewer actif sur la période.':'Coche au moins 2 chaînes dans le menu de gauche (« Chaînes cochées ») pour les voir seules sur la carte.')
+  if(active.length<need){panel.empty=(gameSel!=='*'||minSel>0)&&activeAll0.length>=need?`Les filtres Jeu principal et Audience minimale ne laissent que ${active.length} chaîne${active.length>1?'s':''} : il en faut au moins ${need} pour une carte. Élargis-les dans le Menu, ou réinitialise les filtres.`
+      :view==='sel'?(picked.size?'Parmi les chaînes cochées, il en faut au moins 2 avec un viewer actif sur la période.':'Coche au moins 2 chaînes dans le Menu (rubrique « Vue », puis « Ma sélection ») pour les voir seules sur la carte.')
       :grouped?'Il faut au moins 3 chaînes avec 5 viewers actifs ou plus sur la période. Le plus parlant : suivre 20 à 50 chaînes (onglet Par jeu → « Suivre le top 20 ») et laisser tourner plusieurs soirées.'
       :'Il faut au moins 3 chaînes avec un viewer actif sur la période.';send();return}
   if(nodes.length<need){panel.empty=liveN?`Seulement ${liveN} chaîne${liveN>1?'s':''} en live avec un viewer actif sur la période : il en faut au moins ${need} pour une carte. Choisis « Toutes » dans Statut pour voir aussi les chaînes hors live.`
@@ -1331,7 +1348,7 @@ function renderMap(q){
   function placeLabels(F){
     // la zone des boutons + − ⤢ compte comme occupée
     const Lg=logoAt(),lz=LOGO*Math.min(Math.sqrt(mapView.k),2.2); // la planète Twitch et son anneau, là où ils sont à l'écran
-    const placed=[{x:W-50,y:0,w:50,h:Object.keys(cfg.mapPins||{}).length?324:286} /* colonne de boutons : pause, globe, +, −, tout afficher, recentrer, aide (et remettre en place) */,{x:0,y:0,w:hudW,h:els.radar.querySelector('.radar-log.on')?58:30},{x:Lg.x-lz/2,y:Lg.y-lz*.32,w:lz,h:lz*.64}],rank=i=>(ids[i]===mapView.sel||ids[i]===hover?2:F&&F.s.has(ids[i])?1:0);
+    const placed=[{x:W-50,y:0,w:50,h:Object.keys(cfg.mapPins||{}).length?324:286} /* colonne de boutons : pause, globe, +, −, tout afficher, recentrer, aide (et remettre en place) */,{x:0,y:0,w:hudW,h:els.radar.querySelector('.radar-log.on')?94:66},{x:Lg.x-lz/2,y:Lg.y-lz*.32,w:lz,h:lz*.64}],rank=i=>(ids[i]===mapView.sel||ids[i]===hover?2:F&&F.s.has(ids[i])?1:0);
     // la pile en bas à droite (légende et note « nom masqué », dessinées par React, repérées par data-maplegend) est évitée par les noms, comme le bandeau en haut à gauche
     {const sr=svg.getBoundingClientRect();if(sr.width&&sr.height)document.querySelectorAll('[data-maplegend]').forEach(lg=>{if(!lg.offsetParent)return;const r=lg.getBoundingClientRect();
       placed.push({x:(r.left-sr.left)*W/sr.width,y:(r.top-sr.top)*H/sr.height,w:r.width*W/sr.width,h:r.height*H/sr.height})})}
@@ -2500,6 +2517,8 @@ function settingsMode(m){return setMode(m).then(renderSettings)}
 async function saveSupabase(url,key,code){cfg.sbUrl=String(url||'').trim();cfg.sbKey=String(key||'').trim();cfg.sbCode=String(code||'').trim();saveCfg();
   if(isSecretKey(cfg.sbKey)){cfg.sbKey='';saveCfg();setSmsg('sb','C\'est la clé secrète : elle doit rester dans config.json sur ton PC. Colle ici la clé publique.');return}
   cloudReset();DB=freshDB();await idb.put(dbKey(),DB);cloud.err='';cloud.last=0;setSmsg('sb','Connexion…');applyMode();await cloudSync();renderSettings();render()}
+async function saveBoardCode(code){cfg.sbCode=String(code||'').trim();saveCfg();cloud.err='';cloud.last=0;setSmsg('sb','Connexion…');await cloudSync();renderSettings();render()}
+window.saveSupabase=saveSupabase;window.saveBoardCode=saveBoardCode;
 function addFromSearch(login,img){if(img)setAvatar(login,img);addChans([login])}
 function importLocal(){addChans(pendingLocal())}
 function dropLocal(){cfg.localIgnored=[...new Set([...(cfg.localIgnored||[]),...pendingLocal()])];saveCfg();renderSettings()}

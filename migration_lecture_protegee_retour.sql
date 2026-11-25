@@ -1,0 +1,20 @@
+-- Retour en arrière : la clé publique relit tout sans code (comme avant le 25/11/2026).
+drop policy if exists read_all on presence; create policy read_all on presence for select to anon, authenticated using (true);
+drop policy if exists read_all on minutes; create policy read_all on minutes for select to anon, authenticated using (true);
+drop policy if exists read_all on snaps; create policy read_all on snaps for select to anon, authenticated using (true);
+drop policy if exists read_all on events; create policy read_all on events for select to anon, authenticated using (true);
+drop policy if exists read_all on words; create policy read_all on words for select to anon, authenticated using (true);
+drop policy if exists read_all on vods; create policy read_all on vods for select to anon, authenticated using (true);
+drop policy if exists read_all on chan_meta; create policy read_all on chan_meta for select to anon, authenticated using (true);
+drop policy if exists read_all on clips; create policy read_all on clips for select to anon, authenticated using (true);
+drop policy if exists read_all on ecoute; create policy read_all on ecoute for select to anon, authenticated using (true);
+drop policy if exists read_all on switches; create policy read_all on switches for select to anon, authenticated using (true);
+drop policy if exists read_all on collector_status; create policy read_all on collector_status for select to anon, authenticated using (true);
+drop policy if exists read_all on channels; create policy read_all on channels for select to anon, authenticated using (true);
+drop policy if exists read_all on daily_switches_rollup; create policy read_all on daily_switches_rollup for select to anon, authenticated using (true);
+drop policy if exists read_all on daily_streamer_rollup; create policy read_all on daily_streamer_rollup for select to anon, authenticated using (true);
+drop policy if exists read_all on daily_overlap_matrix; create policy read_all on daily_overlap_matrix for select to anon, authenticated using (true);
+drop policy if exists read_all on daily_hll; create policy read_all on daily_hll for select to anon, authenticated using (true);
+drop policy if exists read_all on rosters; create policy read_all on rosters for select to anon, authenticated using (true);
+drop policy if exists read_all on roster_streamers; create policy read_all on roster_streamers for select to anon, authenticated using (true);
+drop policy if exists read_all on raid_events; create policy read_all on raid_events for select to anon, authenticated using (true);

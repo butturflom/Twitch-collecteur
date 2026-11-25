@@ -246,6 +246,7 @@ export interface MapData {
   periods: { key: string; label: string; on: boolean }[]
   langs: { key: string; label: string; count: number; on: boolean }[] | null
   games: { key: string; label: string; count: number; on: boolean }[] | null // jeu principal de chaque chaîne ; null : moins de 2 jeux
+  mins: { key: string; label: string; count: number; on: boolean }[] | null // audience minimale (viewers actifs) ; null : aucun seuil utile
   pick: (Who & { langs: string[]; n: number; on: boolean })[] | null // vue « Ma sélection »
   pins: number
   empty: string // message quand il n'y a pas assez de chaînes pour une carte
@@ -300,6 +301,8 @@ declare global {
     // Réglages (actions de l'ancien code)
     settingsMode?: (m: "local" | "cloud") => Promise<void>
     saveSupabase?: (url: string, key: string, code: string) => Promise<void>
+    /** change seulement le code du tableau de bord (en-tête x-board-code) et relance la synchro */
+    saveBoardCode?: (code: string) => Promise<void>
     runAddSearch?: (q: string) => Promise<void>
     addFromSearch?: (login: string, img: string) => void
     importLocal?: () => void
@@ -313,7 +316,7 @@ declare global {
     resetDb?: () => Promise<void>
     forceFullResync?: () => Promise<boolean>
     // Carte
-    mapAction?: (a: "side" | "period" | "lang" | "game" | "view" | "live" | "pick" | "pins" | "relayout", v?: string | string[], on?: boolean) => void
+    mapAction?: (a: "side" | "period" | "lang" | "game" | "view" | "live" | "pick" | "pins" | "relayout" | "min" | "reset", v?: string | string[], on?: boolean) => void
     __legacyLoaded?: boolean
   }
 }

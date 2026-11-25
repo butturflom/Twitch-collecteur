@@ -2,187 +2,18 @@
 // La carte elle-même (radar, disposition, rotation, glisser, zoom, activité en direct) est dessinée image par image par le
 // moteur de l’ancien code, dans les éléments que React lui fournit (mount) ; il renvoie ses commandes (MapApi).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { ChevronDown, ChevronsLeft, CircleQuestionMark, Crosshair, Globe, Maximize2, Menu, Minus, Pause, Play, Plus, RotateCcw, Shuffle, X } from "lucide-react"
-import { LangBadge } from "@/components/lang-badge"
+import { ChevronDown, CircleQuestionMark, Crosshair, Globe, Maximize2, Minus, Pause, Play, Plus, RotateCcw, X } from "lucide-react"
 import { Tabs } from "radix-ui"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { MeterList } from "@/components/overview/parts"
 import { Galaxy } from "@/components/map/galaxy"
+import { GameMenu, MenuButton } from "@/components/map/menu"
 import { fmt, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useMapData, type MapApi, type MapData, type MapNotice, type MapViewState } from "@/legacy/bridge"
 
 const act = (...a: Parameters<NonNullable<Window["mapAction"]>>) => window.mapAction?.(...a)
-
-function Sec({ title, children }: { title: ReactNode; children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      <div className="text-xs font-medium text-dusk">{title}</div>
-      {children}
-    </div>
-  )
-}
-
-/** Contrôle segmenté (période, langue) : piste sombre, segment actif en relief ; les segments prennent la largeur de leur texte et passent à la ligne si besoin. */
-function Seg({ items, onPick, label }: { items: { key: string; label: string; on: boolean; count?: number }[]; onPick: (k: string) => void; label: string }) {
-  return (
-    <div
-      role="group"
-      aria-label={label}
-      className="flex flex-wrap gap-0.5 rounded-lg border border-white/5 bg-zinc-950/80 p-1 shadow-well"
-    >
-      {items.map((it) => (
-        <button
-          key={it.key}
-          type="button"
-          aria-pressed={it.on}
-          onClick={() => onPick(it.key)}
-          className={cn(
-            "flex h-8 flex-auto items-center justify-center gap-1 rounded-md px-1.5 text-xs font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none",
-            it.on
-              ? "bg-zinc-800 text-white shadow-sm shadow-black/40 ring-1 ring-white/10"
-              : "text-zinc-400 hover:bg-white/[.03] hover:text-zinc-100",
-          )}
-        >
-          <span>{it.label}</span>
-          {it.count != null && <span className={cn("font-mono text-[10.5px] tabular-nums transition-colors duration-200", it.on ? "text-zinc-400" : "text-dusk")}>{it.count}</span>}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function Side({ d, api, grp, sel, log }: { d: MapData; api: MapApi | null; grp: number | null; sel: string | null; log: NonNullable<MapNotice["log"]> }) {
-  const [q, setQ] = useState("")
-  const shown = useMemo(() => (d.pick ?? []).filter((c) => !q.trim() || c.c.includes(q.trim().toLowerCase())), [d.pick, q])
-  const views: [MapData["view"], string, number | null][] = [["all", "Toutes les chaînes", null], ["groups", "Groupes", null], ["sel", "Ma sélection", d.picked]]
-  return (
-    <aside
-      aria-label="Filtres de la carte"
-      className="flex w-[290px] shrink-0 flex-col gap-5 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] rounded-2xl border border-white/10 bg-zinc-900/70 p-4 shadow-2xl shadow-black/50 backdrop-blur-xl backdrop-saturate-150 max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-30 max-md:w-[min(320px,calc(100%-16px))]"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold tracking-[-0.01em] text-zinc-100">Filtres de la carte</span>
-        <Button variant="secondary" size="icon" className="size-7 border border-white/10 bg-zinc-950/60 text-zinc-400 transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:bg-zinc-800 hover:text-white" aria-label="Replier le menu" title="Replier le menu" onClick={() => act("side")}><ChevronsLeft /></Button>
-      </div>
-      <Sec title="Période"><Seg label="Période" items={d.periods} onPick={(k) => act("period", k)} /></Sec>
-      <Sec title="Statut">
-        <Seg
-          label="Statut des chaînes"
-          items={[
-            { key: "all", label: "Toutes", count: d.live.total, on: !d.live.on },
-            { key: "live", label: "En live", count: d.live.count, on: d.live.on },
-          ]}
-          onPick={(k) => act("live", k)}
-        />
-      </Sec>
-      {d.langs && <Sec title="Langue"><Seg label="Langue" items={d.langs} onPick={(k) => act("lang", k)} /></Sec>}
-      {d.games && <Sec title="Jeu principal"><Seg label="Jeu principal" items={d.games} onPick={(k) => act("game", k)} /></Sec>}
-      <Sec title="Vue">
-        <div role="group" aria-label="Vue de la carte" className="flex flex-col gap-1">
-          {views.map(([k, label, n]) => (
-            <button
-              key={k}
-              type="button"
-              aria-pressed={d.view === k}
-              onClick={() => act("view", k)}
-              className={cn(
-                "flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none",
-                d.view === k
-                  ? "border-primary/40 bg-primary/10 text-white shadow-select"
-                  : "border-white/[.06] bg-zinc-950/40 text-zinc-400 hover:border-white/15 hover:bg-white/[.03] hover:text-zinc-100",
-              )}
-            >
-              {label}{n != null && <span className="ml-auto font-mono text-[11px] text-dusk tabular-nums">{n}</span>}
-            </button>
-          ))}
-        </div>
-      </Sec>
-      {d.pick && (
-        <Sec title={<>Chaînes cochées <span className="text-zinc-300 tabular-nums">{d.picked}</span></>}>
-          <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher une chaîne…" aria-label="Chercher une chaîne" className="h-8 border-field-edge bg-zinc-950/80 text-[13px] transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 focus-visible:border-primary/50 focus-visible:ring-primary/20" />
-          <div className="flex gap-1.5">
-            <Button size="sm" variant="secondary" className="h-8 flex-1 border border-white/10 bg-zinc-950/60 text-xs text-zinc-300 transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:bg-zinc-800 hover:text-white" onClick={() => act("pick", shown.map((c) => c.c), true)}>Tout cocher</Button>
-            <Button size="sm" variant="secondary" className="h-8 flex-1 border border-white/10 bg-zinc-950/60 text-xs text-zinc-300 transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:bg-zinc-800 hover:text-white" onClick={() => act("pick", shown.map((c) => c.c), false)}>Tout décocher</Button>
-          </div>
-          <div className="-mx-1.5 flex max-h-[42vh] flex-col gap-px overflow-auto">
-            {shown.map((c) => (
-              <label key={c.c} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[13px] text-zinc-200 transition-colors duration-200 hover:bg-white/[.04]">
-                <input type="checkbox" checked={c.on} onChange={(e) => act("pick", c.c, e.target.checked)} className="accent-primary" />
-                <ChannelAvatar {...c} />
-                <span className="truncate">{c.c}</span>
-                <LangBadge langs={c.langs} className="h-4 px-1 text-[9.5px]" />
-                <span className="ml-auto font-mono text-[11px] text-dusk tabular-nums">{fmt(c.n)}</span>
-              </label>
-            ))}
-          </div>
-        </Sec>
-      )}
-      {d.find.length > 0 && (
-        <Sec title="Aller à une chaîne">
-          <select
-            aria-label="Aller à une chaîne"
-            value={sel && d.find.includes(sel) ? sel : ""}
-            onChange={(e) => { if (e.target.value) api?.find(e.target.value); else api?.select(null) }}
-            className="h-9 w-full cursor-pointer rounded-lg border border-field-edge bg-zinc-950/80 px-2.5 text-[13px] text-zinc-200 outline-none transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:border-zinc-400 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 [&>option]:bg-zinc-900"
-          >
-            <option value="">Choisir une chaîne…</option>
-            {d.find.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </Sec>
-      )}
-      {d.groups && (
-        <Sec title="Groupes">
-          <button type="button" aria-pressed={grp == null} onClick={() => api?.group(null)} className={cn("rounded-lg border px-3 py-1.5 text-left text-xs font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none", grp == null ? "border-primary/40 bg-primary/10 text-white shadow-lg shadow-primary/20" : "border-white/[.06] bg-zinc-950/40 text-zinc-400 hover:border-white/15 hover:text-zinc-100")}>Tous les groupes</button>
-          {d.groups.map((g) => (
-            <div key={g.i} className={cn("rounded-lg border p-2 transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200", grp === g.i ? "border-primary/40 bg-primary/10 shadow-xl shadow-primary/30" : "border-white/[.06] bg-zinc-950/40 hover:border-white/15")}>
-              <button type="button" aria-pressed={grp === g.i} onClick={() => api?.group(g.i)} className="flex min-h-6 w-full items-center gap-2 rounded text-left text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none">
-                <i className="size-2.5 rounded-full" style={{ background: g.color }} />Groupe {g.i + 1}
-                <span className="ml-auto font-normal text-dusk tabular-nums"><span className="text-zinc-300">{g.members.length}</span> chaînes · <span className="text-zinc-300">{fmt(g.viewers)}</span> viewers</span>
-              </button>
-              <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1">
-                {g.members.map((m) => <button key={m.c} type="button" onClick={() => api?.select(m.c)} className="inline-flex min-h-6 items-center gap-1 rounded text-xs text-zinc-300 transition-colors duration-200 hover:text-primary-soft focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"><ChannelAvatar {...m} size={16} />{m.c}</button>)}
-              </div>
-            </div>
-          ))}
-          {d.solo.length > 0 && (
-            <div className="rounded-lg border border-white/[.06] bg-zinc-950/40 p-2">
-              <div className="flex items-center gap-2 text-xs text-zinc-400"><i className="size-2.5 rounded-full bg-zinc-500" />Isolées : aucun lien fort</div>
-              <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1">
-                {d.solo.map((m) => <button key={m.c} type="button" onClick={() => api?.select(m.c)} className="inline-flex min-h-6 items-center gap-1 rounded text-xs text-zinc-300 transition-colors duration-200 hover:text-primary-soft focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"><ChannelAvatar {...m} size={16} />{m.c}</button>)}
-              </div>
-            </div>
-          )}
-        </Sec>
-      )}
-      {!d.empty && (
-        <>
-        <Sec title="Derniers passages">
-          {log.length ? (
-            <ul className="flex flex-col gap-1 text-xs text-zinc-300">
-              {log.map((p) => (
-                <li key={p.t + p.from + p.to} className="flex min-w-0 items-baseline gap-2">
-                  <span className="shrink-0 font-mono text-[11px] text-dusk tabular-nums">{new Date(p.t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <button type="button" onClick={() => api?.select(p.to)} className="min-h-6 min-w-0 truncate text-left transition-colors duration-200 hover:text-primary-soft">
-                    {p.from} → {p.to}{p.n > 1 && <span className="text-dusk"> × {p.n}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-dusk">Aucun passage depuis l’ouverture de la carte. Ils s’ajoutent ici quand quelqu’un passe d’un chat à l’autre.</p>
-          )}
-        </Sec>
-        <Sec title="Disposition">
-          <Button variant="secondary" className="h-9 border border-white/10 bg-zinc-950/60 text-xs text-zinc-200 transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:border-white/20 hover:bg-zinc-800 hover:text-white active:scale-[.98]" title="Recalculer toute la disposition pour la rendre la plus lisible possible (les chaînes déplacées à la main reprennent aussi leur place calculée)" onClick={() => act("relayout")}><Shuffle />Réorganiser la carte</Button>
-        </Sec>
-        </>
-      )}
-    </aside>
-  )
-}
 
 /** Sens des passages entre la chaîne choisie et une voisine : les deux nombres, puis un verdict court (même règle que les pointes des traits : au moins 10 passages, dont 60 % dans un sens). */
 function passWords(c: string, out: number, inn: number) {
@@ -295,6 +126,8 @@ export function MapView() {
   const svgRef = useRef<SVGSVGElement>(null)
   const [api, setApi] = useState<MapApi | null>(null)
   const [help, setHelp] = useState(false)
+  // menu façon jeu vidéo, par-dessus la carte : fermé au départ, la carte garde toute la largeur
+  const [menu, setMenu] = useState(() => import.meta.env.DEV && new URLSearchParams(location.search).has("menu"))
   // fiche d'une chaîne : dépliée sur ordinateur, repliée sur téléphone où elle couvrait presque toute la carte (critique du 25/11/2026)
   const [sheetOpen, setSheetOpen] = useState(() => !matchMedia("(max-width: 639px)").matches)
   const [allLinks, setAllLinks] = useState(false)
@@ -320,6 +153,7 @@ export function MapView() {
       else if (k === "-" || k === "_") api.zoomOut()
       else if (k === "0") api.fit()
       else if (k === "?") setHelp((h) => !h)
+      else if (k === "m" || k === "M") setMenu((m) => !m)
       else return
       e.preventDefault()
     }
@@ -327,13 +161,17 @@ export function MapView() {
     return () => document.removeEventListener("keydown", onKey)
   }, [api])
 
-  // Échap ferme l’aide d’abord (écouté en capture, avant la fermeture de la fiche)
+  // Échap ferme l’aide d’abord, puis le menu (écouté en capture, avant la fermeture de la fiche)
   useEffect(() => {
-    if (!help) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.preventDefault(); setHelp(false) } }
+    if (!help && !menu) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      e.preventDefault()
+      if (help) setHelp(false); else setMenu(false)
+    }
     document.addEventListener("keydown", onKey, true)
     return () => document.removeEventListener("keydown", onKey, true)
-  }, [help])
+  }, [help, menu])
 
   // Met à jour le curseur du SVG quand le mode Globe change
   useEffect(() => {
@@ -381,22 +219,7 @@ export function MapView() {
     )
   const info = st.info
   return (
-    <div className="relative flex h-[calc(100dvh-84px)] min-h-[420px] gap-3">
-      {d.open ? (
-        <Side d={d} api={api} grp={st.grp} sel={st.info?.c ?? null} log={st.log} />
-      ) : (
-        <button
-          type="button"
-          onClick={() => act("side")}
-          title="Afficher les filtres de la carte"
-          aria-label="Afficher les filtres de la carte"
-          className="flex w-10 shrink-0 flex-col items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900/70 py-3 text-zinc-400 shadow-2xl shadow-black/50 backdrop-blur-xl transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:border-white/20 hover:text-white"
-        >
-          <Menu className="size-4" />
-          <span className="text-xs font-medium [writing-mode:vertical-rl] rotate-180">Filtres</span>
-        </button>
-      )}
-
+    <div className="relative flex h-[calc(100dvh-84px)] min-h-[420px]">
       <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/50">
         {/* zone du moteur : styles de l’ancienne interface (.legacy) pour le radar et le dessin SVG */}
         <div className="legacy h-full">
@@ -410,6 +233,9 @@ export function MapView() {
             </div>
           </div>
         </div>
+
+        <MenuButton d={d} open={menu} onToggle={() => setMenu((m) => !m)} />
+        {menu && <GameMenu d={d} api={api} grp={st.grp} log={st.log} onClose={() => setMenu(false)} openHelp={() => setHelp(true)} />}
 
         {d.empty ? (
           <div className="absolute inset-0 grid place-items-center p-6">

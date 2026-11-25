@@ -133,15 +133,37 @@ function Source({ d }: { d: SettingsData }) {
           <span className="text-xs font-medium">Mode :</span>
           {Badge({ variant: d.mode === "cloud" ? "default" : "secondary", children: d.mode === "cloud" ? "Nuage" : "Local" })}
         </div>
-        {d.mode === "cloud" && (
-          <div className="space-y-2">
-            <Field label="URL Supabase">
-              <Input value={d.sbUrl} onChange={(e) => {}} readOnly />
-            </Field>
-          </div>
-        )}
+        {d.mode === "cloud" && <SupabaseForm d={d} />}
       </div>
     </Card>
+  )
+}
+
+/**
+ * Connexion à la base : URL, clé publique et code du tableau de bord. Le code (« codeTableau » dans config.json) ouvre la lecture des
+ * données ET la modification de la liste des chaînes : sans lui, la base ne rend aucune ligne.
+ */
+function SupabaseForm({ d }: { d: SettingsData }) {
+  const [url, setUrl] = useState(d.sbUrl), [key, setKey] = useState(d.sbKey), [code, setCode] = useState(d.sbCode)
+  const [busy, setBusy] = useState(false)
+  const same = url.trim() === d.sbUrl && key.trim() === d.sbKey
+  const go = async () => {
+    setBusy(true)
+    try {
+      // seul le code change : pas besoin de vider et retélécharger la copie locale
+      if (same) await window.saveBoardCode?.(code); else await window.saveSupabase?.(url, key, code)
+    } finally { setBusy(false) }
+  }
+  return (
+    <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void go() }}>
+      <Field label="URL du projet Supabase"><Input value={url} onChange={(e) => setUrl(e.target.value)} autoComplete="off" spellCheck={false} placeholder="https://….supabase.co" /></Field>
+      <Field label="Clé publique" hint="La clé « publishable » ou « anon », jamais la clé secrète (elle reste dans config.json sur le PC du collecteur)."><Input value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} className="font-mono text-xs" /></Field>
+      <Field label="Code du tableau de bord" hint="« codeTableau » dans config.json. Sans lui, la base ne rend aucune donnée et la liste des chaînes reste en lecture seule."><Input type="password" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" spellCheck={false} className="font-mono text-xs" /></Field>
+      <div className="flex items-center gap-3">
+        <Button type="submit" size="sm" disabled={busy || !url.trim() || !key.trim()}>{busy ? "Connexion…" : "Se connecter"}</Button>
+        <Status text={d.sbMsg} />
+      </div>
+    </form>
   )
 }
 
