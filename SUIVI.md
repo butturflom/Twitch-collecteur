@@ -39,6 +39,7 @@
 | #39 | `carte-menu-lecture-protegee` | Menu de la Carte, classements, lecture protégée par code, effacement, CONFORMITE.md | fusionnée le 25/11 (§15) |
 
 | #40, #41 | `suivi-39-fusionnee`, `carte-sans-pastilles` | Suivi de #39 ; Carte : retrait des pastilles de filtres actifs | fusionnées le 25/11 |
+| #43 | `vue-ensemble-spatiale` | Vue d'ensemble spatiale : ciel étoilé, cartes console, avatars en planètes, constellation des recoupements (choix de l'utilisateur, DESIGN.md mis à jour) | ouverte le 25/11 |
 | #42 | `agences-validation-et-clients` | Direction agences : kit de validation, dossier client, rapport mensuel (§12) | fusionnée le 25/11, sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.

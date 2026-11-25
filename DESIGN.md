@@ -248,6 +248,7 @@ Le verre flouté est réservé au cadre de l'application (barre latérale, en-t�
 
 ### Shadow Vocabulary
 - **Arête de coupole** (`box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 12px 32px -20px rgba(0,0,0,.9)`) : tous les panneaux, cartes de chaîne et groupes d'indicateurs.
+- **Console** (25/11/2026, choix de l'utilisateur pour la Vue d'ensemble : `shadow-console`) : arête de coupole, plus un filet violet à 5 % et un halo violet très diffus (`0 0 28px -14px rgba(139,124,255,.22)`). Panneaux, cartes de chaîne et groupes d'indicateurs de la Vue d'ensemble, légèrement translucides (crête à 90 %, coupole à 85 %) pour que le ciel étoilé affleure. **Écart assumé** avec la règle des lueurs signifiantes et avec « le contenu n'est jamais en verre » : la lueur est ici décorative, voulue pour l'ambiance d'observatoire, et reste faible. Sans flou (il serait invisible devant ce fond).
 - **Flottant** (`box-shadow: 0 25px 50px -12px rgba(0,0,0,.6)`) : infobulles et tiroirs.
 - **Lueur d'action** (`box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 6px 16px -8px rgba(139,124,255,.75)`) : le bouton principal uniquement.
 - **Lueur de repère** (`box-shadow: 0 0 10px rgba(139,124,255,.7)`) : la barre de l'onglet actif. (25/11/2026, audit Hallmark, règle 63 : le carré violet devant chaque titre de section est retiré. Répété sur tous les titres, il ne signalait rien ; un titre se repère par sa taille et sa graisse.)
@@ -289,6 +290,15 @@ Le choix de la période (Tout, Aujourd'hui, 7 jours, 30 jours) et la bascule Gra
 - **Border:** filet de 1 px ; au survol d'une carte cliquable, filet marqué.
 - **Internal Padding:** 16 px (20 px pour un bandeau de chaîne).
 - **Empty state:** même rayon, bordure en pointillés, fond coupole à 50 %, texte centré en 12,5 px brume qui explique pourquoi c'est vide et quand ça se remplira.
+
+### Ciel étoilé (25/11/2026)
+`.to2-sky` (`index.css`), monté par `App.tsx` pour les onglets de `SKY_TABS` (la Vue d'ensemble pour l'instant ; la Carte garde son canvas). Des étoiles en dégradés radiaux sur deux mailles de tailles différentes, et deux lueurs très diffuses (violet de la palette, bleu de signal). Statique, sans flou ni animation. Les étoiles restent à peine visibles : c'est voulu.
+
+### Avatar-planète (25/11/2026)
+`ChannelAvatar`, dès 20 px : photo ou initiale cerclée de la couleur de la chaîne, avec une atmosphère (halo de cette couleur) et un voile de relief (lumière en haut à gauche, ombre en bas à droite, comme les planètes de la Carte). Le voile est léger : la photo doit rester reconnaissable. Sous 20 px (légendes, filtres) : pastille sans relief.
+
+### Constellation des recoupements (25/11/2026)
+En tête du bloc « Recoupements » (`recoup.tsx`, à partir de 768 px) : les chaînes des paires les plus proches (7 au plus) posées sur une orbite en pointillés, voisines reliées par un trait d'autant plus épais et lumineux que leur part commune est grande. C'est un résumé des chiffres de la colonne « Paires les plus proches », décoratif pour la lecture et masqué aux lecteurs d'écran.
 
 ### Channel card (signature)
 La carte d'une chaîne en Vue d'ensemble prend sa couleur : liseré de 2 px en haut qui s'efface vers la droite, halo radial dans le coin haut gauche, et barre « Ont écrit pendant ce live » à sa couleur. En dessous, quatre mesures en grille 2×2, dans de petites cellules de 10 px de rayon sur fond blanc à 2 %. Le bandeau (`Hero`) des onglets Par chaîne et Chat reprend le même liseré et le même halo en plus grand.
