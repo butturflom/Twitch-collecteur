@@ -56,8 +56,7 @@ export interface RecoupData {
 }
 
 /** Top Streamers : analyse des streamers par viewers, heures de stream, croissance */
-export interface TopStreamerRow {
-  c: string
+export interface TopStreamerRow extends Who {
   viewers: number
   peakViewers: number
   hours: number
@@ -67,8 +66,7 @@ export interface TopStreamerRow {
 }
 
 /** Communautés Investies : taux d'interaction, redemptions, bits */
-export interface InvestedCommunityRow {
-  c: string
+export interface InvestedCommunityRow extends Who {
   viewers: number
   interactions: number | null
   interactionRate: number | null

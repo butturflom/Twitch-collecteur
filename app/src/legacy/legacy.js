@@ -1854,7 +1854,7 @@ function topStreamersData(q){
     }
 
     rows.push({
-      c: c,
+      ...who(c),
       viewers: Math.round(avgV),
       peakViewers: Math.round(peakV),
       hours: Math.round(hours*10)/10,
@@ -1921,7 +1921,7 @@ function investedCommunitiesData(q){
     const bitsRate=v>0?(bits/v)*100:null;
 
     rows.push({
-      c: c,
+      ...who(c),
       viewers: v,
       interactions: interactions,
       interactionRate: interactionRate,

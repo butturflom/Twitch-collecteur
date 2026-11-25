@@ -3,7 +3,7 @@
 import { useOverviewData, type TopStreamerRow, type InvestedCommunityRow } from "@/legacy/bridge"
 import { StatCard } from "@/components/ui/stat-card"
 import { fmt, pct } from "@/lib/format"
-import { DataTable, Section, Empty, heat } from "./parts"
+import { ChannelCell, DataTable, Section, Empty, heat, type Col } from "./parts"
 
 // Ré-export des types pour compatibilité avec d'anciens imports
 export type { TopStreamerRow, InvestedCommunityRow }
@@ -28,7 +28,7 @@ export function Phase3Analysis() {
               <StatCard
                 label="Viewers totaux"
                 value={fmt(topStreamers.reduce((s, r) => s + r.viewers, 0))}
-                hint="Moyenne des viewers en direct"
+                hint="Somme des moyennes par chaîne : un même viewer peut compter dans plusieurs"
               />
               <StatCard
                 label="Peak maximum"
@@ -42,7 +42,7 @@ export function Phase3Analysis() {
               />
               <StatCard
                 label="Croissance moyenne"
-                value={pct(topStreamers.reduce((s, r) => s + (r.growth || 0), 0) / topStreamers.length)}
+                value={pct(topStreamers.reduce((s, r) => s + (r.growth || 0), 0) / topStreamers.length / 100)}
                 hint="Croissance moyenne des followers"
               />
             </div>
@@ -102,40 +102,30 @@ function PendingPhase3() {
 }
 
 function TopStreamersTable({ rows }: { rows: TopStreamerRow[] }) {
-  const cols = [
-    { head: "Chaîne", left: true, cell: (r: TopStreamerRow) => `<span style="color:${heat((r.viewers/1000)*0.3)}">${r.c}</span>` },
-    { head: "Viewers", cell: (r: TopStreamerRow) => fmt(r.viewers) },
-    { head: "Peak", cell: (r: TopStreamerRow) => fmt(r.peakViewers) },
-    { head: "Heures", cell: (r: TopStreamerRow) => `${r.hours} h` },
-    { head: "Croissance", cell: (r: TopStreamerRow) => r.growth != null ? pct(r.growth / 100) : "—" },
-    { head: "Jours actifs", cell: (r: TopStreamerRow) => fmt(r.activeDays) },
+  const maxV = Math.max(1, ...rows.map((r) => r.viewers))
+  const cols: Col<TopStreamerRow>[] = [
+    { head: "Chaîne", left: true, cell: (r) => <ChannelCell who={r} />, style: (r) => heat((r.viewers / maxV) * 0.4) },
+    { head: "Viewers", cell: (r) => fmt(r.viewers) },
+    { head: "Peak", cell: (r) => fmt(r.peakViewers) },
+    { head: "Heures", cell: (r) => `${r.hours} h` },
+    { head: "Croissance", cell: (r) => r.growth != null ? pct(r.growth / 100) : "—" },
+    { head: "Jours actifs", cell: (r) => fmt(r.activeDays) },
   ]
 
-  return (
-    <DataTable
-      cols={cols}
-      rows={rows.map(r => ({ ...r, c: r.c }))}
-      rowKey={(r) => r.c}
-    />
-  )
+  return <DataTable cols={cols} rows={rows} rowKey={(r) => r.c} />
 }
 
 function InvestedCommunitiesTable({ rows }: { rows: InvestedCommunityRow[] }) {
-  const cols = [
-    { head: "Chaîne", left: true, cell: (r: InvestedCommunityRow) => `<span style="color:${heat(((r.interactions||0)/1000)*0.3)}">${r.c}</span>` },
-    { head: "Viewers", cell: (r: InvestedCommunityRow) => fmt(r.viewers) },
-    { head: "Interactions", cell: (r: InvestedCommunityRow) => fmt(r.interactions || 0) },
-    { head: "Taux d'interaction", cell: (r: InvestedCommunityRow) => r.interactionRate != null ? pct(r.interactionRate / 100) : "—" },
-    { head: "Subs", cell: (r: InvestedCommunityRow) => fmt(r.subs) },
-    { head: "Bits", cell: (r: InvestedCommunityRow) => fmt(r.bits) },
-    { head: "Raids", cell: (r: InvestedCommunityRow) => `${fmt(r.raidsReceived)} (${fmt(r.raidsViewers)} viewers)` },
+  const maxI = Math.max(1, ...rows.map((r) => r.interactions || 0))
+  const cols: Col<InvestedCommunityRow>[] = [
+    { head: "Chaîne", left: true, cell: (r) => <ChannelCell who={r} />, style: (r) => heat(((r.interactions || 0) / maxI) * 0.4) },
+    { head: "Viewers", cell: (r) => fmt(r.viewers) },
+    { head: "Interactions", cell: (r) => fmt(r.interactions || 0) },
+    { head: "Taux d'interaction", cell: (r) => r.interactionRate != null ? pct(r.interactionRate / 100) : "—" },
+    { head: "Subs", cell: (r) => fmt(r.subs) },
+    { head: "Bits", cell: (r) => fmt(r.bits) },
+    { head: "Raids", cell: (r) => `${fmt(r.raidsReceived)} (${fmt(r.raidsViewers)} viewers)` },
   ]
 
-  return (
-    <DataTable
-      cols={cols}
-      rows={rows.map(r => ({ ...r, c: r.c }))}
-      rowKey={(r) => r.c}
-    />
-  )
+  return <DataTable cols={cols} rows={rows} rowKey={(r) => r.c} />
 }
