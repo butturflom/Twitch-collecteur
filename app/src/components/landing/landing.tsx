@@ -37,8 +37,8 @@ const PILLARS = [
   },
   {
     title: "Anonyme par construction",
-    text: "Les pseudos sont remplacés par une empreinte avant l’envoi, et le texte des messages n’est jamais conservé. Les raids reçus sont comptés à part.",
-    where: "Dans l’app : Réglages, encart « Données anonymisées ».",
+    text: "Les pseudos sont remplacés par une empreinte avant l’envoi, et le texte des messages n’est jamais conservé.",
+    where: "Dans l’app : encart « Données anonymisées », en bas du menu latéral.",
   },
 ]
 
@@ -70,7 +70,7 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
       </header>
 
       <main>
-        <section className="mx-auto grid max-w-[1120px] items-center gap-10 px-6 pt-8 pb-16 lg:grid-cols-[1.05fr_1fr] lg:pt-14 lg:pb-20">
+        <div className="mx-auto grid max-w-[1120px] items-center gap-10 px-6 pt-8 pb-16 lg:grid-cols-[1.05fr_1fr] lg:pt-14 lg:pb-20">
           <div>
             <h1 className="max-w-[16ch] text-[2.5rem]/[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-[3.25rem]/[1.05]">
               Cartographie les flux invisibles des communautés Twitch.
@@ -85,20 +85,20 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
               <Button
                 variant="ghost"
                 className="h-11 px-4 text-[15px]"
-                onClick={() => document.getElementById("landing-piliers")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onClick={() => document.getElementById("landing-piliers")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })}
               >
                 Voir ce que ça mesure
               </Button>
             </div>
-            <p className="mt-4 text-xs text-dusk">Tes données restent dans ta base Supabase. Aucun compte à créer.</p>
+            <p className="mt-4 text-xs text-dusk">Tes données restent dans ta propre base Supabase, et le collecteur tourne sur ton PC.</p>
           </div>
           <figure className="mx-auto w-full max-w-[520px]">
             <LandingMap className="w-full" />
             <figcaption className="mt-3 text-center text-xs text-dusk">Illustration. La Carte de ton tableau de bord affiche tes vraies chaînes.</figcaption>
           </figure>
-        </section>
+        </div>
 
-        <section id="landing-piliers" className="mx-auto max-w-[1120px] px-6 pb-20">
+        <div id="landing-piliers" className="mx-auto max-w-[1120px] px-6 pb-20">
           <div className="grid gap-x-12 gap-y-10 border-t border-border pt-10 md:grid-cols-3">
             {PILLARS.map((p) => (
               <div key={p.title}>
@@ -108,7 +108,7 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
               </div>
             ))}
           </div>
-        </section>
+        </div>
       </main>
 
       <footer className="border-t border-border">
