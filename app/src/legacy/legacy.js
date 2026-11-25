@@ -2504,6 +2504,14 @@ async function channelHistory(c,days){
     return {days:h.days||[],out:(h.out||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid})),in:(h.in||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid}))}}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.channelHistory = channelHistory
+// Fidélité du chat d'une chaîne (« Sticky-Factor ») : viewers actifs et viewers partis chez une autre chaîne suivie, par jour, et quartiles
+// des chaînes suivies (fonction SQL channel_stickiness, voir schema.sql). null : pas de base Supabase (mode local) ou fonction absente
+// d'une base pas à jour. Le score sur 100 se calcule dans React (components/channel/sticky.tsx).
+async function channelSticky(c,days){
+  if(!isCloud())return null;
+  try{return await sbReq('rpc/channel_stickiness',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ch:c,days})})}
+  catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
+window.channelSticky = channelSticky
 // Viewers uniques sur 7, 30 ou 90 jours (fonction SQL period_reach, esquisses HyperLogLog, voir schema.sql). null : pas de base Supabase
 // ou base pas à jour. Les jours incomplets ne comptent pas : aujourd'hui n'est agrégé que cette nuit.
 async function periodReach(chans,days){

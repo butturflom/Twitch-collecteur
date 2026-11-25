@@ -560,6 +560,35 @@ language sql stable set search_path = public, pg_catalog as $$
       select a as c, sum(switches)::int as n, sum(raid_switch_count)::int as raid from sw where b = ch group by a order by 2 desc limit 8) x), '[]'))
 $$;
 
+-- Fidélité du chat d'une chaîne (« Sticky-Factor » du plan V2) pour « Par chaîne » → Historique, lue dans les rollups quotidiens.
+-- 25/11/2026. Lecture seule, avec les droits de l'appelant (comme channel_history).
+--   Par jour agrégé : les viewers actifs (unique_chatters) et les viewers partis, c'est-à-dire qui ont écrit chez une autre chaîne
+--   suivie moins de 3 h après. « Partis » = somme des viewers distincts par destination, plafonnée aux viewers actifs : un viewer parti
+--   vers deux chaînes compte deux fois, donc le score est très légèrement sous-estimé (0,4 point au plus, mesuré le 24/11 sur 14 chaînes).
+--   Le score sur 100 se calcule dans le tableau de bord : 100 × (1 − partis / actifs).
+--   net : quartiles du score parmi les chaînes suivies qui ont au moins 200 viewers actifs sur la période (n = leur nombre). Le tableau
+--   de bord compare la chaîne à ces quartiles : les seuils fixes du plan (vert au-dessus de 70, rouge sous 40) donneraient vert à
+--   toutes les chaînes (minimum observé le 24/11 sur 60 chaînes : 72).
+create or replace function channel_stickiness(ch text, days int default 30) returns jsonb
+language sql stable set search_path = public, pg_catalog as $$
+  with p as (select to_char((now() at time zone 'Europe/Paris')::date - least(greatest(days, 1), 366), 'YYYY-MM-DD') as d0),
+  lv as (select s.d, s.a, sum(s.viewers)::int as v from daily_switches_rollup s, p where s.d >= p.d0 group by s.d, s.a),
+  pd as (select r.d, r.c, r.unique_chatters as actives, least(coalesce(lv.v, 0), r.unique_chatters) as leavers
+         from daily_streamer_rollup r join p on r.d >= p.d0 left join lv on lv.d = r.d and lv.a = r.c
+         where r.unique_chatters > 0),
+  pc as (select c, sum(actives)::int as actives, sum(leavers)::int as leavers from pd group by c),
+  net as (select 100 * (1 - leavers::numeric / actives) as score from pc where actives >= 200)
+  select jsonb_build_object(
+    'days', coalesce((select jsonb_agg(jsonb_build_object('d', d, 'actives', actives, 'leavers', leavers) order by d) from pd where c = ch), '[]'),
+    'actives', coalesce((select actives from pc where c = ch), 0),
+    'leavers', coalesce((select leavers from pc where c = ch), 0),
+    'net', jsonb_build_object(
+      'n', (select count(*) from net),
+      'q1', (select round(percentile_cont(0.25) within group (order by score)::numeric, 1) from net),
+      'med', (select round(percentile_cont(0.5) within group (order by score)::numeric, 1) from net),
+      'q3', (select round(percentile_cont(0.75) within group (order by score)::numeric, 1) from net)))
+$$;
+
 -- Estimation d'un HyperLogLog à 2 048 registres : inv = somme des 2^-registre, zeros = registres vides.
 -- Petits comptes (≤ 5 120) : comptage linéaire, plus exact.
 create or replace function hll_card(inv float8, zeros int) returns bigint

@@ -1,7 +1,7 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { ChannelHistory, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
 declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData } }
 
@@ -340,6 +340,19 @@ function reachDemo(chans: string[], days: number): PeriodReach {
   return { from: d(Math.min(days, 12)), to: d(1), days: Math.min(days, 12), net: Math.round(gross * 0.82), chans: per }
 }
 
+// Fidélité du chat : la part de viewers actifs partis ailleurs dépend de la chaîne (haut, milieu, bas du classement fictif des chaînes suivies) ;
+// &sticky=bas ou &sticky=haut force le rang, &sticky=peu : trop peu de viewers actifs pour mesurer
+function stickyDemo(c: string, n: number, mode: string | null): ChannelSticky {
+  const k = Math.max(1, CH.findIndex(([x]) => x === c) + 1)
+  const rate = mode === "bas" ? 0.16 : mode === "haut" ? 0.03 : [0.03, 0.07, 0.15, 0.1][(k - 1) % 4]
+  const days = Array.from({ length: n }, (_, i) => {
+    const t = new Date(Date.now() - (n - i) * 86400000)
+    const actives = mode === "peu" ? 12 : Math.round((900 + 350 * k) * (0.85 + (i / n) * 0.3))
+    return { d: t.toLocaleDateString("sv-SE"), actives, leavers: Math.round(actives * rate * (0.8 + ((i * 7) % 5) / 12)) }
+  })
+  return { days, actives: days.reduce((s, d) => s + d.actives, 0), leavers: days.reduce((s, d) => s + d.leavers, 0), net: { n: 12, q1: 89.1, med: 93, q3: 96.3 } }
+}
+
 // Historique du réseau : n jours agrégés fictifs (creux en semaine, pics le week-end), pour voir « Historique du réseau » de la Vue d'ensemble
 function networkDemo(n: number): NetworkHistory {
   const days = Array.from({ length: n }, (_, i) => {
@@ -380,6 +393,9 @@ export function installDemo() {
     const histo = () => new URLSearchParams(location.search).get("histo")
     window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
     window.periodReach = async (chans, days) => (histo() === "non" ? null : reachDemo(chans, days))
+    // &sticky=bas|haut : chaîne en bas ou en haut du classement de fidélité ; &sticky=peu : trop peu de viewers actifs (&histo=non couvre aussi la fidélité)
+    const sticky = () => new URLSearchParams(location.search).get("sticky")
+    window.channelSticky = async (c, days) => (histo() === "non" ? null : stickyDemo(c, histo() === "1" ? 1 : days, sticky()))
     window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(histo() === "1" ? 1 : days))
     window.renderRosters = () => window.dispatchEvent(new CustomEvent("legacy:rosters", { detail: rostersDemo() }))
     // pilule d'état : collecteur en ligne ; ?demo&etat=erreur : synchro et API en échec (problèmes affichés avant l'état)

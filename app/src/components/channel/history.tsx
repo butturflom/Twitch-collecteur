@@ -6,6 +6,7 @@ import { LineChart } from "@/components/charts/line-chart"
 import { Empty, MeterList, Section, panel } from "@/components/overview/parts"
 import { Two } from "@/components/shared/blocks"
 import { Segmented } from "@/components/shared/segmented"
+import { Sticky } from "./sticky"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { ChannelHistory, HistoryRoute, LineSpec, PeriodReach } from "@/legacy/bridge"
@@ -84,6 +85,7 @@ export function History({ ch, color }: { ch: string; color: string }) {
               <span className="text-dusk"> · estimation à ± 2,3 %, une même personne n'est comptée qu'une fois</span>
             </p>
           )}
+          <Sticky ch={ch} days={days} />
           <Two>
             <Section title="Viewers (pic et moyenne par jour)" note="Relevés de l'API Twitch pendant les lives.">
               <LineChart spec={spec(st.h, [{ name: "Pic", color, key: "peak" }, { name: "Moyenne", color: "#9a9aa8", key: "avg" }], "")} label="Viewers par jour" />
