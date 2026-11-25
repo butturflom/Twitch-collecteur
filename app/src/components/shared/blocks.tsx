@@ -21,7 +21,7 @@ export function Two({ children }: { children: ReactNode }) {
 /** Rangée d'indicateurs Stat Card (21st.dev) séparés par des filets. */
 export function Kpis({ items, className, compact }: { items: Kpi[]; className?: string; compact?: boolean }) {
   return (
-    <StatCardGroup className={cn("bg-linear-to-b from-dome-crest to-dome max-sm:[&>[data-slot=stat-card]]:basis-36", className)}>
+    <StatCardGroup className={cn("bg-linear-to-b from-dome-crest/90 to-dome/85 shadow-console max-sm:[&>[data-slot=stat-card]]:basis-36", className)}>
       {items.map((k) => (
         <StatCard
           key={k.label}

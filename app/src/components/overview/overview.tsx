@@ -284,7 +284,7 @@ export function Overview() {
           ? `${period.label} · ${period?.range || "Activité"} - ${period.hours}h de données`
           : `${period.label} · ${period?.range || "Activité"}`)
         : "Activité sur la période"} badge={!d.hasApi || period?.range === "Pas encore de relevé" ? "Données incomplètes" : undefined}>
-        <StatCardGroup className="bg-linear-to-b from-dome-crest to-dome max-sm:[&>[data-slot=stat-card]]:basis-36">
+        <StatCardGroup className="bg-linear-to-b from-dome-crest/90 to-dome/85 shadow-console max-sm:[&>[data-slot=stat-card]]:basis-36">
           {d.kpis.map((k) => (
             <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="overlap" className="-my-1 inline-block py-1 underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
           ))}

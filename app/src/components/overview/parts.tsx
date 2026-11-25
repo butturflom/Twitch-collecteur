@@ -26,7 +26,7 @@ export function Section({ title, note, badge, action, children, className }: { t
   )
 }
 
-export const panel = "rounded-[14px] border border-border bg-linear-to-b from-dome-crest to-dome to-[90px] shadow-panel"
+export const panel = "rounded-[14px] border border-border bg-linear-to-b from-dome-crest/90 to-dome/85 to-[90px] shadow-console"
 
 /**
  * En attendant les données d'un onglet. Rien pendant 400 ms (un chargement rapide ne clignote pas), puis des
