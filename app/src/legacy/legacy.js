@@ -1006,7 +1006,7 @@ function renderMap(q){
     panel.solo=gl.filter(m=>m.length<2).flat().map(nd=>who(nd.id))}
   // ---------- la carte : dessinée par ce moteur dans les éléments fournis par React (els : stage, radar, box) ----------
   // React appelle mount(els) une fois la page en place ; le moteur lui renvoie ses commandes (api) et le prévient par
-  // els.notify({info, hidden, pins, grp}) quand la chaîne choisie, les noms masqués ou le groupe mis en avant changent.
+  // els.notify({info, pins, grp}) quand la chaîne choisie ou le groupe mis en avant changent.
   panel.mount=els=>{const notify=els.notify;let lastHidden=null;
   // ---------- positions de base (zoom 1), en pixels du cadre ----------
   // le cadre fait toute la place laissée par le menu, sur toute la hauteur de la fenêtre
@@ -1357,7 +1357,10 @@ function renderMap(q){
       setA(t,{x:(pos[0]+w/2).toFixed(1),y:(pos[1]+14.2).toFixed(1)});setA(LR[i],{x:pos[0].toFixed(1),y:pos[1].toFixed(1),width:w.toFixed(1),height:h,rx:h/2});
       LG[i].setAttribute('visibility','visible');t.classList.toggle('strong',strong);LR[i].classList.toggle('strong',strong);LG[i].style.opacity=!F||F.s.has(ids[i])?1:.2}
     if(!edgesDone)elab.innerHTML=edgeLabels();
-    const ht=hidden?`${hidden} nom${hidden>1?'s':''} masqué${hidden>1?'s':''} pour ne pas se chevaucher : zoome ou survole pour ${hidden>1?'les':'le'} voir`:'';if(ht!==lastHidden){lastHidden=ht;notify({hidden:ht})}
+    // noms masqués : dits dans le bandeau (« · 4 noms masqués »), l'explication en infobulle ; plus de pilule flottante (critique du 25/11/2026)
+    if(hidden!==lastHidden){lastHidden=hidden;const hid=els.radar.querySelector('.hid'),hud=els.radar.querySelector('.radar-hud');
+      if(hid)hid.textContent=hidden?` · ${hidden} nom${hidden>1?'s':''} masqué${hidden>1?'s':''}`:'';
+      if(hud)hud.title=hidden?`Noms masqués pour ne pas se chevaucher : zoome ou survole pour ${hidden>1?'les':'le'} voir`:''}
   }
 
   // ---------- zoom et déplacements ----------
@@ -1536,7 +1539,7 @@ function renderMap(q){
   const rad=els.radar,cx=W/2,cy=H/2;
   rad.style.height=H+'px';
   // bandeau « radar » en haut à gauche, et juste dessous le journal : le dernier abonnement, don de bits ou raid, quelques secondes
-  rad.innerHTML=`<div class="radar-hud"><i></i>${esc(HUD)}<span class="act"></span><span class="cap"></span></div><div class="radar-log" role="status"></div>`;
+  rad.innerHTML=`<div class="radar-hud"><i></i>${esc(HUD)}<span class="act"></span><span class="hid"></span><span class="cap"></span></div><div class="radar-log" role="status"></div>`;
   {const hud=rad.querySelector('.radar-hud'),lg=rad.querySelector('.radar-log');if(hud&&lg)lg.style.top=(hud.offsetTop+hud.offsetHeight+6)+'px'}
   draw(); // affiche la rotation dans l'incrustation, maintenant qu'elle existe
   // ---------- activité en direct : la carte bat au rythme réel des chats ----------

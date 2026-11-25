@@ -297,7 +297,7 @@ export function MapView() {
   // fiche d'une chaîne : dépliée sur ordinateur, repliée sur téléphone où elle couvrait presque toute la carte (critique du 25/11/2026)
   const [sheetOpen, setSheetOpen] = useState(() => !matchMedia("(max-width: 639px)").matches)
   const [allLinks, setAllLinks] = useState(false)
-  const [st, setSt] = useState<Required<MapNotice>>({ info: null, hidden: "", pins: 0, grp: null, paused: false, globe: false, log: [] })
+  const [st, setSt] = useState<Required<MapNotice>>({ info: null, pins: 0, grp: null, paused: false, globe: false, log: [] })
   // sans animation demandée par le système, la carte ne bouge pas : le bouton lecture / pause n’a pas lieu d’être
   const infoName = st.info?.c
   useEffect(() => setAllLinks(false), [infoName])
@@ -355,7 +355,7 @@ export function MapView() {
 
   useLayoutEffect(() => {
     if (!d || !stage.current || !radar.current || !box.current) return
-    setSt((s) => ({ info: null, hidden: "", pins: d.pins, grp: null, paused: s.paused, globe: s.globe, log: s.log }))
+    setSt((s) => ({ info: null, pins: d.pins, grp: null, paused: s.paused, globe: s.globe, log: s.log }))
     if (!d.mount) { box.current.innerHTML = ""; radar.current.innerHTML = ""; setApi(null); return }
     const a = d.mount({ stage: stage.current, radar: radar.current, box: box.current, notify: (n) => setSt((s) => ({ ...s, ...n })), view: (v) => { skyView.current = v } })
     setApi(a)
@@ -455,7 +455,6 @@ export function MapView() {
             </div>
             {help && <MapHelp d={d} onClose={() => setHelp(false)} />}
             <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "hidden")}>
-              {st.hidden && <p className="rounded-xl border border-white/10 bg-zinc-950/80 px-3 py-1 text-right text-xs text-zinc-400 tabular-nums backdrop-blur-sm">{st.hidden}</p>}
               <Legend groups={!!d.groups} />
             </div>
             <p className="sr-only" aria-live="polite">{info ? `Fiche ${deC(info.c)} : ${info.sub}` : ""}</p>
