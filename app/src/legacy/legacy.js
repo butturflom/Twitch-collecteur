@@ -2471,6 +2471,14 @@ function dropLocal(){cfg.localIgnored=[...new Set([...(cfg.localIgnored||[]),...
 function openAddStreamer(){showTab('settings');window.dispatchEvent(new Event('legacy:focus-add'))} // bouton de la barre latérale (React)
 
 // Expose functions needed by React for tab switching
+// Historique d'une chaîne lu dans les rollups quotidiens (fonction SQL channel_history, voir schema.sql). null : pas de base Supabase
+// (mode local) ou fonction absente d'une base pas à jour ; React affiche alors une explication.
+async function channelHistory(c,days){
+  if(!isCloud())return null;
+  try{const h=await sbReq('rpc/channel_history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ch:c,days})});
+    return {days:h.days||[],out:(h.out||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid})),in:(h.in||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid}))}}
+  catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
+window.channelHistory = channelHistory
 window.showTab = showTab
 window.openAddStreamer = openAddStreamer
 window.renderFlows = renderFlows
