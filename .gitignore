@@ -46,3 +46,6 @@ dernier-menage.txt
 # Sauvegardes
 *.bak
 *.bak-doctor
+
+# Autorisations personnelles de Claude Code (non versionnées)
+.claude/settings.local.json

@@ -1,1 +1,15 @@
-{}
+{
+  "permissions": {
+    "deny": [
+      "Read(./twitch-overlap*.html)",
+      "Read(./*.log)",
+      "Read(./config.json)",
+      "Read(./.env)",
+      "Read(./package-lock.json)",
+      "Read(./app/package-lock.json)",
+      "Read(./node_modules/**)",
+      "Read(./app/node_modules/**)",
+      "Read(./app/dist/**)"
+    ]
+  }
+}

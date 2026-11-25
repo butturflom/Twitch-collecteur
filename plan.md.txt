@@ -219,12 +219,14 @@ La consommation RAM ne dépasse pas 250 MB pour 100 chaînes écoutées.
 6. VALIDATION ET SUIVI DU PROJET
 Chaque étape complétée doit être marquée d'un [X] ci-dessous par l'utilisateur ou Claude Code :
 
- Étape 1 : Refactoring Base de Données & Pipeline de Rollups SQL
- Étape 2 : Détection des Raids et Intégration API Twitch EventSub
- Étape 3 : Création de la Page "Flux & Migrations" (Moteur Sankey)
- Étape 4 : Module "Rosters & Analytics Agences" (Net Reach)
- Étape 5 : Moteur d'Exportation de Rapports (CSV & PDF)
- Étape 6 : Conteneurisation Cloud du Collecteur (Docker 24/7)
+[X] Étape 1 : Refactoring Base de Données & Pipeline de Rollups SQL (fait, PR #6 ; les brutes sont purgées par cleanup(), pas à 48 h : choix voulu)
+[~] Étape 2 : Détection des Raids et Intégration API Twitch EventSub (partiel : raids reçus par IRC ; EventSub et is_raid à ±10 min non faits, voir SUIVI.md)
+[X] Étape 3 : Création de la Page "Flux & Migrations" (Moteur Sankey) (fait, PR #7)
+[X] Étape 4 : Module "Rosters & Analytics Agences" (Net Reach) (fait, PR #8 ; rosters encore dans le navigateur)
+[X] Étape 5 : Moteur d'Exportation de Rapports (CSV & PDF) (fait, PR #10)
+[X] Étape 6 : Conteneurisation Cloud du Collecteur (Docker 24/7) (build fait, PR #5 ; VPS non déployé)
+
+État au 25/11/2026 : Fonctionnalité 1 (Raid Recommender) faite ; Fonctionnalité 2 (Client View) abandonnée ; Fonctionnalité 3 (Sticky-Factor) non faite, définition à valider ; landing page non faite. Détail et décisions : SUIVI.md.
 
 FONCTIONNALITÉ 1 : Le "Raid Recommender" (Pour les Streamers)
 Objectif Métier :
