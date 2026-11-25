@@ -4,16 +4,99 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. Le skill `
 
 ## En vrac
 
-<!-- AAAA-MM-JJ · idée telle que tu la dis · (reformulation ajoutée par Claude) -->
+- 2026-11-25 · « Pour la landing page, entrer avec une animation de la carte : une galaxie des streamers en live, comme les premières secondes d'un jeu vidéo, jusqu'au titre du film. À la fin, le nom de l'application apparaît avec un effet adapté au style et à l'ambiance du site. » → (Intro animée de la page d'accueil : galaxie des chaînes en direct, puis révélation du titre.)
+- 2026-11-25 · « Pour la Vue d'ensemble et toutes les statistiques et analyses, les icônes des streamers sont toujours représentées par leur planète. » (avec le texte collé : fond spatial, cartes console, avatars en planètes, Recoupements cosmiques) → (Planète partout, y compris les petits formats et les avatars encore dessinés par `legacy.js`. Le reste du texte collé est déjà livré, voir ci-dessous.)
+- 2026-11-25 · Décision sur les outils 3D : Three.js complémentaire (pas un remplaçant de la Carte), autorisé à modifier le code ; ses conseils, ceux de Spline et des derniers skills comptent comme des évaluations légitimes. → (Rangée dans `SUIVI.md` §16 et dans le skill, §3.)
+- 2026-11-25 · « Pour la partie flux, construire l'onglet comme une map de flux qui représente les migrations des viewers actifs. » → (Carte animée des passages de viewers entre chaînes, jour par jour, à côté du Sankey existant.)
+- 2026-11-25 · « Je voyais la map comme un réseau de tuyaux ou de conduits qui représente les déplacements d'un point A à B, ou C, ou plus encore, avec les planètes des streamers. » → (Variante du chantier C : trajets à plusieurs sauts, dessinés en tuyaux, nœuds = planètes.)
+- 2026-11-25 · « Plus tard, l'application sera à télécharger ou consultable sur un site. Après la création d'un contrat, je donne accès à un compte que je prédéfinis avec le client ID et le secret. Le collecteur tourne 24 h/24 en ligne, et la base Supabase reste identique. » → (Hébergement du collecteur et du tableau de bord, comptes par client. Reprend la Client View abandonnée le 24/11 et l'étape 3 du §12.)
 
 ## Évaluées
 
 | Idée | Valeur | Cohérence | Faisabilité | Risque | Plus-value /25 | Coût | Verdict | Raison |
 |---|---|---|---|---|---|---|---|---|
+| Intro animée de la page d'accueil (galaxie en direct puis titre) | 3 : première impression pour la prospection de fin décembre, mais n'ajoute aucune analyse | 4 : lisible avant spectaculaire (`PRODUCT.md` principe 2) si l'intro se passe d'un clic, ne joue qu'une fois et respecte `prefers-reduced-motion` ; « en live » exige de vraies données, sinon on retombe sur l'illustration actuelle, sans nom ni chiffre inventé | 4 : la page d'accueil est une surface neuve posée par-dessus, Three.js y est autorisé ; poids dans le HTML unique à mesurer | 4 : ne touche ni `schema.sql` ni le moteur de la Carte ; le seul risque est le poids et la fluidité | **18** | M (2 à 3 sessions) | **Faire** | Bonne plus-value pour un coût moyen. Première étape = un prototype isolé avec critère go/no-go écrit (plan ci-dessous). |
+| Carte des migrations de viewers actifs (onglet Flux, animée) | 4 : répond à « où vont les viewers » par jour, un axe que le Sankey de période ne montre pas ; sert raids et agences | 4 : honnête si libellée « viewers actifs qui écrivent, jour par jour » ; ne change aucune décision de données | 3 : `daily_switches_rollup` existe et n'est jamais purgé, mais il faut une fonction SQL par jour et 14 journées (vers le 8/12) pour que la lecture temporelle vaille quelque chose | 4 : fonction SQL additive et rejouable, composant neuf ; ne touche ni la Carte ni `legacy.js` si on ne réutilise pas son moteur | **19** | M (2 à 3 sessions) | **Planifier à une date (8/12)** | Précision : la rétention des passages bruts est d'un jour, donc l'animation avance par journée, pas en temps réel. Un prototype isolé peut démarrer avant, sur les données actuelles, pour juger la lisibilité. |
+| Réseau de tuyaux des déplacements A→B→C, nœuds en planètes (variante du chantier C) | 5 : les trajets à plusieurs sauts montrent où les viewers vont après un passage, donc où un raid ou une collab a le plus de chances de marcher | 2 : `DESIGN.md` réserve l'atmosphère à la Carte (l. 321) ; les tuyaux lumineux risquent d'être du spectacle qui cache la donnée (`PRODUCT.md` principe 2). À réconcilier avec la règle du ciel étoilé posée par #43 et #44 | 2 : `daily_switches_rollup` donne des paires par jour, pas le parcours d'un viewer. Un trajet A→B→C exige un calcul quotidien sur les passages bruts, qui ne sont gardés qu'un jour : nouvelle étape de la tâche de nuit, à valider contre les délais de purge | 3 : une tâche de nuit de plus touche le pipeline des rollups, déjà source d'incidents (57014, 21000) | **17** | L (plusieurs sessions, une décision de design et une tâche de nuit) | **Prototype d'abord** | Le prototype n'a pas besoin de la nouvelle tâche : il part des paires par jour déjà agrégées (2 à 3 journées aujourd'hui). Critère de réussite : sans survol, on lit les 5 trajets les plus forts et leur sens ; sinon, on garde la carte à plat du chantier C. |
+| Application en ligne 24 h/24, comptes clients après contrat (reprend la Client View et l'étape 3 du §12) | 5 : supprime la dépendance au PC et l'installation pour un non-technicien (§12 bis, point 3), ce qui ouvre agences et petits streamers | 2 : remet en cause la Client View abandonnée le 24/11 et renvoie le multi-utilisateur à une demande réelle (§12, étape 3) ; le VPS a été mis de côté (§5) | 2 : hébergement permanent, authentification, isolation des données par client, sauvegardes, et une base Supabase gratuite de 500 Mo qui ne tient pas plusieurs clients (§12) | 1 : le client secret Twitch ne doit jamais sortir du serveur ; `board_ok()` ne suffit pas comme droit par utilisateur ; données personnelles à cadrer (RGPD, `CONFORMITE.md`) et conditions Twitch à relire | **16** | L (plusieurs mois de travail, avec juriste) | **Planifier à une date** : après le premier contrat signé, pas avant janvier | Voir « Chantier D » ci-dessous. Ne pas remettre le secret au client : il reste chez l'opérateur, seul l'accès au tableau de bord est donné. |
+| Planète partout (petits formats et avatars de `legacy.js`) | 2 : cohérence visuelle voulue, ne change aucune décision | 5 : prolonge `DESIGN.md` et la règle des deux niveaux de lueur | 5 : `ChannelAvatar` fait déjà la planète dès 20 px et couvre 17 composants | 4 : touche `legacy.js` (3 appels de `av()`) et `legacy.css`, sans toucher au moteur de la Carte | **18** | S (1 session) | **Faire** | Il reste très peu à faire (voir « Ce qui est déjà livré »). |
+
+### Ce qui est déjà livré du texte collé (PR #43 et #44)
+
+1. Fond spatial, étoiles discrètes : fait, ciel étoilé sur toutes les pages sauf la Carte (`SKY_TABS`).
+2. Cartes « console spatiale » : fait.
+3. Avatars en planètes : fait pour les 17 composants React via `app/src/components/channel-avatar.tsx` (atmosphère et relief dès 20 px).
+4. Recoupements cosmiques : fait (constellation des recoupements).
+5. Densité conservée : oui.
+
+**Ce qui n'est pas planète aujourd'hui** :
+- `av()` dans `app/src/legacy/legacy.js:57`, appelée ligne 444 (légende des graphiques), ligne 1459 (info-bulle de la Carte, taille `md`) et ligne 1462 (lignes de l'info-bulle). Rendu en CSS plat (`legacy.css:126-136`).
+- Les pastilles de moins de 20 px de `ChannelAvatar` (légende de `line-chart.tsx`, menu de la Carte) : sans relief ni halo par choix de lisibilité. Ce choix peut rester, avec un relief léger sans halo.
 
 ## Plan en cours
 
-Aucun.
+Proposé le 2026-11-25, pas lancé. **Un chantier = une session** (`/clear` entre deux). Rien ne se fusionne ni ne se déploie sans ta demande.
+
+### Chantier A · Planète partout (S, 1 session)
+
+| Tâche | Fichiers | Modèle, effort | Vérification |
+|---|---|---|---|
+| Faire rendre `av()` en planète (relief et halo, même sens que `ChannelAvatar`) ; garder la gestion d'erreur de photo (`legacy.js` écouteur `error`, classe `av` sur `<img>` interdite côté React mais utilisée ici par le legacy) | `app/src/legacy/legacy.js` (lignes 57 à 62, 444, 1459, 1462), `app/src/legacy/legacy.css` (lignes 113 à 136) | Sonnet 5.5, high | `npm run build`, puis Playwright sur `http://localhost:5173/?demo=map&hover=0.4` (info-bulle) et sur un graphique avec légende |
+| Relief léger sans halo sous 20 px | `app/src/components/channel-avatar.tsx` | Sonnet 5.5, medium | Légende de `line-chart.tsx` et menu de la Carte lisibles à 16 px |
+
+Critère de fin : plus aucune photo de chaîne plate dans l'info-bulle de la Carte ni dans les légendes ; contraste 4,5:1 conservé. **Abandon** : si le relief rend l'initiale illisible à 16 px, on garde la pastille plate à ce format et on le note dans `DESIGN.md`.
+
+### Chantier B · Intro de la page d'accueil (M, 2 à 3 sessions)
+
+| Étape | Exécutant | Modèle, effort | Sortie |
+|---|---|---|---|
+| B1. Écrire la séquence (storyboard : durée, mouvement de caméra, apparition du titre, effet du nom, bouton « Passer », rappel `prefers-reduced-motion`). Typographie et lueurs selon `DESIGN.md` | Session | Opus 5.5, high | Storyboard dans `IDEES.md`, accepté par toi avant tout code |
+| B2. Prototype isolé (`?intro`, page à part, mode démo, sans toucher à la vraie page d'accueil), moteur Three.js via les skills `three-js` et `react-three-fiber`. Option : maquette de la scène dans Spline | Session | Sonnet 5.5, high | Prototype et mesures |
+| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée |
+| B4. Contrôle du mouvement | Sous-agent `impeccable-motion-reviewer`, une seule fois | par défaut | Liste de corrections |
+
+**Critères go/no-go de B2** (à confirmer par toi) : poids ajouté au HTML unique mesuré et écrit (ordre de grandeur à tenir : quelques centaines de Ko, Three.js allégé par import ciblé) ; 60 images par seconde sur ton PC ; chargement correct depuis `file://` ; intro passable en un clic ou à la touche Échap ; une seule lecture par navigateur (`to2-landing-seen`). **Abandon** : poids ou fluidité hors critère, on garde une animation en SVG et CSS (variante S, sans Three.js).
+
+**Spline** : sert à maquetter la scène. Elle n'entre dans la version livrée que si le chargement sans service externe depuis `file://` est démontré à B2 ; c'est un critère de réussite, pas un doute sur ses conseils.
+
+### Chantier C · Carte des migrations (onglet Flux, M, 2 à 3 sessions, dès le 8/12)
+
+| Tâche | Fichiers | Modèle, effort | Vérification |
+|---|---|---|---|
+| C0. Prototype isolé sur les journées déjà agrégées (mode démo, sans SQL) : disposition des chaînes du Sankey, arcs animés par journée, curseur de date. Mesure la lisibilité avec 2 à 3 journées puis 14 | `app/src/components/flows/` (page de démo seulement) | Opus 5.5, high (c'est une décision de lisibilité) | Capture Playwright sur `npm run dev` |
+| C1. Fonction SQL additive `flows_by_day(code, d0, d1)` : passages par jour et par paire, top N, avec part organique et raid. Dans `schema.sql`, rejouable (`create or replace`), derrière `board_ok()` comme les autres | `schema.sql`, `app/src/legacy/legacy.js` (appel RPC, événement `legacy:flows` enrichi) | Sonnet 5.5, high | Test sur la base dans une transaction annulée, avec le bon code et un mauvais code (0 ligne) |
+| C2. Composant React « carte des migrations » avec curseur de date, à côté du Sankey (le Sankey reste pour la période) | `app/src/components/flows/flows-map.tsx`, `flows.tsx` | Sonnet 5.5, high | `npm run build`, Playwright `?demo=flows` |
+
+**Variante tuyaux (25/11)** : si le prototype C0 réussit en tuyaux, les trajets A→B→C deviennent une étape C3, après C2 : une tâche de nuit (Sonnet high, `schema.sql` rejouable, testée en transaction annulée) qui calcule, à partir des passages bruts de la veille, les trajets à deux sauts par jour et les garde dans une table agrégée. Sans cette table, on ne montre que des paires, jamais un parcours. Les planètes des nœuds réutilisent `ChannelAvatar` (déjà en planète dès 20 px). Décision prise le 25/11 : `DESIGN.md` l. 321 ne réserve plus l'atmosphère à la Carte ; le ciel étoilé la remplace sur toutes les pages. Les tuyaux peuvent donc être dessinés dans Flux, à condition de passer le critère de lisibilité du prototype.
+
+Critère de fin : la carte se lit sans survol sur 14 journées, chaque arc donne son nombre de viewers uniques et la part organique, et le libellé dit « viewers actifs qui écrivent, par jour ». **Abandon** : si, sur 14 journées, la carte ne dit rien de plus que le Sankey, on ne la livre pas et on garde le Sankey.
+
+### Chantier D · Hébergement et comptes clients (L, dormant)
+
+Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'étape 1 de `VALIDATION-AGENCES.md`. Décisions prises le 25/11 :
+
+1. **Base commune avec droits**, sur un plan Supabase payant (augmentation des capacités du compte). Droits par client via RLS. Le palier se choisit selon `COUTS-CLIENTS.md` §5.
+2. **Le secret Twitch reste chez l'opérateur**, qui est seul responsable des données. Le client ne reçoit qu'un accès au tableau de bord.
+3. **Collecte 24 h/24 : conseil sur les dépenses.** Une seule collecte pour l'union des chaînes de tous les clients, dimensionnée selon `COUTS-CLIENTS.md`. Le serveur reste à chiffrer sur deux ou trois offres avant tout choix.
+
+Étapes, si les trois décisions sont prises :
+- D0. Cadre juridique (RGPD, conditions Twitch sur le stockage et la redistribution) validé par un juriste. Bloquant avant tout client payant (§12).
+- D1. Collecteur sur serveur, en ligne, avec sauvegarde et alerte de panne. Sonnet high, testé sur une base de test.
+- D2. Tableau de bord publié sur un site, derrière une connexion par compte. La clé publique ne doit plus lire toutes les tables (§12, blocages). Opus high pour l'architecture des droits, Sonnet high pour l'implémentation.
+- D3. Création d'un compte client avec accès en lecture seule, testé avec un compte de démonstration.
+
+**Critère d'abandon** : si le juriste ne valide pas la base commune, on passe à une base par client, plus lente à monter mais sans droits partagés. Le conseil de coûts est tenu dans `COUTS-CLIENTS.md` : à chaque nouveau client, on remplit le questionnaire de son §6 avant de chiffrer.
+
+### Coût estimé
+
+4 à 6 sessions au total : 1 Opus (B1), 3 à 4 Sonnet, 1 sous-agent d'une critique de mouvement. Le chantier A passe d'abord (peu cher, visible tout de suite).
+
+### Ce que je propose de ne pas faire
+
+- Ne pas passer la Carte en Three.js maintenant : ta décision d'aujourd'hui fait de Three.js un complément, pas un remplaçant. La question se reposera si l'intro prouve un gain de rendu.
+- Ne pas afficher de noms de chaînes ou de chiffres inventés dans l'intro : si aucune donnée réelle n'est disponible à la première visite, l'intro montre la galaxie illustrée.
+
+**Première action** : dire « lance le chantier A ». Pour B, valider d'abord les critères go/no-go ci-dessus.
 
 ## Écartées
 
@@ -24,3 +107,5 @@ Aucun.
 
 | Chantier | Sessions estimées | Sessions réelles | Modèles | Ce que ça a apporté |
 |---|---|---|---|---|
+| A · Planète partout | 1 | | | |
+| B · Intro d'accueil | 3 | | | |
