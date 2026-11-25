@@ -2,7 +2,7 @@
 // La carte elle-même (radar, disposition, rotation, glisser, zoom, activité en direct) est dessinée image par image par le
 // moteur de l’ancien code, dans les éléments que React lui fournit (mount) ; il renvoie ses commandes (MapApi).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { ChevronsLeft, CircleQuestionMark, Crosshair, Globe, Maximize2, Menu, Minus, Pause, Play, Plus, RotateCcw, Shuffle, X } from "lucide-react"
+import { ChevronDown, ChevronsLeft, CircleQuestionMark, Crosshair, Globe, Maximize2, Menu, Minus, Pause, Play, Plus, RotateCcw, Shuffle, X } from "lucide-react"
 import { LangBadge } from "@/components/lang-badge"
 import { Tabs } from "radix-ui"
 import { Button } from "@/components/ui/button"
@@ -257,16 +257,8 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
 const LEGEND = (
   <>
     <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-2 rounded-full bg-zinc-300" /><i aria-hidden className="size-3 rounded-full bg-zinc-300" />taille = viewers actifs</span>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-3 rounded-full bg-[radial-gradient(circle,var(--star-core)_0_35%,var(--star-gold)_36%_60%,transparent_62%)]" />étoile = le plus de viewers actifs du système</span>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="inline-flex size-3 items-center justify-center rounded-full border border-dashed border-zinc-400"><i className="size-1 rounded-full bg-zinc-300" /></i>plus près de l’étoile = plus de viewers en commun avec elle</span>
+    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-3 rounded-full bg-[radial-gradient(circle,var(--star-core)_0_35%,var(--star-gold)_36%_60%,transparent_62%)]" />étoile = le plus de viewers actifs du système · plus près d’elle = plus de viewers en commun</span>
     <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-[2px] w-4 rounded-full bg-map-link" />10 %<i aria-hidden className="ms-1 h-[4.5px] w-4 rounded-full bg-map-link" />50 % et plus : part de viewers en commun</span>
-  </>
-)
-const SIGNALS = (
-  <>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="relative h-1.5 w-4 rounded-full bg-linear-to-r from-transparent to-foreground" />comète = quelqu’un passe d’un chat à l’autre, maintenant</span>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-1.5 rounded-full bg-foreground shadow-glint" />lueur = passages de la période</span>
-    <span className="inline-flex items-center gap-1.5"><svg aria-hidden viewBox="0 0 10 10" className="size-2.5"><path d="M3 1.5L7 5L3 8.5" fill="none" stroke="var(--map-link)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>pointe = sens le plus fréquent</span>
   </>
 )
 const helpH = "text-xs font-medium text-dusk"
@@ -281,14 +273,10 @@ function Legend({ groups }: { groups: boolean }) {
     <>
       <div className={cn(box, "pointer-events-auto max-sm:hidden")}>
         <p className="flex flex-wrap items-center justify-end gap-x-3.5 gap-y-1">{LEGEND}{grp}</p>
-        <details className="group mt-1 text-right">
-          <summary className="cursor-pointer list-none text-zinc-400 transition-colors hover:text-zinc-200 [&::-webkit-details-marker]:hidden">Signaux <span aria-hidden className="inline-block transition-transform group-open:rotate-180 motion-reduce:transition-none">▾</span></summary>
-          <p className="mt-1 flex flex-wrap items-center justify-end gap-x-3.5 gap-y-1">{SIGNALS}</p>
-        </details>
       </div>
       <details className={cn(box, "pointer-events-auto sm:hidden")}>
         <summary className="cursor-pointer list-none text-right text-zinc-200 [&::-webkit-details-marker]:hidden">Comment lire la carte</summary>
-        <div className="mt-1.5 flex flex-col gap-1">{LEGEND}{grp}{SIGNALS}</div>
+        <div className="mt-1.5 flex flex-col gap-1">{LEGEND}{grp}</div>
       </details>
     </>
   )
@@ -317,8 +305,13 @@ export function MapView() {
   const svgRef = useRef<SVGSVGElement>(null)
   const [api, setApi] = useState<MapApi | null>(null)
   const [help, setHelp] = useState(false)
+  // fiche d'une chaîne : dépliée sur ordinateur, repliée sur téléphone où elle couvrait presque toute la carte (critique du 25/11/2026)
+  const [sheetOpen, setSheetOpen] = useState(() => !matchMedia("(max-width: 639px)").matches)
+  const [allLinks, setAllLinks] = useState(false)
   const [st, setSt] = useState<Required<MapNotice>>({ info: null, hidden: "", pins: 0, grp: null, paused: false, globe: false, log: [] })
   // sans animation demandée par le système, la carte ne bouge pas : le bouton lecture / pause n’a pas lieu d’être
+  const infoName = st.info?.c
+  useEffect(() => setAllLinks(false), [infoName])
   const still = useMemo(() => matchMedia("(prefers-reduced-motion: reduce)").matches, [])
   // vue du moteur (globe, zoom, déplacement), lue par le fond en volume à chaque image ; sans re-rendu React
   const skyView = useRef<MapViewState | null>(null)
@@ -419,7 +412,7 @@ export function MapView() {
         <div className="legacy h-full">
           <div className="panel mappanel h-full">
             <div className="mapstage" ref={stage}>
-              <Galaxy view={skyView} />
+              <Galaxy view={skyView} paused={st.paused} />
               {/* voile très doux entre le ciel et la carte, plus dense au centre : les traits restent lisibles sur le cœur clair de la galaxie (le ciel lui-même ne change pas) */}
               <div aria-hidden className="pointer-events-none absolute inset-0 bg-(image:--map-veil-gradient)" />
               <div className="radar" ref={radar} />
@@ -430,7 +423,10 @@ export function MapView() {
 
         {d.empty ? (
           <div className="absolute inset-0 grid place-items-center p-6">
-            <p className="max-w-md rounded-2xl border border-dashed border-white/15 bg-card px-5 py-6 text-center text-[13px] text-muted-foreground">{d.empty}</p>
+            <div className="flex flex-col items-center gap-3">
+              <p className="max-w-md rounded-2xl border border-dashed border-white/15 bg-card px-5 py-6 text-center text-[13px] text-muted-foreground">{d.empty}</p>
+              {d.view === "sel" && <Button size="sm" className="h-8 text-xs" onClick={() => act("view", "all")}>Afficher toutes les chaînes</Button>}
+            </div>
           </div>
         ) : (
           <>
@@ -467,12 +463,6 @@ export function MapView() {
               <button type="button" className={ctl} title="Recentrer : la chaîne choisie, le groupe mis en avant, ou sinon le centre de la carte (C)" aria-label="Recentrer la carte" onClick={() => api?.recenter()}><Crosshair /></button>
               {st.pins > 0 && <button type="button" className={ctl} title="Remettre à leur place les chaînes déplacées" aria-label="Remettre les chaînes à leur place" onClick={() => act("pins")}><RotateCcw /></button>}
               <button type="button" className={cn(ctl, help && "border-primary/40 text-primary-soft")} aria-haspopup="dialog" aria-expanded={help} title="Aide : lire, signaux, manipuler (?)" aria-label="Aide de la carte" onClick={() => setHelp((h) => !h)}><CircleQuestionMark /></button>
-              {st.globe && (
-                <span className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary-soft shadow-sm" aria-live="polite">
-                  <span className="inline-flex size-1.5 shrink-0 items-center justify-center rounded-full bg-primary-soft" aria-hidden>●</span>
-                  MODE GLOBE
-                </span>
-              )}
             </div>
             {help && <MapHelp d={d} onClose={() => setHelp(false)} />}
             <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "max-lg:hidden")}>
@@ -481,24 +471,27 @@ export function MapView() {
             </div>
             <p className="sr-only" aria-live="polite">{info ? `Fiche ${deC(info.c)} : ${info.sub}` : ""}</p>
             {info && (
-              <div role="region" aria-label={`Fiche ${deC(info.c)}`} className="absolute bottom-3 left-3 max-h-[calc(100%-70px)] w-[min(380px,calc(100%-24px))] animate-in fade-in-0 slide-in-from-bottom-2 overflow-auto rounded-2xl border border-white/10 bg-zinc-900/80 p-3.5 shadow-2xl shadow-black/60 backdrop-blur-xl backdrop-saturate-150 duration-200">
+              <div role="region" aria-label={`Fiche ${deC(info.c)}`} className="absolute bottom-3 left-3 max-h-[min(46%,calc(100%-70px))] w-[min(380px,calc(100%-24px))] animate-in fade-in-0 slide-in-from-bottom-2 overflow-auto rounded-2xl border border-white/10 bg-zinc-900/80 p-3.5 shadow-2xl shadow-black/60 backdrop-blur-xl backdrop-saturate-150 duration-200">
                 <div className="flex items-center gap-2.5">
                   <ChannelAvatar {...info} size={32} />
                   <div className="min-w-0 flex-1">
                     <b className="block truncate text-sm font-semibold text-zinc-100">{info.c}</b>
-                    <span className="text-xs text-zinc-400 tabular-nums">{info.sub}</span>
+                    <span className="line-clamp-2 text-xs text-zinc-400 tabular-nums">{info.sub}</span>
                   </div>
+                  <button type="button" className={ctl} aria-expanded={sheetOpen} title={sheetOpen ? "Réduire la fiche" : "Déplier la fiche"} aria-label={sheetOpen ? "Réduire la fiche" : "Déplier la fiche"} onClick={() => setSheetOpen((o) => !o)}><ChevronDown className={cn("transition-transform duration-200 motion-reduce:transition-none", sheetOpen && "rotate-180")} /></button>
                   <button type="button" className={ctl} title="Recentrer la carte sur cette chaîne (C)" aria-label="Recentrer sur cette chaîne" onClick={() => api?.recenter()}><Crosshair /></button>
                   <button type="button" className={ctl} title="Fermer la fiche (Échap)" aria-label="Fermer la fiche" onClick={() => api?.select(null)}><X /></button>
                 </div>
+                {sheetOpen && (
+                <>
                 <Button size="sm" className="mt-2.5 h-8 text-xs shadow-action transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200" data-open={info.c}>Ouvrir dans Par chaîne</Button>
                 {info.links.length ? (
                   <>
-                    <p className="mt-3 mb-1 text-xs text-zinc-400">Part de ses viewers actifs qu’on voit aussi écrire chez chaque voisine (barre pleine à 50 % et plus, comme l’épaisseur des traits), puis le sens des passages sur la période</p>
+                    <p className="mt-3 mb-1 text-xs text-zinc-400">Part de ses viewers actifs qui écrivent aussi chez chaque voisine, puis le sens des passages</p>
                     <MeterList
                       max={0.5}
                       thick
-                      rows={info.links.map((l) => ({
+                      rows={(allLinks ? info.links : info.links.slice(0, 4)).map((l) => ({
                         key: l.c, v: l.share, color: l.color,
                         right: <>{pct(l.share)} · {fmt(l.n)} pers.</>,
                         sub: l.out + l.inn > 0 ? (
@@ -507,9 +500,16 @@ export function MapView() {
                         label: <button type="button" onClick={() => api?.select(l.c)} className="inline-flex min-h-6 items-center gap-1.5 transition-colors duration-200 hover:text-primary-soft"><ChannelAvatar {...l} />{l.c}</button>,
                       }))}
                     />
+                    {info.links.length > 4 && (
+                      <button type="button" aria-expanded={allLinks} onClick={() => setAllLinks((v) => !v)} className="mt-1 inline-flex min-h-6 items-center rounded text-xs font-medium text-zinc-300 transition-colors hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                        {allLinks ? "Voir moins" : `Voir les ${info.links.length - 4} autres voisines`}
+                      </button>
+                    )}
                   </>
                 ) : (
                   <p className="mt-2 text-xs text-zinc-400">Aucun viewer actif en commun avec les autres chaînes de la carte.</p>
+                )}
+                </>
                 )}
               </div>
             )}

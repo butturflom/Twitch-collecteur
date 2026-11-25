@@ -139,8 +139,8 @@ function paintFar(w: number, h: number) {
   g.fillStyle = base; g.fillRect(0, 0, W, H)
   g.globalCompositeOperation = "lighter"
   const clouds: [number, number, number, string, number][] = [
-    [0.82, 0.18, 0.5, "#c026d3", 0.15], [0.12, 0.3, 0.55, "#2563eb", 0.14], [0.3, 0.88, 0.5, "#0d9488", 0.11], [0.62, 0.72, 0.45, "#7c3aed", 0.15],
-    [0.97, 0.04, 0.35, "#06b6d4", 0.12], [0.03, 0.97, 0.38, "#ec4899", 0.12], [0.15, 0.1, 0.4, "#ece6ff", 0.1], [0.88, 0.9, 0.42, "#f1eaff", 0.09], [0.5, 0.5, 0.65, "#ffffff", 0.05],
+    [0.82, 0.18, 0.5, "#6d28d9", 0.15], [0.12, 0.3, 0.55, "#4338ca", 0.13], [0.3, 0.88, 0.5, "#5b21b6", 0.11], [0.62, 0.72, 0.45, "#7c3aed", 0.15],
+    [0.97, 0.04, 0.35, "#8b7cff", 0.1], [0.03, 0.97, 0.38, "#6f5ff0", 0.1], [0.15, 0.1, 0.4, "#ece6ff", 0.1], [0.88, 0.9, 0.42, "#f1eaff", 0.09], [0.5, 0.5, 0.65, "#ffffff", 0.05],
   ]
   for (const [x, y, s, col, a] of clouds) blob(g, x * W, y * H, s * M, hex(col), a)
   return c
@@ -148,15 +148,17 @@ function paintFar(w: number, h: number) {
 
 const FLAT: MapViewState = { k: 1, tx: 0, ty: 0, rot: 0, q: [1, 0, 0, 0] }
 
-export function Galaxy({ view }: { view?: RefObject<MapViewState | null> }) {
+export function Galaxy({ view, paused }: { view?: RefObject<MapViewState | null>; /** carte en pause : la galaxie arrête sa rotation lente (plus de redessin 8 fois par seconde) */ paused?: boolean }) {
   const wrap = useRef<HTMLDivElement>(null), cv = useRef<HTMLCanvasElement>(null)
+  const pausedRef = useRef(false)
+  pausedRef.current = !!paused
 
   useEffect(() => {
     const el = wrap.current, c = cv.current, ctx = c?.getContext("2d")
     if (!el || !c || !ctx) return
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
     const V = buildVolume(), t0 = performance.now()
-    let W = 0, H = 0, dpr = 1, far: HTMLCanvasElement | null = null, lastKey = "", lastSpin = 0, raf = 0
+    let W = 0, H = 0, dpr = 1, far: HTMLCanvasElement | null = null, lastKey = "", lastSpin = 0, raf = 0, pausedAt: number | null = null, held = 0
 
     const draw = (v: MapViewState, t: number) => {
       if (!W || !H) return
@@ -236,11 +238,13 @@ export function Galaxy({ view }: { view?: RefObject<MapViewState | null> }) {
     // la galaxie ; rien quand l'onglet est caché.
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame)
-      const v = view?.current || FLAT, key = `${v.k}|${v.tx}|${v.ty}|${v.rot}|${v.q.join(",")}|${W}x${H}`, spin = !reduce && now - lastSpin > 120
+      // en pause, le temps de la galaxie s'arrête (et reprend là où il était) : plus de redessin tant que la vue ne change pas
+      if (pausedRef.current) { if (pausedAt == null) pausedAt = now } else if (pausedAt != null) { held += now - pausedAt; pausedAt = null }
+      const v = view?.current || FLAT, key = `${v.k}|${v.tx}|${v.ty}|${v.rot}|${v.q.join(",")}|${W}x${H}`, spin = !reduce && pausedAt == null && now - lastSpin > 120
       if (key === lastKey && !spin) return
       lastKey = key
       if (spin) lastSpin = now
-      draw(v, reduce ? 0 : (now - t0) / 1000)
+      draw(v, reduce ? 0 : ((pausedAt ?? now) - t0 - held) / 1000)
     }
     resize(); draw(view?.current || FLAT, 0)
     raf = requestAnimationFrame(frame)
