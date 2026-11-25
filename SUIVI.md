@@ -67,6 +67,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Carte, critique n°7 (25/11)** : 28/40, rien à changer. Reste en « Explorer seulement ».
 - **Vue d'ensemble, critique n°7** : 27/40. Seul le bug Phase 3 (P1) est traité (PR #22). Non retenus : boutons des Recoupements, grille de chaînes et tri de Participation, pulse du bouton Analyses, état de chargement de Phase 3.
 - **Plan V2, à ne pas appliquer tel quel** : sel quotidien (il casserait les viewers sur plusieurs jours), purge à 48 h dans le rollup, raids via Helix ou EventSub, Client View, alerte pendant les pubs, spec Dockerfile (obsolète).
+- **Atmosphère hors Carte (25/11, décision de l'utilisateur)** : `DESIGN.md` ne réserve plus l'atmosphère à la Carte. Le ciel étoilé la porte sur toutes les pages ; les nouvelles surfaces (intro, Flux) peuvent la reprendre si la lisibilité suit. Les outils 3D et de design (Three.js, Spline, `ui-ux-pro-max`, Playwright, `impeccable`) servent à améliorer les analyses futures, avec la même valeur d'évaluation que les autres avis.
 - **Viewers uniques** : esquisses HyperLogLog (erreur d'environ 2,3 %). Pas d'exclusifs ni de paires en estimation.
 - **Hash `u` raccourci (≈ −45 Mo)** : déconseillé pour l'instant (271 Mo sur 500).
 - **Téléphone** : hors usage, ordinateur seulement.
