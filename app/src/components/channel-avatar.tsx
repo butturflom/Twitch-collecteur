@@ -1,5 +1,6 @@
 // Photo d'une chaîne, cerclée de sa couleur ; l'initiale sur sa couleur si pas de photo (ou lien périmé).
 // À partir de 20 px, c'est une petite planète : atmosphère (halo de sa couleur) et relief (lumière en haut à gauche, ombre en bas à droite).
+// Sous 20 px, la pastille garde le relief mais pas le halo.
 // La photo reste lisible : le relief est un voile léger posé dessus, jamais un filtre.
 // Pas de classe « av » : l'ancien code remplace lui-même les <img class="av"> en erreur, ce qui casserait React.
 import { useState } from "react"
@@ -20,16 +21,7 @@ export function ChannelAvatar({ c, color, img, size = 20, className }: Who & { s
   const photo = !!img && broken !== img
   const letter = (c || "?")[0].toUpperCase()
 
-  if (!planet) {
-    // petites pastilles (légendes, filtres) : sans relief
-    const style = { width: size, height: size, boxShadow }
-    const cls = cn("inline-grid shrink-0 place-items-center rounded-full object-cover align-middle", className)
-    return photo ? (
-      <img src={img} alt="" loading="lazy" referrerPolicy="no-referrer" className={cls} style={style} onError={() => setBroken(img!)} />
-    ) : (
-      <span aria-hidden className={cn(cls, "font-semibold text-white")} style={{ ...style, fontSize: Math.round(size * 0.42), background: `color-mix(in srgb, ${color} 30%, var(--dome-crest))` }}>{letter}</span>
-    )
-  }
+  // Sous 20 px (légendes, filtres) : même pastille avec son relief léger, mais sans halo (voir boxShadow).
   return (
     <span aria-hidden={photo ? undefined : true} className={cn("relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full align-middle", className)} style={{ width: size, height: size, boxShadow, background: photo ? undefined : `color-mix(in srgb, ${color} 30%, var(--dome-crest))` }}>
       {photo ? (
