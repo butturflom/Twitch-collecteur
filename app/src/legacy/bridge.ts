@@ -266,9 +266,13 @@ export interface HistoryDay { d: string; chatters: number; msgs: number; mins: n
 export interface HistoryRoute extends Who { n: number; raid: number }
 export interface ChannelHistory { days: HistoryDay[]; out: HistoryRoute[]; in: HistoryRoute[] }
 
+/** Viewers uniques sur plusieurs jours, estimés par HyperLogLog (± 2,3 %) : réunion des chaînes (net) et chaque chaîne. */
+export interface PeriodReach { from: string | null; to: string | null; days: number; net: number; chans: { c: string; n: number }[] }
+
 declare global {
   interface Window {
     /** null : pas de base Supabase (mode local) ou base pas à jour */
+    periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>
     channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
     showTab?: (t: TabId) => void
     openAddStreamer?: () => void

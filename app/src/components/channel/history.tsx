@@ -7,7 +7,7 @@ import { Empty, MeterList, Section, panel } from "@/components/overview/parts"
 import { Two } from "@/components/shared/blocks"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { ChannelHistory, HistoryRoute, LineSpec } from "@/legacy/bridge"
+import type { ChannelHistory, HistoryRoute, LineSpec, PeriodReach } from "@/legacy/bridge"
 
 type State = { s: "loading" } | { s: "none" } | { s: "error"; msg: string } | { s: "ok"; h: ChannelHistory }
 
@@ -38,6 +38,14 @@ function Routes({ rows, note }: { rows: HistoryRoute[]; note: string }) {
 export function History({ ch, color }: { ch: string; color: string }) {
   const [days, setDays] = useState<30 | 90>(30)
   const [st, setSt] = useState<State>({ s: "loading" })
+  const [uniq, setUniq] = useState<PeriodReach | null>(null) // viewers uniques sur la période (esquisses HyperLogLog)
+
+  useEffect(() => {
+    let live = true
+    setUniq(null)
+    window.periodReach?.([ch], days).then((p) => live && setUniq(p), () => live && setUniq(null))
+    return () => { live = false }
+  }, [ch, days])
 
   useEffect(() => {
     let live = true
@@ -79,6 +87,12 @@ export function History({ ch, color }: { ch: string; color: string }) {
         <>
           {st.h.days.length < 2 && (
             <p className="mb-3 text-xs text-dusk">{st.h.days.length} seule journée agrégée pour l'instant : les courbes se dessineront au fil des nuits.</p>
+          )}
+          {uniq && uniq.days > 0 && (
+            <p className="mb-1 text-sm text-muted-foreground">
+              <span className="font-mono text-base font-semibold tabular-nums text-foreground">≈ {fmt(uniq.net)}</span> viewers actifs uniques sur {uniq.days} jour{uniq.days > 1 ? "s" : ""} complet{uniq.days > 1 ? "s" : ""}
+              <span className="text-dusk"> · estimation à ± 2,3 %, une même personne n'est comptée qu'une fois</span>
+            </p>
           )}
           <Two>
             <Section title="Viewers (pic et moyenne par jour)" note="Relevés de l'API Twitch pendant les lives.">

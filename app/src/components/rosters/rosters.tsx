@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { useRostersData, usePeriodInfo, type RosterChannel } from "@/legacy/bridge"
+import { useRostersData, usePeriodInfo, type PeriodReach, type RosterChannel } from "@/legacy/bridge"
 import { printRosterReport, rosterCsv } from "./roster-report"
 
 /** Types pour les rosters */
@@ -98,11 +98,14 @@ export interface Reach {
   net: number
   gross: number
   cannibal: number
-  multi: number
-  rows: { who: RosterChannel; viewers: number; exclusive: number; msgs: number }[]
+  /** null en estimation : le nombre de viewers sur 2 chaînes ou plus ne se déduit pas des esquisses */
+  multi: number | null
+  rows: { who: RosterChannel; viewers: number; exclusive: number | null; msgs: number | null }[]
   /** paires du roster qui partagent des viewers, les plus fortes d'abord ; share = communs ÷ audience de la plus petite */
   pairs: { a: RosterChannel; b: RosterChannel; shared: number; share: number }[]
   missing: string[]
+  /** présent sur 7, 30 ou 90 jours : estimation HyperLogLog (± 2,3 %), sans exclusifs, messages ni paires */
+  estimated?: { days: number; from: string; to: string }
 }
 
 function pairsOf(present: RosterChannel[]): Reach["pairs"] {
@@ -134,18 +137,51 @@ export function reachOf(channels: string[], byChan: Map<string, RosterChannel>):
   return { net: count.size, gross, cannibal: gross ? 1 - count.size / gross : 0, multi, rows, pairs: pairsOf(present), missing: channels.filter((c) => !byChan.has(c)) }
 }
 
+/** Reach d'un roster sur 7, 30 ou 90 jours, depuis les esquisses (period_reach). Pas d'exclusifs ni de paires : la différence de deux
+ *  estimations serait trop bruitée. La cannibalisation compare la réunion à la somme des estimations par chaîne (± 3 points environ). */
+export function reachFromEstimate(channels: string[], byChan: Map<string, RosterChannel>, p: PeriodReach): Reach {
+  const rows = p.chans.flatMap((x) => {
+    const who = byChan.get(x.c)
+    return who ? [{ who, viewers: x.n, exclusive: null, msgs: null }] : []
+  })
+  const gross = rows.reduce((s, x) => s + x.viewers, 0)
+  return {
+    net: p.net, gross, cannibal: gross ? Math.max(0, 1 - p.net / gross) : 0, multi: null, rows, pairs: [],
+    missing: channels.filter((c) => !byChan.has(c)), estimated: { days: p.days, from: p.from ?? "", to: p.to ?? "" },
+  }
+}
+
+type Est = { s: "loading" } | { s: "none" } | { s: "error"; msg: string } | { s: "ok"; p: PeriodReach }
+
+/** Lit period_reach pour les chaînes d'un roster quand la fenêtre dépasse un jour (win > 0). */
+function useEstimate(channels: string[], win: number): Est {
+  const key = channels.join(",")
+  const [st, setSt] = useState<Est>({ s: "loading" })
+  useEffect(() => {
+    if (!win) return
+    let live = true
+    setSt({ s: "loading" })
+    const f = window.periodReach
+    if (!f || !channels.length) { setSt({ s: "none" }); return }
+    f(channels, win).then(
+      (p) => live && setSt(p ? { s: "ok", p } : { s: "none" }),
+      (e) => live && setSt({ s: "error", msg: String(e?.message ?? e) })
+    )
+    return () => { live = false }
+  }, [key, win])
+  return st
+}
+
 const pct = (x: number) => (x * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " %"
 
 /** Portée cumulée d'un roster : chiffres réels, détail par chaîne à la demande */
-function NetReachCard({ roster, r, ready }: { roster: Roster; r: Reach; ready: boolean }) {
+function NetReachCard({ roster, r, status }: { roster: Roster; r: Reach | null; status: string }) {
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   if (!roster.channels.length) {
     return <p className="text-xs text-muted-foreground">Ajoutez des chaînes pour calculer la portée cumulée.</p>
   }
-  if (!ready) {
-    return <p className="text-xs text-muted-foreground">Chargement des viewers de la période…</p>
-  }
+  if (!r) return <p className="text-xs text-muted-foreground">{status}</p>
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -158,18 +194,28 @@ function NetReachCard({ roster, r, ready }: { roster: Roster; r: Reach; ready: b
         )}
       </div>
       <div className="flex items-baseline gap-3">
-        <span className="text-2xl font-bold text-foreground font-mono tabular-nums">{fmt(r.net)}</span>
+        <span className="text-2xl font-bold text-foreground font-mono tabular-nums">{r.estimated ? "≈ " : ""}{fmt(r.net)}</span>
         <span className="text-sm text-muted-foreground">viewers actifs uniques</span>
       </div>
+      {r.estimated && (
+        <p className="mt-1 text-xs text-dusk">
+          Estimation à ± 2,3 % sur {r.estimated.days} jour{r.estimated.days > 1 ? "s" : ""} complet{r.estimated.days > 1 ? "s" : ""}
+          {r.estimated.from ? ` (${r.estimated.from === r.estimated.to ? r.estimated.from : `${r.estimated.from} → ${r.estimated.to}`})` : ""}.
+        </p>
+      )}
       <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-xs">
         <dt className="text-dusk">Audience brute (somme des chaînes)</dt>
-        <dd className="text-right font-mono tabular-nums">{fmt(r.gross)}</dd>
+        <dd className="text-right font-mono tabular-nums">{r.estimated ? "≈ " : ""}{fmt(r.gross)}</dd>
         <dt className="text-dusk" title="Part de l'audience brute qui fait doublon : 1 − Net Reach ÷ audience brute">
           Cannibalisation
         </dt>
-        <dd className="text-right font-mono tabular-nums">{r.gross ? pct(r.cannibal) : "—"}</dd>
-        <dt className="text-dusk">Sur 2 chaînes ou plus du roster</dt>
-        <dd className="text-right font-mono tabular-nums">{fmt(r.multi)}</dd>
+        <dd className="text-right font-mono tabular-nums">{r.gross ? (r.estimated ? "≈ " : "") + pct(r.cannibal) : "—"}</dd>
+        {r.multi !== null && (
+          <>
+            <dt className="text-dusk">Sur 2 chaînes ou plus du roster</dt>
+            <dd className="text-right font-mono tabular-nums">{fmt(r.multi)}</dd>
+          </>
+        )}
       </dl>
       {r.missing.length > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
@@ -180,18 +226,22 @@ function NetReachCard({ roster, r, ready }: { roster: Roster; r: Reach; ready: b
         <div className="mt-3 grid gap-1 border-t border-border/50 pt-3">
           <div className="flex justify-between text-[11px] text-dusk">
             <span>Chaîne</span>
-            <span>viewers · exclusifs</span>
+            <span>{r.estimated ? "viewers uniques (≈)" : "viewers · exclusifs"}</span>
           </div>
           {r.rows.map((x) => (
             <div key={x.who.c} className="flex items-center justify-between gap-3 text-sm py-1">
               <span className="truncate font-mono text-muted-foreground">{x.who.c}</span>
               <span className="text-right whitespace-nowrap">
-                <span className="font-mono tabular-nums text-foreground">{fmt(x.viewers)}</span>
-                <span className="text-dusk"> · </span>
-                <span className="font-mono tabular-nums" title="Viewers qu'aucune autre chaîne du roster n'a eus">
-                  {fmt(x.exclusive)}
-                  {x.viewers ? <span className="text-dusk"> ({pct(x.exclusive / x.viewers)})</span> : null}
-                </span>
+                <span className="font-mono tabular-nums text-foreground">{r.estimated ? "≈ " : ""}{fmt(x.viewers)}</span>
+                {x.exclusive !== null && (
+                  <>
+                    <span className="text-dusk"> · </span>
+                    <span className="font-mono tabular-nums" title="Viewers qu'aucune autre chaîne du roster n'a eus">
+                      {fmt(x.exclusive)}
+                      {x.viewers ? <span className="text-dusk"> ({pct(x.exclusive / x.viewers)})</span> : null}
+                    </span>
+                  </>
+                )}
               </span>
             </div>
           ))}
@@ -293,6 +343,7 @@ export function Rosters() {
   const byChan = useMemo(() => new Map((data?.chans ?? []).map((c) => [c.c, c])), [data])
   const [editingRoster, setEditingRoster] = useState<Roster | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [win, setWin] = useState<0 | 7 | 30 | 90>(0)
   const [pickingId, setPickingId] = useState<string | null>(null)
   const picking = rosters.find((r) => r.id === pickingId) ?? null
 
@@ -360,6 +411,22 @@ export function Rosters() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 rounded-lg bg-card p-1 shadow-sm" role="group" aria-label="Fenêtre du Net Reach">
+          {([[0, "Période affichée"], [7, "7 jours"], [30, "30 jours"], [90, "90 jours"]] as const).map(([n, label]) => (
+            <button
+              key={n} type="button" aria-pressed={win === n} onClick={() => setWin(n)}
+              className={cn("px-3 py-1 text-xs font-medium rounded-md transition-colors", win === n ? "bg-accent text-foreground shadow" : "text-muted-foreground hover:text-foreground")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-dusk max-w-[60ch]">
+          {win ? "Estimation à ± 2,3 % sur les jours complets déjà agrégés (la plage exacte est sur chaque carte)." : "Calcul exact sur les viewers en base pour la période choisie en haut de page."}
+        </p>
+      </div>
+
       {rosters.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -379,6 +446,7 @@ export function Rosters() {
               byChan={byChan}
               ready={!!data}
               period={period?.range || "Période en cours"}
+              win={win}
               onEdit={setEditingRoster}
               onDelete={handleDelete}
               onPick={(r) => setPickingId(r.id)}
@@ -425,18 +493,30 @@ export function Rosters() {
 }
 
 /** Carte individuelle d'un roster */
-function RosterCard({ roster, byChan, ready, period, onEdit, onDelete, onPick }: {
+function RosterCard({ roster, byChan, ready, period, win, onEdit, onDelete, onPick }: {
   roster: Roster
   byChan: Map<string, RosterChannel>
   ready: boolean
   period: string
+  /** 0 : période affichée, calcul exact sur les viewers en base ; 7, 30 ou 90 : estimation HyperLogLog sur ces jours */
+  win: number
   onEdit: (r: Roster) => void
   onDelete: (r: Roster) => void
   onPick: (r: Roster) => void
 }) {
   // calculé une fois par carte : l'affichage et les exports montrent exactement les mêmes chiffres
-  const r = useMemo(() => reachOf(roster.channels, byChan), [roster.channels, byChan])
-  const canExport = ready && r.rows.length > 0
+  const exact = useMemo(() => reachOf(roster.channels, byChan), [roster.channels, byChan])
+  const est = useEstimate(roster.channels, win)
+  const empty = est.s === "ok" && est.p.days === 0
+  const r: Reach | null = win ? (est.s === "ok" && !empty ? reachFromEstimate(roster.channels, byChan, est.p) : null) : ready ? exact : null
+  const status = !win
+    ? "Chargement des viewers de la période…"
+    : est.s === "loading" ? "Calcul de l'estimation…"
+    : est.s === "error" ? `Estimation impossible : ${est.msg}`
+    : empty ? "Aucun jour complet agrégé pour l'instant : les esquisses se calculent chaque nuit pour la veille."
+    : "Les estimations sur plusieurs jours demandent la base Supabase à jour (Réglages → Source des données, puis schema.sql à rejouer)."
+  const when = r?.estimated ? `${r.estimated.days} jour${r.estimated.days > 1 ? "s" : ""} complet${r.estimated.days > 1 ? "s" : ""} (${r.estimated.from} → ${r.estimated.to}), estimation à ± 2,3 %` : period
+  const canExport = !!r && r.rows.length > 0
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
@@ -460,7 +540,7 @@ function RosterCard({ roster, byChan, ready, period, onEdit, onDelete, onPick }:
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col">
-        <NetReachCard roster={roster} r={r} ready={ready} />
+        <NetReachCard roster={roster} r={r} status={status} />
       </CardContent>
 
       <CardContent className="border-t border-border pt-3 flex gap-2">
@@ -472,13 +552,13 @@ function RosterCard({ roster, byChan, ready, period, onEdit, onDelete, onPick }:
           variant="ghost"
           size="sm"
           disabled={!canExport}
-          onClick={() => void printRosterReport(roster, r, period)}
+          onClick={() => r && void printRosterReport(roster, r, when)}
           title="Ouvre l'impression : choisissez « Enregistrer en PDF »"
         >
           <FileDown className="h-4 w-4 mr-1.5" />
           PDF
         </Button>
-        <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => rosterCsv(roster, r, period)} title="Tableur (séparateur ;)">
+        <Button variant="ghost" size="sm" disabled={!canExport} onClick={() => r && rosterCsv(roster, r, when)} title="Tableur (séparateur ;)">
           <Download className="h-4 w-4 mr-1.5" />
           CSV
         </Button>

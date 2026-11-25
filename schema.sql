@@ -191,6 +191,18 @@ create index if not exists daily_overlap_matrix_d on daily_overlap_matrix (d);
 create index if not exists daily_overlap_matrix_a on daily_overlap_matrix (a);
 create index if not exists daily_overlap_matrix_b on daily_overlap_matrix (b);
 
+-- Esquisses HyperLogLog des viewers par chaîne et par jour (25/11/2026) : permettent de compter des viewers UNIQUES sur 7, 30 ou
+-- 90 jours (Net Reach d'un roster, viewers uniques d'une chaîne) alors que « presence » ne garde qu'un jour. Des viewers uniques ne
+-- s'additionnent pas d'un jour à l'autre ; deux esquisses, elles, se fusionnent (maximum registre par registre) et donnent la
+-- réunion. 2 048 registres d'un octet (≈ 2 Ko par chaîne et par jour, ≈ 15 Mo pour 90 jours de 85 chaînes) : erreur type de 2,3 %.
+-- Une esquisse ne contient aucune empreinte de viewer et ne permet pas de retrouver qui a écrit.
+create table if not exists daily_hll (
+  d text not null,                          -- jour (AAAA-MM-JJ, heure de Paris)
+  c text not null,                          -- chaîne
+  regs bytea not null,                      -- 2 048 octets : pour chaque seau, le plus grand rang observé (0 = seau vide)
+  primary key (d, c)
+);
+
 -- Rosters (listes de chaînes groupées)
 create table if not exists rosters (
   id bigserial primary key,
@@ -548,6 +560,61 @@ language sql stable set search_path = public, pg_catalog as $$
       select a as c, sum(switches)::int as n, sum(raid_switch_count)::int as raid from sw where b = ch group by a order by 2 desc limit 8) x), '[]'))
 $$;
 
+-- Estimation d'un HyperLogLog à 2 048 registres : inv = somme des 2^-registre, zeros = registres vides.
+-- Petits comptes (≤ 5 120) : comptage linéaire, plus exact.
+create or replace function hll_card(inv float8, zeros int) returns bigint
+language sql immutable as $$
+  select round(case when e <= 5120 and zeros > 0 then 2048 * ln(2048.0 / zeros) else e end)::bigint
+  from (select 0.72092 * 2048.0 * 2048.0 / inv as e) t
+$$;
+
+-- Construit les esquisses d'une journée (heure de Paris) depuis « presence ». Rejouable. Ne fait rien si les présences du jour
+-- ont déjà été purgées (on garde l'esquisse existante). Chaque pseudo est haché (MD5 de son empreinte) : 11 bits choisissent le
+-- registre, le rang du premier 1 dans les 53 bits suivants est gardé s'il est plus grand.
+-- Lancée chaque nuit par pg_cron (scripts/cron_rollup.sql), après le rollup, pour la veille.
+create or replace function build_daily_hll(jour text) returns void
+language plpgsql set search_path = public, pg_catalog as $$
+begin
+  if not exists (select 1 from presence where presence.d = jour) then return; end if;
+  delete from daily_hll where daily_hll.d = jour;
+  insert into daily_hll (d, c, regs)
+  with h as (
+    select z.c, ('x' || substr(md5(z.u), 1, 16))::bit(64) as b
+    from (select distinct u, c from presence where presence.d = jour) z
+  ),
+  r as (
+    select q.c, q.j, max(case when q.pos = 0 then 54 else q.pos end) as m
+    from (select h.c, substring(h.b from 1 for 11)::bit(11)::int as j,
+                 position('1' in substring(h.b from 12 for 53)::text) as pos from h) q
+    group by q.c, q.j
+  )
+  select jour, ch.c, decode(string_agg(lpad(to_hex(coalesce(r.m, 0)), 2, '0'), '' order by s.j), 'hex')
+  from (select distinct h.c from h) ch
+  cross join generate_series(0, 2047) as s(j)
+  left join r on r.c = ch.c and r.j = s.j
+  group by ch.c;
+end $$;
+
+-- Viewers uniques sur les « days » derniers jours COMPLETS (aujourd'hui, pas encore agrégé, est exclu), pour une liste de chaînes
+-- (30 au plus : chaque jour de chaque chaîne est lu registre par registre).
+--   net   : viewers uniques de la réunion des chaînes (Net Reach)      chans : viewers uniques de chaque chaîne
+--   days  : nombre de jours qui ont une esquisse dans la fenêtre (peut être plus petit que « days » au début de l'historique)
+-- Estimations à ± 2,3 % (1 écart type). Pas d'exclusifs ni de paires : une différence de deux estimations serait trop bruitée.
+create or replace function period_reach(chans text[], days int default 30) returns jsonb
+language sql stable set search_path = public, pg_catalog as $$
+  with p as (select (now() at time zone 'Europe/Paris')::date as today),
+  w as (select to_char(p.today - least(greatest(days, 1), 366), 'YYYY-MM-DD') as d0, to_char(p.today, 'YYYY-MM-DD') as d1 from p),
+  src as (select h.c, h.d, h.regs from daily_hll h, w where h.c = any(chans[1:30]) and h.d >= w.d0 and h.d < w.d1),
+  cj as (select src.c, s.j, max(get_byte(src.regs, s.j)) as m from src cross join generate_series(0, 2047) as s(j) group by src.c, s.j),
+  per as (select cj.c, hll_card(sum(power(2::float8, -cj.m)), (count(*) filter (where cj.m = 0))::int) as n from cj group by cj.c),
+  un as (select hll_card(sum(power(2::float8, -x.m)), (count(*) filter (where x.m = 0))::int) as n
+         from (select cj.j, max(cj.m) as m from cj group by cj.j) x)
+  select jsonb_build_object(
+    'from', (select min(d) from src), 'to', (select max(d) from src), 'days', (select count(distinct d) from src),
+    'net', coalesce((select n from un), 0),
+    'chans', coalesce((select jsonb_agg(jsonb_build_object('c', per.c, 'n', per.n) order by per.n desc) from per), '[]'))
+$$;
+
 -- Insertion d'événements de raid (Étape 2 : table raid_events séparée)
 create or replace function ingest_raid(p jsonb) returns void
 language plpgsql set search_path = public, pg_catalog as $$
@@ -580,6 +647,7 @@ alter table ingested_batches enable row level security; -- idem
 alter table daily_switches_rollup enable row level security;
 alter table daily_streamer_rollup enable row level security;
 alter table daily_overlap_matrix enable row level security;
+alter table daily_hll enable row level security;
 alter table rosters enable row level security;
 alter table roster_streamers enable row level security;
 alter table raid_events enable row level security;
@@ -604,6 +672,7 @@ drop policy if exists del_chan on channels;
 drop policy if exists read_all on daily_switches_rollup; create policy read_all on daily_switches_rollup for select to anon, authenticated using (true);
 drop policy if exists read_all on daily_streamer_rollup; create policy read_all on daily_streamer_rollup for select to anon, authenticated using (true);
 drop policy if exists read_all on daily_overlap_matrix; create policy read_all on daily_overlap_matrix for select to anon, authenticated using (true);
+drop policy if exists read_all on daily_hll; create policy read_all on daily_hll for select to anon, authenticated using (true);
 drop policy if exists read_all on rosters; create policy read_all on rosters for select to anon, authenticated using (true);
 drop policy if exists read_all on roster_streamers; create policy read_all on roster_streamers for select to anon, authenticated using (true);
 drop policy if exists read_all on raid_events; create policy read_all on raid_events for select to anon, authenticated using (true);
@@ -627,13 +696,17 @@ grant execute on function set_board_code(text) to service_role;
 grant execute on function run_daily_overlap_rollup(date) to service_role;
 grant execute on function backfill_daily_rollup(int) to service_role;
 grant execute on function channel_history(text, int) to anon, authenticated, service_role;
+grant execute on function period_reach(text[], int) to anon, authenticated, service_role;
+revoke all on function build_daily_hll(text) from public, anon, authenticated;
+grant execute on function build_daily_hll(text) to service_role;
+grant select on daily_hll to anon, authenticated;
 grant execute on function add_channels(text, text[]) to anon, authenticated, service_role;
 grant execute on function remove_channels(text, text[]) to anon, authenticated, service_role;
 
 -- Droits explicites (Supabase en donne déjà par défaut ; on les resserre)
 revoke insert, update, delete on presence, minutes, snaps, events, words, vods, chan_meta, clips, ecoute, switches, collector_status, channels from anon, authenticated;
 revoke all on private_settings, ingested_batches from anon, authenticated;
-revoke insert, update, delete on daily_switches_rollup, daily_streamer_rollup, daily_overlap_matrix, rosters, roster_streamers, raid_events from anon, authenticated;
+revoke insert, update, delete on daily_hll, daily_switches_rollup, daily_streamer_rollup, daily_overlap_matrix, rosters, roster_streamers, raid_events from anon, authenticated;
 grant select on presence, minutes, snaps, events, words, vods, chan_meta, clips, ecoute, switches, collector_status, channels to anon, authenticated;
 grant select on daily_switches_rollup, daily_streamer_rollup, daily_overlap_matrix, rosters, roster_streamers, raid_events to anon, authenticated;
 grant all on all tables in schema public to service_role;
