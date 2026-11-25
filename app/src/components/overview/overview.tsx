@@ -20,6 +20,8 @@ const PAIR = "flex flex-col [&>:last-child]:flex-1"
 const MULTI = "Actifs dans 2 chats ou plus"
 const maxOf = <T,>(a: T[], f: (x: T) => number | null) => Math.max(0, ...a.map((x) => f(x) ?? 0)) || 1
 const nf = (x: number | null, f: (n: number) => string) => (x != null && isFinite(x) ? f(x) : "—")
+/** Les deux blocs de Phase3Analysis (classement des chaînes, communautés investies) comptent dans le repli. */
+const PHASE3 = 2
 const extraCount = (followers: FollowerRow[], brand: BrandRow[] | null, mod: { rows: ModRow[]; noDel: boolean } | null) =>
   (followers.length > 0 ? 1 : 0) + (brand && brand.length > 0 ? 1 : 0) + (mod ? 1 : 0)
 
@@ -30,7 +32,7 @@ function Participation({ rows }: { rows: PartRow[] }) {
     { head: "Viewers moyens en live", cell: (r) => fmt(r.avgV) },
     { head: "Écrivent chaque minute", title: "Viewers actifs différents par minute ÷ viewers", cell: (r) => pct(r.perMin), style: (r) => heat((r.perMin / mP) * 0.4) },
     { head: "Msg/min pour 1 000 viewers", cell: (r) => fmt1(r.msgK), style: (r) => heat((r.msgK / mK) * 0.4) },
-    { head: "Actifs uniques / viewers", title: "Viewers actifs uniques sur la période ÷ viewers moyens", cell: (r) => pct(r.uniq) },
+    { head: "Actifs ÷ viewers", title: "Viewers actifs sur la période ÷ viewers moyens", cell: (r) => pct(r.uniq) },
     { head: "Réactions", cell: (r) => pct(r.react) },
     { head: "Interactions", cell: (r) => pct(r.inter), style: (r) => (r.inter != null ? heat((r.inter / mI) * 0.4) : undefined) },
   ]
@@ -79,7 +81,7 @@ function Moderation({ rows, noDel }: { rows: ModRow[]; noDel: boolean }) {
 /**
  * Les chaînes : une carte entière pour chaque chaîne en live (ou dont l'état est inconnu, sans API Twitch), une ligne compacte
  * pour les chaînes hors ligne, qui n'ont rien « maintenant » à montrer. 8 cartes et 8 lignes visibles, le reste derrière un bouton.
- * Option "Toujours voir les 2 premières chaînes en card" : les 2 premières rows hors ligne s'affichent aussi en card.
+ * Option « 2 premières hors ligne en cartes » : les 2 premières chaînes hors ligne s'affichent aussi en carte.
  */
 const CARDS = 8
 const ROWS_AS_CARDS_KEY = "to2-ov-rows-as-cards"
@@ -92,31 +94,36 @@ function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
   })
   const cards = channels.filter((c) => c.live !== false)
   const rows = channels.filter((c) => c.live === false)
-  // Les 2 premières rows hors ligne peuvent être affichées en card si l'option est activée
+  // Les 2 premières chaînes hors ligne peuvent être affichées en carte si l'option est activée
   const rowsAsCardsCount = rowsAsCards ? 2 : 0
   const rowCards = rows.slice(0, rowsAsCardsCount)
   const rowLines = rows.slice(rowsAsCardsCount)
   const cutCards = cards.length > CARDS + 1 && !openCards
   const rowLinesCut = rowLines.length > CARDS + 1 && !openRows
+  // réglage de présentation, rare : une petite commande à droite du titre, pas un bouton posé dans le contenu
+  const rowsToggle = (
+    <button
+      type="button"
+      aria-pressed={rowsAsCards}
+      onClick={() => {
+        const next = !rowsAsCards
+        setRowsAsCards(next)
+        try { localStorage.setItem(ROWS_AS_CARDS_KEY, next ? "1" : "0") } catch { /* stockage indisponible */ }
+      }}
+      className={cn("inline-flex min-h-6 items-center rounded-md px-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        rowsAsCards ? "bg-primary-soft/10 text-primary-soft" : "text-muted-foreground hover:text-foreground")}
+      title="Afficher les 2 premières chaînes hors ligne sous forme de carte, au lieu d'une ligne compacte">
+      2 premières hors ligne en cartes
+    </button>
+  )
   return (
     <>
-      {/* Bouton pour activer/désactiver l'option "Toujours voir les 2 premières chaînes en card" */}
-      <button
-        type="button"
-        onClick={() => {
-          const next = !rowsAsCards
-          setRowsAsCards(next)
-          try { localStorage.setItem(ROWS_AS_CARDS_KEY, next ? "1" : "0") } catch { /* stockage indisponible */ }
-        }}
-        className={cn("mb-3 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-medium transition-colors",
-          rowsAsCards ? "bg-primary-soft/10 text-primary-soft" : "text-muted-foreground hover:text-foreground")}
-        title="Afficher les 2 premières chaînes hors ligne en format carte au lieu d'une ligne compacte">
-        {rowsAsCards ? "✓ Voir les 2 premières en card" : "Voir en card les 2 premières hors ligne"}
-      </button>
-
       {cards.length > 0 && (
         <>
-          <h3 className="mb-1.5 text-xs font-medium text-dusk">Chaînes en live ({cards.length})</h3>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <h3 className="text-xs font-medium text-dusk">Chaînes en live ({cards.length})</h3>
+            {rows.length > 0 && rowsToggle}
+          </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(272px,1fr))] gap-3">
             {(cutCards ? cards.slice(0, CARDS) : cards).map((ch) => <ChannelCard key={ch.c} ch={ch} />)}
           </div>
@@ -127,9 +134,10 @@ function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
       )}
       {rowsAsCardsCount > 0 && (
         <>
-          <h3 className={cn("mb-1.5 text-xs font-medium text-dusk", cards.length > 0 ? "mt-5" : "")}>
-            Prévisualisation hors ligne ({rows.length})
-          </h3>
+          <div className={cn("mb-1.5 flex items-center justify-between gap-3", cards.length > 0 ? "mt-5" : "")}>
+            <h3 className="text-xs font-medium text-dusk">Hors ligne ({rows.length})</h3>
+            {cards.length === 0 && rowsToggle}
+          </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(272px,1fr))] gap-3">
             {rowCards.map((ch) => <ChannelCard key={ch.c} ch={ch} />)}
           </div>
@@ -143,7 +151,10 @@ function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
       )}
       {rowsAsCardsCount === 0 && rows.length > 0 && (
         <div className={cards.length > 0 ? "mt-5" : undefined}>
-          <h3 className="mb-1.5 text-xs font-medium text-dusk">Prévisualisation hors ligne ({rows.length})</h3>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <h3 className="text-xs font-medium text-dusk">Hors ligne ({rows.length})</h3>
+            {cards.length === 0 && rowsToggle}
+          </div>
           <div className={cn(panel, "divide-y divide-white/5 overflow-hidden")}>
             {rows.map((ch) => <ChannelRow key={ch.c} ch={ch} />)}
           </div>
@@ -175,14 +186,11 @@ function Extra({ children, count, pulse }: { children: ReactNode; count: number;
         aria-controls="ov-extra"
         onClick={toggle}
         className={cn("group inline-flex min-h-6 items-center gap-2 rounded-md text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-          pulse && "animate-pulse")}>
+          pulse && "animate-pulse motion-reduce:animate-none")}>
         <ChevronDown aria-hidden className={cn("size-4 transition-transform duration-200", open && "rotate-180")} />
         <span className="hidden sm:inline">
           {open ? "Masquer les analyses supplémentaires" : `Afficher les analyses (${count})`}
         </span>
-        {count > 0 && (
-          <span className="inline-flex items-center justify-center size-5 rounded-full bg-dusk/10 text-xs font-semibold text-dusk" aria-hidden>{count}</span>
-        )}
         {!count && !open && (
           <span className="hidden sm:inline">Aucune analyse supplémentaire</span>
         )}
@@ -268,23 +276,11 @@ export function Overview() {
       {chartNote && <p className="mt-2.5 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk">{chartNote}</p>}
 
       {d.part && (
-        <div className="flex items-start gap-2">
-          <div className="flex-1">
-            <Section
+        <Section
               title="Participation du chat pendant les lives"
-              note={d.part.length ? "Rapporte l'activité du chat à la taille de l'audience, pour comparer des chaînes de tailles différentes. Calculé uniquement pendant les lives. Les très grosses chaînes ont presque toujours un taux plus bas (mode lent, chat qui défile trop vite pour suivre)." : undefined}>
+              note={d.part.length ? "Rapporte l'activité du chat à la taille de l'audience, pour comparer des chaînes de tailles différentes. Calculé uniquement pendant les lives. Les très grosses chaînes ont presque toujours un taux plus bas (mode lent, chat qui défile trop vite pour suivre)." : undefined} action={<ShareButton title="Participation du chat pendant les lives" kpis={[ { label: "Chaînes analysées", value: String(d.part.length) }, { label: "Viewers moyens", value: fmt(d.part.reduce((a, r) => a + r.avgV, 0) / d.part.length) }, { label: "Perms/min", value: fmt1(d.part.reduce((a, r) => a + r.msgK, 0) * 1000 / d.part.reduce((a, r) => a + r.avgV, 0) / 1000) } ]} />}>
               {d.part.length ? <Participation rows={d.part} /> : <Empty>Il faut au moins 10 minutes de live d'une chaîne suivie sur la période.</Empty>}
             </Section>
-          </div>
-          <ShareButton
-            title="Participation du chat pendant les lives"
-            kpis={[
-              { label: "Chaînes analysées", value: String(d.part.length) },
-              { label: "Viewers moyens", value: fmt(d.part.reduce((a, r) => a + r.avgV, 0) / d.part.length) },
-              { label: "Perms/min", value: fmt1(d.part.reduce((a, r) => a + r.msgK, 0) * 1000 / d.part.reduce((a, r) => a + r.avgV, 0) / 1000) }
-            ]}
-          />
-        </div>
       )}
 
       {/* l'historique long vient après l'essentiel, replié : il redit l'activité sur d'autres échelles de temps */}
@@ -292,47 +288,23 @@ export function Overview() {
 
       {(() => {
         const extraCnt = extraCount(d.followers, d.brand, d.mod)
-        return extraCnt > 0 && (
-          <Extra count={extraCnt} pulse={pulseExtra}>
+        return (
+          <Extra count={extraCnt + PHASE3} pulse={pulseExtra}>
             {d.followers.length > 0 && (
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <Section title="Audience et followers" note="Le nombre de followers est relevé chaque heure. Un rapport viewers ÷ followers élevé veut dire que la communauté suit le live en direct plutôt que de seulement suivre la chaîne.">
+              <Section title="Audience et followers" note="Le nombre de followers est relevé chaque heure. Un rapport viewers ÷ followers élevé veut dire que la communauté suit le live en direct plutôt que de seulement suivre la chaîne." action={<ShareButton title="Audience et followers" kpis={[ { label: "Chaînes analysées", value: String(d.followers.length) }, { label: "Followers moyens", value: fmt(d.followers.reduce((a, r) => a + r.fol, 0) / d.followers.length) } ]} />}>
                     <Followers rows={d.followers} />
                   </Section>
-                </div>
-                <ShareButton
-                  title="Audience et followers"
-                  kpis={[
-                    { label: "Chaînes analysées", value: String(d.followers.length) },
-                    { label: "Followers moyens", value: fmt(d.followers.reduce((a, r) => a + r.fol, 0) / d.followers.length) }
-                  ]}
-                />
-              </div>
             )}
 
             {d.brand && (
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  <Section title="Avec ou sans pub déclarée" note={d.brand.length ? "Compare le chat d'une même chaîne quand le stream est déclaré « contenu de marque » (sponsorisé) et quand il ne l'est pas. Calculé sur les minutes où le chat a écrit." : undefined}>
+              <Section title="Avec ou sans pub déclarée" note={d.brand.length ? "Compare le chat d'une même chaîne quand le stream est déclaré « contenu de marque » (sponsorisé) et quand il ne l'est pas. Calculé sur les minutes où le chat a écrit." : undefined} action={<ShareButton title="Avec ou sans pub déclarée" kpis={[ { label: "Chaînes analysées", value: String(d.brand.length) }, { label: "Écarts pub", value: `${d.brand.length === 0 ? "-" : d.brand.map(r => r.with.msgK - r.without.msgK).filter(d => d !== 0).length}/${d.brand.length}` } ]} />}>
                     {d.brand.length ? <Brand rows={d.brand} /> : <Empty>Pas encore de chaîne avec des lives à la fois avec et sans « contenu de marque » : la comparaison apparaît dès qu'une chaîne a eu les deux, avec au moins 15 minutes de chat de chaque côté.</Empty>}
                   </Section>
-                </div>
-                <ShareButton
-                  title="Avec ou sans pub déclarée"
-                  kpis={[
-                    { label: "Chaînes analysées", value: String(d.brand.length) },
-                    { label: "Écarts pub", value: `${d.brand.length === 0 ? "-" : d.brand.map(r => r.with.msgK - r.without.msgK).filter(d => d !== 0).length}/${d.brand.length}` }
-                  ]}
-                />
-              </div>
             )}
 
-            <div className="flex items-start gap-2">
-              <div className="flex-1">
-                <Section
+            <Section
                   title="Modération du chat"
-                  note={d.mod?.rows.length ? "Compté à partir des annonces de Twitch dans le chat, quel que soit l'auteur (modérateur, bot ou AutoMod). Un message bloqué par AutoMod avant d'être affiché n'est pas annoncé, donc pas compté. Ni les pseudos, ni le modérateur, ni le texte des messages supprimés ne sont gardés. Les rapports aux messages ne sont calculés qu'à partir de 200 messages, et seulement depuis le début du relevé (collecteur 1.6 pour les sanctions, 1.6.1 pour les messages supprimés), pour ne pas les diluer avec les jours d'avant." : undefined}
+                  note={d.mod?.rows.length ? "Compté à partir des annonces de Twitch dans le chat, quel que soit l'auteur (modérateur, bot ou AutoMod). Un message bloqué par AutoMod avant d'être affiché n'est pas annoncé, donc pas compté. Ni les pseudos, ni le modérateur, ni le texte des messages supprimés ne sont gardés. Les rapports aux messages ne sont calculés qu'à partir de 200 messages, et seulement depuis le début du relevé (collecteur 1.6 pour les sanctions, 1.6.1 pour les messages supprimés), pour ne pas les diluer avec les jours d'avant." : undefined} action={<ShareButton title="Modération du chat" kpis={[ { label: "Chaînes analysées", value: String(d.mod?.rows.length ?? 0) }, { label: "Total Bans", value: fmt(d.mod?.rows.reduce((a, r) => a + r.ban, 0) ?? 0) }, { label: "Total Timeouts", value: fmt(d.mod?.rows.reduce((a, r) => a + r.to, 0) ?? 0) } ]} />}
                 >
                   {!d.mod ? (
                     <Empty>Bans, timeouts et messages supprimés relevés à partir du collecteur 1.6 : ils apparaîtront ici dès la première sanction.</Empty>
@@ -342,22 +314,10 @@ export function Overview() {
                     <Empty>Aucune sanction ni message supprimé sur cette période.</Empty>
                   )}
                 </Section>
-              </div>
-              <ShareButton
-                title="Modération du chat"
-                kpis={[
-                  { label: "Chaînes analysées", value: String(d.mod?.rows.length ?? 0) },
-                  { label: "Total Bans", value: fmt(d.mod?.rows.reduce((a, r) => a + r.ban, 0) ?? 0) },
-                  { label: "Total Timeouts", value: fmt(d.mod?.rows.reduce((a, r) => a + r.to, 0) ?? 0) }
-                ]}
-              />
-            </div>
+            <Phase3Analysis />
           </Extra>
         )}
       )()}
-
-      {/* Phase 3 : Top Streamers et Communautés Investies */}
-      <Phase3Analysis />
     </div>
   )
 }

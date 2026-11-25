@@ -71,7 +71,7 @@ export function ChannelCard({ ch }: { ch: ChannelInfo }) {
         </div>
         <p className="mt-2.5 mb-1 text-[11px] text-dusk">Sur la période</p>
         <div className="grid grid-cols-2 gap-1.5">
-          <Metric label="Actifs uniques" title="Viewers différents qui ont écrit au moins un message sur la période" value={fmt(ch.uniq)} />
+          <Metric label="Actifs (période)" title="Viewers différents de cette chaîne qui ont écrit au moins un message sur la période" value={fmt(ch.uniq)} />
           <Metric label="Messages" value={fmt(ch.msgs)} />
         </div>
       </div>
@@ -117,7 +117,7 @@ export function ChannelRow({ ch }: { ch: ChannelInfo }) {
       </div>
       <dl className="flex items-baseline gap-5 text-xs">
         <div className="flex items-baseline gap-1.5">
-          <dt className="text-muted-foreground">Actifs uniques</dt>
+          <dt className="text-muted-foreground">Actifs (période)</dt>
           <dd className="font-mono text-[13px] font-medium text-foreground tabular-nums">{fmt(ch.uniq)}</dd>
         </div>
         <div className="flex items-baseline gap-1.5">

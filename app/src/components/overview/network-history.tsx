@@ -115,7 +115,7 @@ function Body({ st, uniq, days }: { st: State; uniq: PeriodReach | null; days: 3
   const totalMsgs = h.days.reduce((s, d) => s + d.msgs, 0)
   const avgAud = Math.round(h.days.reduce((s, d) => s + d.avg, 0) / h.days.length)
   const items: Kpi[] = [
-    ...(uniq && uniq.days > 0 ? [{ label: "Viewers actifs uniques", value: "≈ " + fmt(uniq.net), hint: `${win} · estimation à ± 2,3 %` }] : []),
+    ...(uniq && uniq.days > 0 ? [{ label: "Actifs uniques du réseau", value: "≈ " + fmt(uniq.net), hint: `${win} · estimation à ± 2,3 %` }] : []),
     { label: "Messages", value: fmt(totalMsgs), hint: `sur ${h.days.length} jours agrégés` },
     { label: "Audience moyenne cumulée", value: fmt(avgAud), hint: "somme des viewers moyens des chaînes en live", trend: h.days.map((d) => d.avg), trendLabel: "courbe par jour" },
   ]
