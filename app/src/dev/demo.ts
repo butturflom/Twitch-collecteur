@@ -1,9 +1,9 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { ChannelHistory, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
-declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; statusOf?: () => StatusData } }
+declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; statusOf?: () => StatusData } }
 
 const CH: [string, string][] = [["etoiles", "#4d8dff"], ["xari", "#ff7a45"], ["gotaga", "#2fbf71"], ["kamet0", "#f5b83d"]]
 const MIN = 60000
@@ -317,6 +317,19 @@ function rostersDemo(): RostersData {
   return { chans: CH.map(([c, color], i) => ({ c, color, img: "", users: new Set(U[i]), msgs: U[i].length * (3 + i) })) }
 }
 
+// Historique : n jours agrégés fictifs (courbes qui montent avec un creux le week-end), pour voir la section « Historique » de Par chaîne
+function historyDemo(c: string, n: number): ChannelHistory {
+  const k = Math.max(1, CH.findIndex(([x]) => x === c) + 1)
+  const days = Array.from({ length: n }, (_, i) => {
+    const t = new Date(Date.now() - (n - i) * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.35 : 1
+    const base = (3000 + 900 * k) * (0.8 + (i / n) * 0.5) * wk
+    const avg = Math.round(base), chatters = Math.round(base * 0.32)
+    return { d: t.toLocaleDateString("sv-SE"), chatters, msgs: chatters * 14, mins: 240 + ((i * 37) % 200), peak: Math.round(avg * 1.6), avg, out: Math.round(chatters * 0.08), in: Math.round(chatters * 0.07) }
+  })
+  const who = (x: string, col: string, n2: number, raid: number) => ({ c: x, color: col, img: "", n: n2, raid })
+  return { days, out: [who("xari", "#ff7a45", 612 * k, 0), who("gotaga", "#2fbf71", 310 * k, 48), who("kamet0", "#f5b83d", 120 * k, 0)], in: [who("gotaga", "#2fbf71", 540 * k, 0), who("etoiles", "#4d8dff", 204 * k, 120)] }
+}
+
 export function installDemo() {
   // l'ancien code se charge après le premier rendu : on remplace ses fonctions dès qu'elles existent
   const id = setInterval(() => {
@@ -343,6 +356,7 @@ export function installDemo() {
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
     window.renderFlows = () => window.dispatchEvent(new CustomEvent("legacy:flows", { detail: flowsDemo() }))
+    window.channelHistory = async (c, days) => (new URLSearchParams(location.search).get("histo") === "non" ? null : historyDemo(c, Math.min(days, new URLSearchParams(location.search).get("histo") === "1" ? 1 : days)))
     window.renderRosters = () => window.dispatchEvent(new CustomEvent("legacy:rosters", { detail: rostersDemo() }))
     // pilule d'état : collecteur en ligne ; ?demo&etat=erreur : synchro et API en échec (problèmes affichés avant l'état)
     window.statusOf = () => statusDemo(new URLSearchParams(location.search).get("etat") === "erreur")

@@ -9,6 +9,7 @@ import { DataTable, Delta, Empty, MeterList, Section, panel, type Col } from "@/
 import { API_NOTE, CLIPS_NOTE, ChannelPicker, Clips, Hero, Kpis, Moments, NO_CLIPS, NO_MOMENTS, Two } from "@/components/shared/blocks"
 import { fmt, fmt1, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { History } from "./history"
 import { useChannelData, type SwitchRow } from "@/legacy/bridge"
 
 // Copy raid command to clipboard and show feedback
@@ -159,6 +160,8 @@ export function Channel() {
           <Empty>Aucun viewer actif en commun pour l'instant. Ça apparaît en cumulant plusieurs jours d'écoute.</Empty>
         )}
       </Section>
+
+      <History ch={d.ch.c} color={d.ch.color} />
     </div>
   )
 }

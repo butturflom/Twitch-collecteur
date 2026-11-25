@@ -261,8 +261,15 @@ export interface MapData {
  */
 export interface MapViewState { k: number; tx: number; ty: number; rot: number; q: number[] }
 
+/** Historique d'une chaîne lu dans les rollups quotidiens (une ligne par jour agrégé). */
+export interface HistoryDay { d: string; chatters: number; msgs: number; mins: number; peak: number; avg: number; out: number; in: number }
+export interface HistoryRoute extends Who { n: number; raid: number }
+export interface ChannelHistory { days: HistoryDay[]; out: HistoryRoute[]; in: HistoryRoute[] }
+
 declare global {
   interface Window {
+    /** null : pas de base Supabase (mode local) ou base pas à jour */
+    channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
     showTab?: (t: TabId) => void
     openAddStreamer?: () => void
     runDiscover?: (q: string, lang: string) => void
