@@ -73,11 +73,11 @@ Critère de fin : la carte se lit sans survol sur 14 journées, chaque arc donne
 
 ### Chantier D · Hébergement et comptes clients (L, dormant)
 
-Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'étape 1 de `VALIDATION-AGENCES.md`. Avant tout code, trois décisions à prendre par toi :
+Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'étape 1 de `VALIDATION-AGENCES.md`. Décisions prises le 25/11 :
 
-1. **Une base par client ou une base commune avec droits ?** Une base par client tient dans l'esprit de §12 étape 2 et simplifie l'isolation, mais coûte un projet Supabase par client. Une base commune demande des droits par utilisateur (RLS) et passe les 500 Mo gratuits plus vite.
-2. **Qui détient le client ID et le secret Twitch ?** Recommandation : l'opérateur, sur le serveur, jamais le client. Le client ne reçoit qu'un accès au tableau de bord.
-3. **Où tourne le collecteur 24 h/24 ?** VPS (déjà mis de côté, §5), ou hébergement type cloud. Le choix change le coût mensuel et la sauvegarde.
+1. **Base commune avec droits**, sur un plan Supabase payant (augmentation des capacités du compte). Droits par client via RLS. Le palier se choisit selon `COUTS-CLIENTS.md` §5.
+2. **Le secret Twitch reste chez l'opérateur**, qui est seul responsable des données. Le client ne reçoit qu'un accès au tableau de bord.
+3. **Collecte 24 h/24 : conseil sur les dépenses.** Une seule collecte pour l'union des chaînes de tous les clients, dimensionnée selon `COUTS-CLIENTS.md`. Le serveur reste à chiffrer sur deux ou trois offres avant tout choix.
 
 Étapes, si les trois décisions sont prises :
 - D0. Cadre juridique (RGPD, conditions Twitch sur le stockage et la redistribution) validé par un juriste. Bloquant avant tout client payant (§12).
@@ -85,7 +85,7 @@ Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'ét
 - D2. Tableau de bord publié sur un site, derrière une connexion par compte. La clé publique ne doit plus lire toutes les tables (§12, blocages). Opus high pour l'architecture des droits, Sonnet high pour l'implémentation.
 - D3. Création d'un compte client avec accès en lecture seule, testé avec un compte de démonstration.
 
-**Critère d'abandon** : si le juriste ne valide pas la base partagée, on reste sur une base par client, plus lente à monter mais sans droits partagés.
+**Critère d'abandon** : si le juriste ne valide pas la base commune, on passe à une base par client, plus lente à monter mais sans droits partagés. Le conseil de coûts est tenu dans `COUTS-CLIENTS.md` : à chaque nouveau client, on remplit le questionnaire de son §6 avant de chiffrer.
 
 ### Coût estimé
 
