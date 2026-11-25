@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useRostersData, usePeriodInfo, type PeriodReach, type RosterChannel } from "@/legacy/bridge"
+import { Compare } from "@/components/compare/compare"
 import { printRosterReport, rosterCsv } from "./roster-report"
 
 /** Types pour les rosters */
@@ -454,6 +455,8 @@ export function Rosters() {
           ))}
         </div>
       )}
+
+      <Compare chans={data?.chans ?? []} />
 
       {/* Choix des chaînes */}
       <Dialog open={!!picking} onOpenChange={(open) => !open && setPickingId(null)}>
