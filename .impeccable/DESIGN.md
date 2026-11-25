@@ -76,7 +76,7 @@ Groupes avec titre eyebrow, élément actif avec barre violette et fond.
 | **Chiffre en mono** | Les nombres comparables sont en JetBrains Mono tabular-nums. |
 | **Note** | Chaque bloc d'interprétation a une note sous lui expliquant le chiffre et ses limites. |
 | **Groupe à filets** | Les indicateurs liés partagent une surface séparée par des filets 1px. |
-| **Lueurs signifiantes** | Lueur violette = "c'est ici" ou "c'est l'action". N'ajouter jamais pour décorer. |
+| **Deux niveaux de lueur** | Lueur vive = "c'est ici" ou "c'est l'action" (onglet actif, bouton principal, sélection). Lueur ambiante (halo « console », atmosphère des planètes) = ambiance, très faible, jamais au survol, seulement sur les pages du ciel étoilé. |
 
 ---
 

@@ -27,6 +27,9 @@ const PAGES: Record<TabId, [string, string]> = {
   rosters: ["Rosters", "Regroupez vos chaînes pour analyser les flux entre groupes et calculer le Net Reach."],
 }
 
+/** Onglets qui montrent le ciel étoilé (la Carte a le sien). Pour étendre le décor à d'autres pages, ajouter leur identifiant ici. */
+const SKY_TABS: TabId[] = ["overview"]
+
 // Zones gérées par l'ancien code : rendues une seule fois, React n'y touche plus jamais.
 const LegacyFilters = memo(() => <div className="legacy" dangerouslySetInnerHTML={{ __html: filtersHtml }} />)
 const LegacySections = memo(() => <div className="legacy" dangerouslySetInnerHTML={{ __html: sectionsHtml }} />)
@@ -78,7 +81,8 @@ export default function App() {
     <>
     {/* l'accueil est posée par-dessus : le tableau de bord se charge dessous (l'ancien code a besoin de ses éléments), inerte tant qu'elle est là */}
     {landing && <Landing onEnter={enter} />}
-    <div inert={landing} className="min-h-screen bg-background font-sans text-foreground antialiased">
+    <div inert={landing} className="relative isolate min-h-screen bg-background font-sans text-foreground antialiased">
+      {SKY_TABS.includes(tab) && <div aria-hidden className="to2-sky" />}
       <AppSidebar
         active={tab}
         open={navOpen}

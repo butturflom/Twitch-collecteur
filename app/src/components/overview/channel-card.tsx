@@ -28,7 +28,7 @@ export function ChannelCard({ ch }: { ch: ChannelInfo }) {
   const color = useAvatarColor(ch.img, ch.color)
   return (
     <article
-      className="relative flex min-w-0 flex-col overflow-hidden rounded-[14px] border border-border bg-linear-to-b from-dome-crest to-dome p-4 shadow-panel"
+      className="relative flex min-w-0 flex-col overflow-hidden rounded-[14px] border border-border bg-linear-to-b from-dome-crest/90 to-dome/85 p-4 shadow-console"
       style={{ "--c": color } as React.CSSProperties}
     >
       <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-(--c) to-transparent to-80%" />
