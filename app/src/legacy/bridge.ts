@@ -273,6 +273,9 @@ export interface StickyDay { d: string; actives: number; leavers: number }
 export interface StickyNet { n: number; q1: number | null; med: number | null; q3: number | null }
 export interface ChannelSticky { days: StickyDay[]; actives: number; leavers: number; net: StickyNet }
 
+/** Rythme d'une chaîne : viewers actifs par jour, moyenne des 7 derniers jours agrégés (recent) et des jours d'avant (base, écart type sd). */
+export interface RhythmRow extends Who { nr: number; nb: number; recent: number; base: number; sd: number }
+
 /** Viewers uniques sur plusieurs jours, estimés par HyperLogLog (± 2,3 %) : réunion des chaînes (net) et chaque chaîne. */
 export interface PeriodReach { from: string | null; to: string | null; days: number; net: number; chans: { c: string; n: number }[] }
 
@@ -288,6 +291,7 @@ declare global {
     periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>
     channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
     channelSticky?: (c: string, days: number) => Promise<ChannelSticky | null>
+    channelsRhythm?: (days: number) => Promise<RhythmRow[] | null>
     showTab?: (t: TabId) => void
     openAddStreamer?: () => void
     runDiscover?: (q: string, lang: string) => void

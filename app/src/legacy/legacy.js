@@ -2512,6 +2512,14 @@ async function channelSticky(c,days){
   try{return await sbReq('rpc/channel_stickiness',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ch:c,days})})}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.channelSticky = channelSticky
+// Rythme des chaînes (alertes « décolle » / « ralentit ») : moyenne des viewers actifs des 7 derniers jours agrégés et des jours d'avant,
+// par chaîne ayant au moins 14 journées (fonction SQL channels_rhythm, voir schema.sql). null : pas de base Supabase ou base pas à jour.
+async function channelsRhythm(days){
+  if(!isCloud())return null;
+  try{const rows=await sbReq('rpc/channels_rhythm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days})});
+    return (rows||[]).map(r=>({...who(r.c),nr:r.nr,nb:r.nb,recent:r.recent,base:r.base,sd:r.sd}))}
+  catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
+window.channelsRhythm = channelsRhythm
 // Viewers uniques sur 7, 30 ou 90 jours (fonction SQL period_reach, esquisses HyperLogLog, voir schema.sql). null : pas de base Supabase
 // ou base pas à jour. Les jours incomplets ne comptent pas : aujourd'hui n'est agrégé que cette nuit.
 async function periodReach(chans,days){
