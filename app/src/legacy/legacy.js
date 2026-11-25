@@ -840,6 +840,7 @@ function mapAction(a,v,on){
   if(a==='side'){cfg.mapSide=!mapSideOpen();saveCfg();render();return}
   if(a==='period'){const b=$('period').querySelector(`[data-p="${v}"]`);if(b)b.click();return} // mêmes filtres que les autres onglets
   if(a==='lang'){cfg.lang=v;saveCfg();buildChanSel();render();return}
+  if(a==='game'){cfg.mapGame=v;saveCfg();mapView.sel=null;render();return} // jeu principal (« * » : tous)
   if(a==='view'){cfg.mapMode=v;saveCfg();mapView.sel=null;render();return}
   if(a==='live'){cfg.mapLive=v==='live';saveCfg();mapView.sel=null;render();return} // seulement les chaînes en live en ce moment
   if(a==='pick'){const S=new Set(cfg.mapSel||[]);for(const c of [].concat(v))on?S.add(c):S.delete(c);cfg.mapSel=[...S];saveCfg();mapIntroKey='';render();return}
@@ -961,13 +962,22 @@ function renderMap(q){
   // Filtre « En live » : seulement les chaînes en live en ce moment (combinable avec chaque vue)
   const liveOnly=!!cfg.mapLive,isLive=c=>!!(info[c]&&info[c].live);
   const by=usersBy(q.pres,p=>p.c),pool=view==='sel'?cfg.chans.filter(c=>picked.has(c)):shown();
-  const active=pool.filter(c=>by.get(c)&&by.get(c).size>=(grouped?5:1)),liveN=active.filter(isLive).length;
+  const activeAll=pool.filter(c=>by.get(c)&&by.get(c).size>=(grouped?5:1));
+  // Filtre « Jeu principal » : le jeu le plus relevé de chaque chaîne sur la période (relevés en live). On propose les 8 jeux les plus
+  // présents parmi les chaînes affichées ; un jeu qui n'existe plus sur la période (période changée) revient à « Tous » sans effacer le choix.
+  const gc=new Map();for(const s of q.snaps||[]){if(!s.live||!s.g)continue;const m=gc.get(s.c)||new Map();m.set(s.g,(m.get(s.g)||0)+1);gc.set(s.c,m)}
+  const mainGame=new Map([...gc].map(([c,m])=>[c,[...m].sort((a,b)=>b[1]-a[1])[0][0]]));
+  const gameN=new Map();for(const c of activeAll){const g=mainGame.get(c);if(g)gameN.set(g,(gameN.get(g)||0)+1)}
+  const gamesTop=[...gameN].sort((a,b)=>b[1]-a[1]).slice(0,8),gameSel=gameN.has(cfg.mapGame)?cfg.mapGame:'*';
+  const gamesPanel=gameN.size>1?[{key:'*',label:'Tous',count:activeAll.length,on:gameSel==='*'},...(gamesTop.some(([g])=>g===gameSel)||gameSel==='*'?gamesTop:[...gamesTop,[gameSel,gameN.get(gameSel)]]).map(([g,n])=>({key:g,label:g,count:n,on:g===gameSel}))]:null;
+  const active=activeAll.filter(c=>gameSel==='*'||mainGame.get(c)===gameSel),liveN=active.filter(isLive).length;
   const nodes=active.filter(c=>!liveOnly||isLive(c)).map(c=>({id:c,size:by.get(c).size}));
   // ---------- menu de gauche (React) : période, langue, vue, chaînes cochées, recherche, groupes ----------
   const lg=cfg.lang||'*',nl=k=>cfg.chans.filter(c=>inLang(c,k)).length,known=cfg.chans.some(c=>langOf(c));
   const panel={open:mapSideOpen(),view,picked:picked.size,live:{on:liveOnly,count:liveN,total:active.length},
     periods:[...$('period').children].map(b=>({key:b.dataset.p,label:b.textContent,on:b.classList.contains('on')})),
     langs:known?LANGS.filter(([k])=>k==='*'||k===lg||nl(k)).map(([k,label])=>({key:k,label,count:nl(k),on:k===lg})):null,
+    games:gamesPanel,
     pick:view==='sel'?[...cfg.chans].sort((a,b)=>a.localeCompare(b)).map(c=>({...who(c),langs:langsOf(c),n:by.get(c)?by.get(c).size:0,on:picked.has(c)})):null,
     pins:Object.keys(cfg.mapPins||{}).length,empty:'',find:[],groups:null,solo:[],mount:null};
   const send=()=>window.dispatchEvent(new CustomEvent('legacy:map',{detail:panel}));
@@ -1262,7 +1272,7 @@ function renderMap(q){
     const c=k==='n'?[lcol(e.a),lcol(e.b)]:k==='a'?HL:[HL[1],HL[0]];st[0].setAttribute('stop-color',c[0]);st[1].setAttribute('stop-color',c[1]);
     const lw=1+3.5*w;lines[i].setAttribute('stroke-width',lw.toFixed(2));cases[i].setAttribute('stroke-width',(lw+3).toFixed(2))};
   const TWR=mapTwR(W),LOGO=mapLogo(W); // rayon de la planète Twitch au centre (zoom 1) ; LOGO : place gardée libre autour d'elle
-  const HUD=`Carte · ${n} chaînes${view==='sel'?' · sélection':(({fr:' francophones',en:' anglophones',autre:' (autres langues)'})[cfg.lang]||'')+(grouped?' · groupes':'')}${liveOnly?' · en live':''} · ${({today:'aujourd’hui','7d':'7 jours','30d':'30 jours',all:'tout'})[period]||''}`,
+  const HUD=`Carte · ${n} chaînes${view==='sel'?' · sélection':(({fr:' francophones',en:' anglophones',autre:' (autres langues)'})[cfg.lang]||'')+(grouped?' · groupes':'')}${gameSel!=='*'?' · '+gameSel:''}${liveOnly?' · en live':''} · ${({today:'aujourd’hui','7d':'7 jours','30d':'30 jours',all:'tout'})[period]||''}`,
     hudW=textWidth(HUD,500,getComputedStyle(document.body).getPropertyValue('--sans'),12)+34+110+100; // incrustation en haut à gauche (+ l'activité et la rotation), évitée par les noms
   let hover=null,zOrder='';const S=new Array(n),LP=new Array(n).fill(null); // LP : place du nom choisie au dessin précédent ; zOrder : icônes de la plus au fond à la plus devant
 
@@ -1624,7 +1634,7 @@ function renderMap(q){
   // Tracé à l'apparition : quand on ouvre l'onglet ou qu'on change de période ou de langue (pas aux rafraîchissements
   // automatiques), les liens se dessinent du centre du radar vers l'extérieur, puis leur halo s'allume.
   // (un tracé en cours est repris si la carte se redessine pendant ce temps, par exemple une fois la police chargée)
-  const introKey=period+'|'+(cfg.lang||'*')+'|'+view+(liveOnly?'|live':'')+'|'+(view==='sel'?[...picked].sort().join(','):''),introOn=introKey!==mapIntroKey||performance.now()-mapIntroAt<2600;mapIntroKey=introKey;if(introOn)mapIntroAt=performance.now();
+  const introKey=period+'|'+(cfg.lang||'*')+'|'+view+(liveOnly?'|live':'')+'|'+gameSel+'|'+(view==='sel'?[...picked].sort().join(','):''),introOn=introKey!==mapIntroKey||performance.now()-mapIntroAt<2600;mapIntroKey=introKey;if(introOn)mapIntroAt=performance.now();
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return api;
   let intro=null;
   if(introOn){const far=Math.hypot(W,H)/2;intro={t0:null,delay:EC.map(c=>Math.min(1,Math.hypot((c.ax+c.bx)/2-CX,(c.ay+c.by)/2-CY)/far)*.9)};

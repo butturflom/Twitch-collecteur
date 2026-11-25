@@ -79,6 +79,7 @@ function Side({ d, api, grp, sel, log }: { d: MapData; api: MapApi | null; grp: 
         />
       </Sec>
       {d.langs && <Sec title="Langue"><Seg label="Langue" items={d.langs} onPick={(k) => act("lang", k)} /></Sec>}
+      {d.games && <Sec title="Jeu principal"><Seg label="Jeu principal" items={d.games} onPick={(k) => act("game", k)} /></Sec>}
       <Sec title="Vue">
         <div role="group" aria-label="Vue de la carte" className="flex flex-col gap-1">
           {views.map(([k, label, n]) => (

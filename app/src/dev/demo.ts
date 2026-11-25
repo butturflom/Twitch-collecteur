@@ -284,7 +284,10 @@ function seedMap() {
       for(const c of set){const t=now-rnd()*5*3600e3;DB.presence['demo'+u+'|'+c+'|'+d+'|x']={u:'demo'+u,c,d,g:'Just Chatting',f:t,l:t+rnd()*1800e3,n:1+Math.floor(rnd()*20)}}}
     // chaînes en live (viewers du moment, pour la taille des ronds) ; les autres sont hors live
     const lv={zerator:21040,etoiles:14520,xari:6230,ponce:9800,mynthos:3120,jbzz:1840,sardoche:4400,domingo:900};
-    for(const c of chans)info[c]=lv[c]?{live:true,v:lv[c],g:'Just Chatting',since:now-2*3600e3}:{live:false}})();`
+    for(const c of chans)info[c]=lv[c]?{live:true,v:lv[c],g:'Just Chatting',since:now-2*3600e3}:{live:false};
+    // jeu principal de chaque chaîne (relevés en live), pour le filtre « Jeu principal » du menu de la Carte
+    const gm={etoiles:'Teamfight Tactics',xari:'Just Chatting',gotaga:'VALORANT',kamet0:'VALORANT',zerator:'Just Chatting',mynthos:'League of Legends',jbzz:'Teamfight Tactics',ponce:'Just Chatting',antoinedaniel:'Just Chatting',domingo:'League of Legends',sardoche:'League of Legends',rivenzi:'VALORANT'};
+    for(const c of chans)for(let k=0;k<3;k++)DB.snaps.push({t:now-(k+1)*1800e3,c,live:1,v:lv[c]||600,g:gm[c]})})();`
   document.body.appendChild(s)
 }
 
