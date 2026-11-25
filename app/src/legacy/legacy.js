@@ -1348,7 +1348,7 @@ function renderMap(q){
   function placeLabels(F){
     // la zone des boutons + − ⤢ compte comme occupée
     const Lg=logoAt(),lz=LOGO*Math.min(Math.sqrt(mapView.k),2.2); // la planète Twitch et son anneau, là où ils sont à l'écran
-    const placed=[{x:W-50,y:0,w:50,h:Object.keys(cfg.mapPins||{}).length?324:286} /* colonne de boutons : pause, globe, +, −, tout afficher, recentrer, aide (et remettre en place) */,{x:0,y:0,w:hudW,h:els.radar.querySelector('.radar-log.on')?94:66},{x:Lg.x-lz/2,y:Lg.y-lz*.32,w:lz,h:lz*.64}],rank=i=>(ids[i]===mapView.sel||ids[i]===hover?2:F&&F.s.has(ids[i])?1:0);
+    const placed=[{x:W-50,y:0,w:50,h:Object.keys(cfg.mapPins||{}).length?324:286} /* colonne de boutons : pause, globe, +, −, tout afficher, recentrer, aide (et remettre en place) */,{x:0,y:0,w:hudW,h:els.radar.querySelector('.radar-log.on')?58:30},{x:Lg.x-lz/2,y:Lg.y-lz*.32,w:lz,h:lz*.64}],rank=i=>(ids[i]===mapView.sel||ids[i]===hover?2:F&&F.s.has(ids[i])?1:0);
     // la pile en bas à droite (légende et note « nom masqué », dessinées par React, repérées par data-maplegend) est évitée par les noms, comme le bandeau en haut à gauche
     {const sr=svg.getBoundingClientRect();if(sr.width&&sr.height)document.querySelectorAll('[data-maplegend]').forEach(lg=>{if(!lg.offsetParent)return;const r=lg.getBoundingClientRect();
       placed.push({x:(r.left-sr.left)*W/sr.width,y:(r.top-sr.top)*H/sr.height,w:r.width*W/sr.width,h:r.height*H/sr.height})})}

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { MeterList } from "@/components/overview/parts"
 import { Galaxy } from "@/components/map/galaxy"
-import { FilterChips, GameMenu } from "@/components/map/menu"
+import { GameMenu } from "@/components/map/menu"
 import { fmt, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useMapData, type MapApi, type MapData, type MapNotice, type MapViewState } from "@/legacy/bridge"
@@ -238,7 +238,6 @@ export function MapView() {
           </div>
         </div>
 
-        <FilterChips d={d} />
         {menu && <GameMenu d={d} api={api} grp={st.grp} log={st.log} onClose={() => setMenu(false)} openHelp={() => { setMenu(false); setHelp(true) }} />}
 
         {d.empty ? (
