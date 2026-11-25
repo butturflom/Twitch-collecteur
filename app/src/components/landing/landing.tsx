@@ -2,12 +2,16 @@
 // ses éléments dans la page). Elle s'affiche une seule fois : le clic sur le bouton principal enregistre le drapeau « entré » dans le
 // localStorage. ?accueil la rouvre ; en démo (?demo) elle ne s'affiche jamais.
 // Texte du plan, mis au tutoiement du produit ; rien n'y est inventé (pas de chiffre, de témoignage ni de fonction absente).
-import { useEffect, useRef } from "react"
+// Intro (components/intro/) : un film de 4 s joué AVANT la page d'accueil, une seule fois (drapeau `to2-intro-seen`, distinct de
+// `to2-landing-seen`). Voir `introAuChargement` pour les règles.
+import { useEffect, useRef, useState, type ComponentType } from "react"
 import { Button } from "@/components/ui/button"
 import type { TabId } from "@/legacy/bridge"
+import type { IntroProps } from "@/components/intro/intro"
 import { LandingMap } from "./landing-map"
 
 const KEY = "to2-landing-seen"
+const INTRO_KEY = "to2-intro-seen"
 
 export function shouldShowLanding(): boolean {
   try {
@@ -22,6 +26,38 @@ export function shouldShowLanding(): boolean {
 
 export function markLandingSeen() {
   try { localStorage.setItem(KEY, "1") } catch { /* le choix vaut pour cette visite */ }
+}
+
+/**
+ * L'intro se joue-t-elle à ce chargement ? Évalué UNE fois, au chargement de la page (pas quand l'accueil est rouverte ensuite par
+ * l'événement `to2:landing`, où la personne cherche l'explication, pas le film).
+ * Il faut que la page d'accueil s'affiche (même condition que `shouldShowLanding`) et :
+ *  - jamais en démo (?demo) ;
+ *  - jamais avec la réduction des mouvements (la page s'affiche directement) ;
+ *  - jamais si le stockage est indisponible (sinon le film se rejouerait à chaque visite) ;
+ *  - sinon, si le drapeau `to2-intro-seen` est absent, ou si l'adresse contient ?accueil (le film se rejoue alors à chaque chargement).
+ */
+function introAuChargement(): boolean {
+  try {
+    const q = new URLSearchParams(location.search)
+    if (q.has("demo")) return false
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false
+    if (!shouldShowLanding()) return false
+    const vue = localStorage.getItem(INTRO_KEY) === "1" // lève une erreur si le stockage est indisponible : pas d'intro
+    return q.has("accueil") || !vue
+  } catch {
+    return false
+  }
+}
+let introEnAttente = introAuChargement()
+/** Consomme la décision : seule la première page d'accueil de la page chargée peut jouer l'intro. */
+const prendreIntro = () => {
+  const jouer = introEnAttente
+  introEnAttente = false
+  return jouer
+}
+function markIntroSeen() {
+  try { localStorage.setItem(INTRO_KEY, "1") } catch { /* tant pis : pas de drapeau, l'intro pourra se rejouer */ }
 }
 
 const PILLARS = [
@@ -44,22 +80,40 @@ const PILLARS = [
 
 export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
   const racine = useRef<HTMLDivElement>(null)
-  useEffect(() => { racine.current?.focus() }, [])
+  // Intro : décidée une fois pour toutes au premier affichage. La page est alors dessous, invisible et inerte, jusqu'à l'arrivée.
+  const [intro, setIntro] = useState(prendreIntro)
+  const [arrivee, setArrivee] = useState<null | "normale" | "rapide">(null)
+  const [Intro, setIntroComp] = useState<ComponentType<IntroProps> | null>(null)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onEnter()
+    if (!intro) return
+    let vivant = true
+    import("@/components/intro/intro").then((m) => vivant && setIntroComp(() => m.Intro), () => vivant && setIntro(false))
+    return () => { vivant = false }
+  }, [intro])
+  // Le focus va sur la page d'accueil dès qu'elle est affichée seule (tout de suite sans intro, à la fin de l'intro sinon).
+  useEffect(() => { if (!intro) racine.current?.focus() }, [intro])
+  useEffect(() => {
+    // Pendant l'intro, Échap la passe (c'est elle qui l'écoute) : il ne ferme pas la page d'accueil.
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !intro && onEnter()
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [onEnter])
+  }, [onEnter, intro])
 
   return (
+    <>
     <div
       ref={racine}
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label="Accueil de Twitch Overlap"
+      inert={intro}
       className="fixed inset-0 z-[60] outline-none overflow-y-auto overscroll-contain bg-background text-foreground animate-in fade-in-0 slide-in-from-bottom-1 duration-300"
     >
+      <div
+        className="transition-opacity ease-linear"
+        style={{ opacity: intro && !arrivee ? 0 : 1, transitionDuration: arrivee === "rapide" ? "200ms" : "300ms" }}
+      >
       <header className="mx-auto flex h-16 max-w-[1120px] items-center justify-between gap-4 px-6">
         <div className="flex items-center gap-2.5">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
@@ -127,6 +181,15 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
           </button>
         </div>
       </footer>
+      </div>
     </div>
+    {intro && Intro && (
+      <Intro
+        onArrive={(rapide) => setArrivee(rapide ? "rapide" : "normale")}
+        onDone={() => { markIntroSeen(); setIntro(false) }}
+        getTarget={() => racine.current?.querySelector("figure svg")?.getBoundingClientRect() ?? null}
+      />
+    )}
+    </>
   )
 }

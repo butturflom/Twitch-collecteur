@@ -51,9 +51,146 @@ Critère de fin : plus aucune photo de chaîne plate dans l'info-bulle de la Car
 | Étape | Exécutant | Modèle, effort | Sortie |
 |---|---|---|---|
 | B1. Écrire la séquence (storyboard : durée, mouvement de caméra, apparition du titre, effet du nom, bouton « Passer », rappel `prefers-reduced-motion`). Typographie et lueurs selon `DESIGN.md` | Session | Opus 5.5, high | Storyboard dans `IDEES.md`, accepté par toi avant tout code |
-| B2. Prototype isolé (`?intro`, page à part, mode démo, sans toucher à la vraie page d'accueil), moteur Three.js via les skills `three-js` et `react-three-fiber`. Option : maquette de la scène dans Spline | Session | Sonnet 5.5, high | Prototype et mesures |
-| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée |
+| B2. Prototype isolé (`?intro`, page à part, mode démo, sans toucher à la vraie page d'accueil), moteur Three.js via les skills `three-js` et `react-three-fiber`. Option : maquette de la scène dans Spline | Session | Sonnet 5.5, high | Prototype et mesures. **GO** (fluidité 60 i/s confirmée sur le PC de l'utilisateur, 25/11) : +141 Ko compressés, `file://` OK |
+| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée. **Fait, en attente de validation** (25/11) : `app/src/components/intro/intro.tsx` ; `?intro` et `intro-proto.tsx` retirés |
 | B4. Contrôle du mouvement | Sous-agent `impeccable-motion-reviewer`, une seule fois | par défaut | Liste de corrections |
+
+#### Storyboard (B1, 25/11, validé avec modifications)
+
+Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot « Observer » comme titre, seulement les chaînes en direct). Rien n'est codé. Le point du nom dans l'en-tête (plan 4) est validé le 25/11. Un choix technique reste à trancher pour B2 (voir les dernières sections).
+
+**Principe.** L'intro est un calque posé au-dessus de la page d'accueil actuelle (`landing.tsx`), qui est déjà dans la page dessous, invisible et `inert` pendant l'intro. La dernière image de l'intro est la page d'accueil elle-même : la galaxie se range à la place de l'illustration (`landing-map.tsx`, même astre central, mêmes trois orbites), le mot « Observer » s'efface et l'en-tête affiche le nom comme aujourd'hui. Il n'y a pas de coupure : on passe du film à la page sans changer de décor.
+
+**Durées.**
+
+| Plan | Début → fin | Durée |
+|---|---|---|
+| 0 · Nuit | 0,0 → 0,3 s | 0,3 s |
+| 1 · Approche | 0,3 → 1,7 s | 1,4 s |
+| 2 · Mise en orbite | 1,7 → 2,5 s | 0,8 s |
+| 3 · Titre | 2,5 → 3,5 s | 1,0 s |
+| 4 · Arrivée sur l'accueil | 3,5 → 4,0 s | 0,5 s |
+| **Total** | 0,0 → 4,0 s | **4,0 s** (0,3 + 1,4 + 0,8 + 1,0 + 0,5) |
+
+- **Durée totale : 4,0 s, et c'est aussi la durée maximale.** La séquence suit l'horloge, pas le nombre d'images : si le PC rame, des images sautent mais la fin tombe quand même à 4,0 s.
+- **Premier écran final sans attente** : à 4,0 s au plus tard sans rien faire ; 0,2 s après « Passer », Échap ou un clic ; tout de suite (fondu d'opacité de 0,2 s) avec `prefers-reduced-motion`.
+- Si l'onglet est en arrière-plan au moment du chargement (`document.hidden`), l'intro attend qu'il redevienne visible, sinon elle serait jouée pour personne.
+
+**Plan 0 · Nuit (0,0 → 0,3 s, 0,3 s)**
+
+| | |
+|---|---|
+| Mouvement | Aucun. |
+| Contenu | Fond ciel profond (#09090b). La poussière d'étoiles de la galaxie apparaît en fondu d'opacité (0 → 100 % en 0,3 s), encore très petite au centre. Le bouton « Passer l'intro » est là dès 0 s. |
+| Titre et textes | Aucun, sauf « Passer l'intro ». |
+| Son | Aucun (vaut pour tous les plans : pas d'autoplay sonore, outil utilisé au bureau). |
+| `prefers-reduced-motion` | Le plan n'existe pas (voir plus bas). |
+| Décision de données | À 0,3 s, l'intro regarde une seule fois si des données de chaînes sont déjà chargées. Elle choisit alors le cas illustré ou le cas réel pour toute la séquence ; elle ne bascule jamais en cours de route. |
+
+**Plan 1 · Approche (0,3 → 1,7 s, 1,4 s)**
+
+| | |
+|---|---|
+| Mouvement | Travelling avant vers le centre de la galaxie : la galaxie passe de 35 % à 85 % de sa taille finale, courbe `cubic-bezier(.32,.72,0,1)` (celle du tiroir, `DESIGN.md`), donc rapide au début puis de plus en plus lent. Le disque est vu incliné : 55° au départ, 20° à la fin du plan (il « se redresse » vers nous). Rotation dans son plan : 4° par seconde au plus, sens horaire. Aucun roulis de caméra, aucune secousse, aucun zoom brusque. Vitesse apparente d'un point au bord : 400 px/s au plus sur un écran de 1 440 px. |
+| Contenu | Astre central violet (comme `landing-map.tsx`), poussière d'étoiles en deux bras spiraux, puis les planètes qui s'allument une à une (fondu de 0,3 s chacune, une toutes les 0,08 s : 12 planètes au plus tiennent dans le plan, la dernière finit d'apparaître vers 1,3 s), des orbites internes vers l'externe. Voir « Galaxie » pour ce que représente chaque point. |
+| Titre et textes | Aucun. |
+| Son | Aucun. |
+| `prefers-reduced-motion` | Plan supprimé. |
+
+**Plan 2 · Mise en orbite (1,7 → 2,5 s, 0,8 s)**
+
+| | |
+|---|---|
+| Mouvement | Fin du travelling : 85 % → 100 %. Le disque finit de se redresser : 20° → 0° (vu de face, comme l'illustration à plat de l'accueil). La rotation ralentit de 4°/s à 1,5°/s, la vitesse exacte de `.landing-orbit` (un tour en 240 s), pour qu'il n'y ait aucun à-coup quand l'illustration prend le relais. |
+| Contenu | Les trois orbites (rayons 92, 152 et 214 de `landing-map.tsx`) se dessinent en traits fins (`map-link` à 12 %). Les liens entre planètes se tracent ensuite (0,4 s, `map-link` à 34 %), comme dans l'illustration. |
+| Titre et textes | Aucun. |
+| Son | Aucun. |
+| `prefers-reduced-motion` | Plan supprimé. |
+
+**Plan 3 · Titre (2,5 → 3,5 s, 1,0 s)**
+
+| | |
+|---|---|
+| Mouvement | La caméra ne bouge plus. La galaxie continue de tourner à 1,5°/s et descend à 30 % d'opacité en 0,3 s, avec le voile radial de la Carte (`map-veil`) derrière le titre. |
+| Contenu | Au centre, le mot « Observer », mot court qui invite à observer la carte des streamers. 2,6 → 3,1 s : il se révèle par un masque horizontal, de gauche à droite (0,5 s, même courbe). 3,1 → 3,5 s : il reste à l'écran, immobile et lisible en entier, jusqu'à la fin du plan 3. Logo retiré le 25/11 : le logo à deux cercles n'est pas tracé au plan 3, le mot seul porte le plan. |
+| Titre et textes | « Observer » en Inter 600, sans lueur, interlettrage −0,03em (comme le titre de l'accueil), taille `clamp(2.25rem, 7vw, 4rem)`, couleur lumière d'étoile (#f4f4f5). |
+| Son | Aucun. |
+| `prefers-reduced-motion` | Plan supprimé : l'image fixe porte déjà le nom dans l'en-tête. |
+
+**Plan 4 · Arrivée sur l'accueil (3,5 → 4,0 s, 0,5 s)**
+
+| | |
+|---|---|
+| Mouvement | Le mot « Observer » s'efface en 0,3 s (opacité seulement, sans déplacement) et l'en-tête affiche « Twitch Overlap » comme aujourd'hui. Validé le 25/11 : le nom de l'outil n'apparaît qu'à ce moment, dans l'en-tête, et non dans le film. Les déplacements n'utilisent que `transform`, jamais `top`, `left`, `width` ni `height` (règle de `DESIGN.md`). Sur écran large, la galaxie glisse et rétrécit jusqu'au cadre de l'illustration (colonne de droite, `transform` en 0,5 s) et remonte à 100 % d'opacité. Sous 1 024 px (`lg`), l'illustration est sous le texte : la galaxie s'efface en fondu (0,3 s) et l'illustration apparaît en fondu à sa place, sans déplacement. |
+| Contenu | La poussière d'étoiles s'efface ; il ne reste que la composition de l'illustration. Le titre de la page, le sous-titre et les deux boutons arrivent comme toute vue du site : fondu + montée de 4 px en 0,3 s, décalés de 0,08 s (le dernier élément finit avant 4,0 s). Le bouton principal prend sa lueur d'action à la fin. À 4,0 s, le calque de l'intro est retiré et `LandingMap` (ou sa version réelle, B3) prend le relais, au même angle. Le focus va sur la page d'accueil, comme aujourd'hui. |
+| Titre et textes | Ceux de la page d'accueil actuelle, inchangés. « Passer l'intro » s'efface de 3,7 à 3,9 s. |
+| Son | Aucun. |
+| `prefers-reduced-motion` | Remplacé par l'image fixe. |
+
+**Galaxie : ce que représente chaque point.**
+
+- **Cas illustré** (aucune chaîne suivie en direct, ou données pas encore chargées à 0,3 s ; c'est le cas le plus fréquent puisque la source des données n'est pas encore réglée) : des formes seulement. Les 9 planètes de `landing-map.tsx` (mêmes couleurs : `primary`, `primary-soft`, `map-link`, `star-gold`), l'astre central et la poussière d'étoiles. Aucun nom de chaîne, aucun chiffre, aucun avatar, et pas de rouge live (rien n'est en direct). La légende actuelle « Illustration. La Carte de ton tableau de bord affiche tes vraies chaînes. » apparaît avec l'illustration au plan 4.
+- **Cas réel, seulement les chaînes en direct** (la galaxie ne montre que les chaînes en direct à la première visite, jamais les chaînes hors ligne ; si aucune chaîne suivie n'est en direct, on prend le cas illustré, l'illustration de `landing-map.tsx` ; données déjà chargées à 0,3 s, par exemple quand on rouvre l'accueil par `?accueil` une fois le tableau de bord rempli) : chaque planète est une chaîne en direct, dessinée comme `ChannelAvatar` (planète dès 20 px : photo ou initiale, cercle et atmosphère de la couleur de la chaîne, relief). Plafond de 12 planètes, les plus regardées sur l'orbite intérieure. Taille de 20 à 40 px selon la racine carrée des viewers, sans afficher le chiffre. Petit point rouge live posé sur la planète, fixe (pas de pulsation pendant l'intro). Pas de nom pendant le mouvement, pour ne rien donner à lire qui bouge. On n'attend jamais une photo : si elle n'est pas arrivée, l'initiale reste. La légende devient « Tes chaînes en direct à l'ouverture de cette page. »
+- **Poussière d'étoiles** (les deux cas) : décor, aucune signification. Environ 180 points dans la variante Three.js, 60 dans la variante S, tons `map-link` et `star-gold` entre 20 et 60 % d'opacité, sans scintillement.
+
+**Titre « Observer » : pourquoi ce choix.**
+
+- **Révélation par masque horizontal** : elle évoque le balayage d'un instrument d'observation et laisse les lettres nettes à chaque image. Un fondu seul ferait passer le titre par un gris peu lisible ; un flou (refusé le 25/11) ou un brouillage de lettres serait du spectacle.
+- **Un mot court** : « Observer » invite à observer la carte des streamers et se lit d'un coup d'œil dans un film de 4 s. Le nom vient ensuite, dans l'en-tête (validé le 25/11 ; logo retiré le 25/11).
+- **Sobre** : pas d'Orbitron (refusé le 25/11), pas de capitales espacées (règle du libellé en clair), pas de lueur ni d'ombre portée sur le texte. Règle des deux niveaux de lueur : pendant l'intro, seule l'atmosphère des planètes et de l'astre central brille, en lueur ambiante. La seule lueur vive de la séquence est celle du bouton principal, à la fin.
+
+**Bouton « Passer l'intro ».**
+
+- **Place** : en bas à droite, à 24 px des bords (16 px sous 640 px). Bouton secondaire de `DESIGN.md` (orbite, filet), fond opaque pour que la galaxie ne passe jamais dessous ; 36 px de haut, 44 px sur mobile, comme les boutons de l'accueil.
+- **Visible** de 0 s à 3,7 s, puis effacé en 0,2 s.
+- **Ce qu'il fait** : saute à l'image finale (fondu d'opacité de 0,2 s, sans déplacement), retire le calque et marque l'intro comme vue. La page d'accueil reste ouverte : passer l'intro n'est pas entrer dans le tableau de bord.
+- **Échap** fait la même chose pendant l'intro. Un second Échap, sur la page d'accueil, la ferme comme aujourd'hui. Le premier Échap ne doit donc pas atteindre l'écouteur actuel de `landing.tsx`. Un clic n'importe où sur le calque passe aussi l'intro, comme dans un jeu.
+- **Focus** : le bouton reçoit le focus à 0 s (Entrée et Espace le déclenchent) ; à la fin, le focus revient sur la page d'accueil comme aujourd'hui. Il porte `aria-keyshortcuts="Escape"`.
+
+**`prefers-reduced-motion`.** Pas d'intro du tout. On affiche directement l'image fixe de la fin du plan 4 : la page d'accueil actuelle, avec l'illustration (ou la galaxie réelle, en image fixe) et le nom dans l'en-tête. Seul un fondu d'opacité de 0,2 s est permis, aucun déplacement ni rotation (l'illustration ne tourne déjà plus dans ce cas, `index.css`). Pas de bouton « Passer », puisqu'il n'y a rien à passer.
+
+**Lecture unique.**
+
+- Nouveau drapeau `to2-intro-seen`, posé quand l'intro se termine ou est passée.
+- L'intro joue seulement si la page d'accueil s'affiche **et** que le drapeau est absent, ou si l'adresse contient `?accueil` (elle rejoue alors à chaque chargement avec `?accueil`).
+- Jamais avec `?demo` (l'accueil ne s'y affiche pas). Le prototype `?intro` de B2 a été retiré en B3. Jamais quand on rouvre l'accueil par le lien de l'état vide de la Vue d'ensemble (`to2:landing`) : la personne y cherche l'explication, pas le film.
+- Si le stockage est indisponible : pas d'intro (on ne rejoue pas le film à chaque visite).
+
+**Variante S (SVG et CSS, sans Three.js).** Même séquence, mêmes durées, mêmes textes et même bouton. Ce qui change :
+
+- **Inclinaison** : le disque est un SVG aplati par une échelle verticale (45 % → 100 %) au lieu d'une vraie perspective. On voit une ellipse qui s'ouvre en cercle ; pas de vraie profondeur.
+- **Profondeur** : deux calques seulement (poussière lointaine et disque) qui grandissent à des vitesses différentes, au lieu d'une parallaxe continue.
+- **Poussière** : 60 points au lieu de 180.
+- **Animation** : seulement `transform` et `opacity`, en Web Animations API ou en keyframes CSS ; les traits se dessinent par `stroke-dashoffset`.
+- **Planètes réelles** : `ChannelAvatar` posé en HTML au-dessus du SVG. C'est aussi ce que je propose pour la variante Three.js, car une photo Twitch chargée comme texture WebGL depuis `file://` risque d'être refusée (règle d'origine croisée), à vérifier en B2.
+- **Poids ajouté** : quelques Ko, aucune bibliothèque. Elle suffit si les critères de B2 échouent ; on peut aussi la choisir d'emblée.
+
+**Accessibilité et lisibilité.**
+
+- **Contraste du titre** : lumière d'étoile sur un fond qui, dans la zone du titre, n'est jamais plus clair que la coupole (#121217). Pour ça, la galaxie passe à 30 % d'opacité et le voile `map-veil` est posé derrière le titre. Contraste ≥ 15:1. Le titre ne passe jamais sur l'astre central à pleine intensité : sur le violet profond, la lumière d'étoile tomberait sous 4,5:1.
+- **Contraste du bouton** : lumière d'étoile sur orbite opaque, ≥ 15:1, quel que soit le décor derrière. Anneau de focus violet de 3 px, comme partout.
+- **Lisible à tout moment** : pendant le masque, les lettres déjà révélées sont à pleine opacité (pas de lettre à moitié transparente) ; pendant le plan 4, « Observer » s'efface sans bouger et le nom apparaît à 14 px dans l'en-tête, comme aujourd'hui.
+- **Pas de clignotement** : aucun éclair, aucune variation de luminosité plus de trois fois par seconde (WCAG 2.3.1).
+- **Lecteurs d'écran** : le calque de l'intro est `aria-hidden` ; seul « Passer l'intro » est annoncé. La page d'accueil garde son rôle de dialogue et son nom (« Accueil de Twitch Overlap »).
+- **Clavier** : tout se fait sans souris (Échap, ou Entrée sur « Passer l'intro »).
+
+**Décisions de l'utilisateur (25/11).**
+
+1. **Durée** : 4,0 s au total, qui est aussi le maximum. Découpage : 0,3 + 1,4 + 0,8 + 1,0 + 0,5 s (tableau ci-dessus).
+2. **Titre** : le mot « Observer » (plan 3), qui s'efface au plan 4 pendant que l'en-tête affiche « Twitch Overlap » (validé le 25/11).
+3. **Seulement les chaînes en direct** : jamais de chaîne hors ligne dans la galaxie ; sans chaîne en direct, le cas illustré. Plafond de 12 planètes, de 20 à 40 px.
+4. **Phrase d'accroche avant le nom** : non retenue (aucun plan supplémentaire).
+
+**Choix à trancher pour B2.**
+
+| | Three.js | Variante S (SVG et CSS) |
+|---|---|---|
+| Ce qui change visuellement | Profondeur réelle et parallaxe continue | Inclinaison simulée du disque (échelle verticale), deux calques seulement |
+| Poids ajouté à `twitch-overlap.html` | Ordre de grandeur à mesurer, quelques centaines de Ko | Quelques Ko, aucune bibliothèque |
+| Risque sous `file://` | Réel : chargement du moteur et des textures (photos Twitch refusées par l'origine croisée), à vérifier | Aucun |
+| Risque de fluidité pendant le chargement du tableau de bord | Réel : le rendu WebGL se dispute le fil principal avec le chargement | Faible : seulement `transform` et `opacity` |
+| Effort | Une session Sonnet high | Une session de prototype plus longue (réglage fin de l'illusion de profondeur) |
+| Recommandation | Il serait raisonnable de commencer par la variante S pour la livraison, et de n'ouvrir Three.js que si la capture de la variante S paraît plate. | |
 
 **Critères go/no-go de B2** (à confirmer par toi) : poids ajouté au HTML unique mesuré et écrit (ordre de grandeur à tenir : quelques centaines de Ko, Three.js allégé par import ciblé) ; 60 images par seconde sur ton PC ; chargement correct depuis `file://` ; intro passable en un clic ou à la touche Échap ; une seule lecture par navigateur (`to2-landing-seen`). **Abandon** : poids ou fluidité hors critère, on garde une animation en SVG et CSS (variante S, sans Three.js).
 
