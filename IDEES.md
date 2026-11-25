@@ -57,7 +57,7 @@ Critère de fin : plus aucune photo de chaîne plate dans l'info-bulle de la Car
 
 #### Storyboard (B1, 25/11, validé avec modifications)
 
-Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot « Observer » comme titre, seulement les chaînes en direct). Rien n'est codé. Un point reste à confirmer (nom dans l'en-tête, plan 4) et un choix technique reste à trancher pour B2 (voir les dernières sections).
+Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot « Observer » comme titre, seulement les chaînes en direct). Rien n'est codé. Le point du nom dans l'en-tête (plan 4) est validé le 25/11. Un choix technique reste à trancher pour B2 (voir les dernières sections).
 
 **Principe.** L'intro est un calque posé au-dessus de la page d'accueil actuelle (`landing.tsx`), qui est déjà dans la page dessous, invisible et `inert` pendant l'intro. La dernière image de l'intro est la page d'accueil elle-même : la galaxie se range à la place de l'illustration (`landing-map.tsx`, même astre central, mêmes trois orbites), le mot « Observer » s'efface et l'en-tête affiche le nom comme aujourd'hui. Il n'y a pas de coupure : on passe du film à la page sans changer de décor.
 
@@ -112,7 +112,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 | | |
 |---|---|
 | Mouvement | La caméra ne bouge plus. La galaxie continue de tourner à 1,5°/s et descend à 30 % d'opacité en 0,3 s, avec le voile radial de la Carte (`map-veil`) derrière le titre. |
-| Contenu | Au centre, le mot « Observer », mot court qui invite à observer la carte des streamers. 2,6 → 3,1 s : il se révèle par un masque horizontal, de gauche à droite (0,5 s, même courbe). 3,1 → 3,5 s : il reste à l'écran, immobile et lisible en entier, jusqu'à la fin du plan 3. Le logo à deux cercles n'est plus tracé ici (valeur revue : à cette durée il n'y a plus la place, et le mot seul porte le plan). |
+| Contenu | Au centre, le mot « Observer », mot court qui invite à observer la carte des streamers. 2,6 → 3,1 s : il se révèle par un masque horizontal, de gauche à droite (0,5 s, même courbe). 3,1 → 3,5 s : il reste à l'écran, immobile et lisible en entier, jusqu'à la fin du plan 3. Logo retiré le 25/11 : le logo à deux cercles n'est pas tracé au plan 3, le mot seul porte le plan. |
 | Titre et textes | « Observer » en Inter 600, sans lueur, interlettrage −0,03em (comme le titre de l'accueil), taille `clamp(2.25rem, 7vw, 4rem)`, couleur lumière d'étoile (#f4f4f5). |
 | Son | Aucun. |
 | `prefers-reduced-motion` | Plan supprimé : l'image fixe porte déjà le nom dans l'en-tête. |
@@ -121,7 +121,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 
 | | |
 |---|---|
-| Mouvement | Le mot « Observer » s'efface en 0,3 s (opacité seulement, sans déplacement) et l'en-tête affiche « Twitch Overlap » comme aujourd'hui. **Choix à confirmer** : que le nom de l'outil n'apparaisse qu'à ce moment, dans l'en-tête, et non dans le film. Les déplacements n'utilisent que `transform`, jamais `top`, `left`, `width` ni `height` (règle de `DESIGN.md`). Sur écran large, la galaxie glisse et rétrécit jusqu'au cadre de l'illustration (colonne de droite, `transform` en 0,5 s) et remonte à 100 % d'opacité. Sous 1 024 px (`lg`), l'illustration est sous le texte : la galaxie s'efface en fondu (0,3 s) et l'illustration apparaît en fondu à sa place, sans déplacement. |
+| Mouvement | Le mot « Observer » s'efface en 0,3 s (opacité seulement, sans déplacement) et l'en-tête affiche « Twitch Overlap » comme aujourd'hui. Validé le 25/11 : le nom de l'outil n'apparaît qu'à ce moment, dans l'en-tête, et non dans le film. Les déplacements n'utilisent que `transform`, jamais `top`, `left`, `width` ni `height` (règle de `DESIGN.md`). Sur écran large, la galaxie glisse et rétrécit jusqu'au cadre de l'illustration (colonne de droite, `transform` en 0,5 s) et remonte à 100 % d'opacité. Sous 1 024 px (`lg`), l'illustration est sous le texte : la galaxie s'efface en fondu (0,3 s) et l'illustration apparaît en fondu à sa place, sans déplacement. |
 | Contenu | La poussière d'étoiles s'efface ; il ne reste que la composition de l'illustration. Le titre de la page, le sous-titre et les deux boutons arrivent comme toute vue du site : fondu + montée de 4 px en 0,3 s, décalés de 0,08 s (le dernier élément finit avant 4,0 s). Le bouton principal prend sa lueur d'action à la fin. À 4,0 s, le calque de l'intro est retiré et `LandingMap` (ou sa version réelle, B3) prend le relais, au même angle. Le focus va sur la page d'accueil, comme aujourd'hui. |
 | Titre et textes | Ceux de la page d'accueil actuelle, inchangés. « Passer l'intro » s'efface de 3,7 à 3,9 s. |
 | Son | Aucun. |
@@ -136,7 +136,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 **Titre « Observer » : pourquoi ce choix.**
 
 - **Révélation par masque horizontal** : elle évoque le balayage d'un instrument d'observation et laisse les lettres nettes à chaque image. Un fondu seul ferait passer le titre par un gris peu lisible ; un flou (refusé le 25/11) ou un brouillage de lettres serait du spectacle.
-- **Un mot court** : « Observer » invite à observer la carte des streamers et se lit d'un coup d'œil dans un film de 4 s. Le nom et le logo viennent ensuite, dans l'en-tête (choix à confirmer).
+- **Un mot court** : « Observer » invite à observer la carte des streamers et se lit d'un coup d'œil dans un film de 4 s. Le nom vient ensuite, dans l'en-tête (validé le 25/11 ; logo retiré le 25/11).
 - **Sobre** : pas d'Orbitron (refusé le 25/11), pas de capitales espacées (règle du libellé en clair), pas de lueur ni d'ombre portée sur le texte. Règle des deux niveaux de lueur : pendant l'intro, seule l'atmosphère des planètes et de l'astre central brille, en lueur ambiante. La seule lueur vive de la séquence est celle du bouton principal, à la fin.
 
 **Bouton « Passer l'intro ».**
@@ -177,7 +177,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 **Décisions de l'utilisateur (25/11).**
 
 1. **Durée** : 4,0 s au total, qui est aussi le maximum. Découpage : 0,3 + 1,4 + 0,8 + 1,0 + 0,5 s (tableau ci-dessus).
-2. **Titre** : le mot « Observer » (plan 3), qui s'efface au plan 4 pendant que l'en-tête affiche « Twitch Overlap ». **Choix à confirmer** pour ce dernier point.
+2. **Titre** : le mot « Observer » (plan 3), qui s'efface au plan 4 pendant que l'en-tête affiche « Twitch Overlap » (validé le 25/11).
 3. **Seulement les chaînes en direct** : jamais de chaîne hors ligne dans la galaxie ; sans chaîne en direct, le cas illustré. Plafond de 12 planètes, de 20 à 40 px.
 4. **Phrase d'accroche avant le nom** : non retenue (aucun plan supplémentaire).
 
