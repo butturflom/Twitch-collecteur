@@ -1,4 +1,4 @@
-// Menu de la Carte, façon menu de jeu vidéo : un bouton « Menu » posé sur la carte (avec les filtres actifs en pastilles), qui ouvre un
+// Menu de la Carte, façon menu de jeu vidéo : un bouton « Menu » dans la colonne de boutons de droite de la carte, qui ouvre un
 // panneau à deux colonnes par-dessus la carte : à gauche les rubriques, à droite leur contenu. La carte garde toute la largeur et
 // reste visible à droite du panneau : chaque réglage se voit tout de suite.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
@@ -15,7 +15,7 @@ const act = (...a: Parameters<NonNullable<Window["mapAction"]>>) => window.mapAc
 type Page = "filtres" | "vue" | "aller" | "journal" | "outils"
 type Opt = { key: string; label: string; on: boolean; count?: number }
 
-/** Les filtres qui ne sont pas à leur valeur d'origine : la carte les rappelle en pastilles, chacune se retire d'un clic. */
+/** Les filtres qui ne sont pas à leur valeur d'origine : le menu en donne le nombre sur la rubrique Filtres. */
 function activeFilters(d: MapData): { id: string; label: string; clear: () => void }[] {
   const out: { id: string; label: string; clear: () => void }[] = []
   if (d.live.on) out.push({ id: "live", label: "En live", clear: () => act("live", "all") })
@@ -217,28 +217,6 @@ const PAGES: { id: Page; label: string; icon: ReactNode }[] = [
   { id: "journal", label: "Journal", icon: <Radio /> },
   { id: "outils", label: "Outils", icon: <Telescope /> },
 ]
-
-/** Les filtres actifs, en pastilles en haut à gauche de la carte (sous le bandeau du moteur) : chacune se retire d'un clic. Rien si aucun filtre. */
-export function FilterChips({ d }: { d: MapData }) {
-  const chips = activeFilters(d)
-  if (!chips.length) return null
-  return (
-    <div className="absolute top-11 left-2.5 z-20 flex max-w-[calc(100%-70px)] flex-wrap items-center gap-1.5">
-      {chips.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          onClick={c.clear}
-          title={`Retirer le filtre « ${c.label} »`}
-          aria-label={`Retirer le filtre ${c.label}`}
-          className="inline-flex h-7 items-center gap-1 rounded-full border border-primary/40 bg-zinc-900/75 pr-1.5 pl-2.5 text-xs text-zinc-100 backdrop-blur-xl transition-colors hover:border-primary/70 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
-        >
-          {c.label}<X className="size-3 text-zinc-400" />
-        </button>
-      ))}
-    </div>
-  )
-}
 
 /** Le panneau : rubriques à gauche, contenu à droite ; sur petit écran, les rubriques passent en barre au-dessus. */
 export function GameMenu({ d, api, grp, log, onClose, openHelp }: { d: MapData; api: MapApi | null; grp: number | null; log: NonNullable<MapNotice["log"]>; onClose: () => void; openHelp: () => void }) {
