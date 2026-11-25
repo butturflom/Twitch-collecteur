@@ -33,8 +33,8 @@
 | #28, #29 | `comparer-chaines`, `fidelite-petites-chaines` | Comparer 2 à 4 chaînes ; fidélité dès 30 viewers actifs | fusionnées le 25/11 |
 | #30 à #35 | `alertes-rythme`, `mon-univers`, `par-chaine-essentiel`, `fidelite-voisines`, suivi | Alertes de rythme, son univers, l'essentiel de Par chaîne, fidélité comparée aux voisines (#33 est passée par #35) | fusionnées le 25/11 |
 | #36 | `carte-filtre-jeu` | Carte : filtre par jeu principal | fusionnée le 25/11 |
-| #37 | `regle-build-auto` | CLAUDE.md : reconstruction automatique du tableau de bord | ouverte |
-| — | `docs-maj-25-11` | Cette mise à jour de la documentation | ouverte |
+| #37 | `regle-build-auto` | CLAUDE.md : reconstruction automatique du tableau de bord | fusionnée le 25/11 |
+| #38 | `docs-maj-25-11` | Cette mise à jour de la documentation | fusionnée le 25/11 (après #37) |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
