@@ -90,7 +90,7 @@ function Body({ st, uniq, days }: { st: State; uniq: PeriodReach | null; days: 3
     return (
       <Empty>
         L'historique du réseau n'a pas pu être lu. Réessaie dans un instant ; si ça dure, vérifie la connexion à la base dans Réglages.
-        <span className="mt-1.5 block font-mono text-[11px] leading-snug break-words text-dusk">Message reçu : {st.msg}</span>
+        <span className="mt-1.5 block text-[11px] leading-snug text-dusk">Message reçu : <span className="font-mono break-words">{st.msg}</span></span>
       </Empty>
     )
   }

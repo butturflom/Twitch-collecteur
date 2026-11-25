@@ -11,8 +11,7 @@ import type { Who } from "@/legacy/bridge"
 
 export function Section({ title, note, badge, action, children, className }: { title: string; note?: ReactNode; badge?: string; /** contrôle à droite du titre (bascule de durée, par exemple) */ action?: ReactNode; children: ReactNode; className?: string }) {
   const head = (
-    <h2 className={cn("flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.015em]", !action && "mb-3")}>
-      <span aria-hidden className="size-1.5 rounded-[2px] bg-primary shadow-pip" />
+    <h2 className={cn("flex items-center gap-2.5 text-[15px] font-semibold tracking-[-0.015em] text-balance", !action && "mb-3")}>
       {title}
       {badge && <Badge variant="secondary" className="text-[11px] h-4.5 px-2">{badge}</Badge>}
     </h2>

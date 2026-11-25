@@ -88,7 +88,7 @@ function StatusPill() {
                       )}
                       {raw && (
                         <div className="mt-1.5">
-                          <p className="font-mono text-[11px] leading-snug break-words text-dusk">Message reçu :</p>
+                          <p className="text-[11px] leading-snug text-dusk">Message reçu :</p>
                           <p className="font-mono text-[11px] leading-snug break-words text-dusk">{raw}</p>
                         </div>
                       )}
