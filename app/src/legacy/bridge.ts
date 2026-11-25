@@ -269,9 +269,15 @@ export interface ChannelHistory { days: HistoryDay[]; out: HistoryRoute[]; in: H
 /** Viewers uniques sur plusieurs jours, estimés par HyperLogLog (± 2,3 %) : réunion des chaînes (net) et chaque chaîne. */
 export interface PeriodReach { from: string | null; to: string | null; days: number; net: number; chans: { c: string; n: number }[] }
 
+/** Historique du réseau entier lu dans les rollups quotidiens (Vue d'ensemble). */
+export interface NetworkDay { d: string; msgs: number; avg: number; chans: number }
+export interface NetworkTop extends Who { msgs: number; avg: number }
+export interface NetworkHistory { days: NetworkDay[]; top: NetworkTop[] }
+
 declare global {
   interface Window {
     /** null : pas de base Supabase (mode local) ou base pas à jour */
+    networkHistory?: (days: number) => Promise<NetworkHistory | null>
     periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>
     channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
     showTab?: (t: TabId) => void

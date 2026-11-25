@@ -2486,6 +2486,13 @@ async function periodReach(chans,days){
   try{return await sbReq('rpc/period_reach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chans,days})})}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.periodReach = periodReach
+// Historique du réseau entier (fonction SQL network_history, voir schema.sql) ; les viewers uniques du réseau passent par periodReach(['*'], jours).
+async function networkHistory(days){
+  if(!isCloud())return null;
+  try{const h=await sbReq('rpc/network_history',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days})});
+    return {days:h.days||[],top:(h.top||[]).map(x=>({...who(x.c),msgs:x.msgs,avg:x.avg}))}}
+  catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
+window.networkHistory = networkHistory
 window.showTab = showTab
 window.openAddStreamer = openAddStreamer
 window.renderFlows = renderFlows

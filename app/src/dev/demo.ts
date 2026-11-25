@@ -1,9 +1,9 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { ChannelHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { ChannelHistory, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
-declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; statusOf?: () => StatusData } }
+declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData } }
 
 const CH: [string, string][] = [["etoiles", "#4d8dff"], ["xari", "#ff7a45"], ["gotaga", "#2fbf71"], ["kamet0", "#f5b83d"]]
 const MIN = 60000
@@ -339,6 +339,16 @@ function reachDemo(chans: string[], days: number): PeriodReach {
   return { from: d(Math.min(days, 12)), to: d(1), days: Math.min(days, 12), net: Math.round(gross * 0.82), chans: per }
 }
 
+// Historique du réseau : n jours agrégés fictifs (creux en semaine, pics le week-end), pour voir « Historique du réseau » de la Vue d'ensemble
+function networkDemo(n: number): NetworkHistory {
+  const days = Array.from({ length: n }, (_, i) => {
+    const t = new Date(Date.now() - (n - i) * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.3 : 1
+    return { d: t.toLocaleDateString("sv-SE"), msgs: Math.round((2_100_000 + i * 14_000) * wk), avg: Math.round((520_000 + i * 2_600) * wk), chans: 78 + (i % 6) }
+  })
+  const who = (c: string, color: string, msgs: number, avg: number) => ({ c, color, img: "", msgs, avg })
+  return { days, top: [who("etoiles", "#4d8dff", 98432 * n, 14520), who("xari", "#ff7a45", 71204 * n, 6230), who("gotaga", "#2fbf71", 52310 * n, 5870), who("kamet0", "#f5b83d", 24172 * n, 2232)] }
+}
+
 export function installDemo() {
   // l'ancien code se charge après le premier rendu : on remplace ses fonctions dès qu'elles existent
   const id = setInterval(() => {
@@ -365,8 +375,11 @@ export function installDemo() {
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
     window.renderFlows = () => window.dispatchEvent(new CustomEvent("legacy:flows", { detail: flowsDemo() }))
-    window.channelHistory = async (c, days) => (new URLSearchParams(location.search).get("histo") === "non" ? null : historyDemo(c, Math.min(days, new URLSearchParams(location.search).get("histo") === "1" ? 1 : days)))
-    window.periodReach = async (chans, days) => (new URLSearchParams(location.search).get("histo") === "non" ? null : reachDemo(chans, days))
+    // &histo=non : base pas à jour ; &histo=1 : une seule journée agrégée
+    const histo = () => new URLSearchParams(location.search).get("histo")
+    window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
+    window.periodReach = async (chans, days) => (histo() === "non" ? null : reachDemo(chans, days))
+    window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(histo() === "1" ? 1 : days))
     window.renderRosters = () => window.dispatchEvent(new CustomEvent("legacy:rosters", { detail: rostersDemo() }))
     // pilule d'état : collecteur en ligne ; ?demo&etat=erreur : synchro et API en échec (problèmes affichés avant l'état)
     window.statusOf = () => statusDemo(new URLSearchParams(location.search).get("etat") === "erreur")

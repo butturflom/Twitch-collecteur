@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { useOverviewData, usePeriodInfo, type BrandRow, type ChannelInfo, type FollowerRow, type ModRow, type PartRow } from "@/legacy/bridge"
 import { Phase3Analysis } from "./phase3-analysis"
 import { ChannelCard, ChannelRow } from "./channel-card"
+import { NetworkHistoryBlock } from "./network-history"
 import { Recoup } from "./recoup"
 import { LineChart } from "@/components/charts/line-chart"
 import { ChannelCell, DataTable, Delta, Empty, Section, ShowMore, heat, muted, panel, type Col, Pending } from "./parts"
@@ -265,6 +266,8 @@ export function Overview() {
         </Section>
       )}
       {chartNote && <p className="mt-2.5 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk">{chartNote}</p>}
+
+      <NetworkHistoryBlock />
 
       {d.part && (
         <div className="flex items-start gap-2">
