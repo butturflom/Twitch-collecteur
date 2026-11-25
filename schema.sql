@@ -593,6 +593,13 @@ begin
   cross join generate_series(0, 2047) as s(j)
   left join r on r.c = ch.c and r.j = s.j
   group by ch.c;
+  -- Esquisse « réseau » : réunion de toutes les chaînes du jour (c = '*'), pour les viewers uniques du réseau entier sur 7, 30 ou 90
+  -- jours sans lire 100 chaînes × 90 jours. Aucune chaîne ne s'appelle « * » ; period_reach(array['*'], 30) la lit.
+  insert into daily_hll (d, c, regs)
+  select jour, '*', decode(string_agg(lpad(to_hex(x.m), 2, '0'), '' order by x.j), 'hex')
+  from (select s.j, max(get_byte(h.regs, s.j)) as m
+        from daily_hll h cross join generate_series(0, 2047) as s(j)
+        where h.d = jour and h.c <> '*' group by s.j) x;
 end $$;
 
 -- Viewers uniques sur les « days » derniers jours COMPLETS (aujourd'hui, pas encore agrégé, est exclu), pour une liste de chaînes
@@ -613,6 +620,24 @@ language sql stable set search_path = public, pg_catalog as $$
     'from', (select min(d) from src), 'to', (select max(d) from src), 'days', (select count(distinct d) from src),
     'net', coalesce((select n from un), 0),
     'chans', coalesce((select jsonb_agg(jsonb_build_object('c', per.c, 'n', per.n) order by per.n desc) from per), '[]'))
+$$;
+
+-- Historique du réseau pour la Vue d'ensemble, lu dans daily_streamer_rollup (25/11/2026). Lecture seule.
+--   days : par jour, messages (exact), audience moyenne cumulée (somme des viewers moyens des chaînes en live : une même personne
+--          qui regarde deux lives compte deux fois), nombre de chaînes qui ont été écoutées
+--   top  : les 8 chaînes qui ont le plus écrit sur la période, avec leurs viewers moyens (moyenne des jours en live)
+-- Les viewers uniques du réseau se lisent à part : period_reach(array['*'], days).
+create or replace function network_history(days int default 30) returns jsonb
+language sql stable set search_path = public, pg_catalog as $$
+  with p as (select to_char((now() at time zone 'Europe/Paris')::date - least(greatest(days, 1), 366), 'YYYY-MM-DD') as d0),
+  s as (select r.* from daily_streamer_rollup r, p where r.d >= p.d0)
+  select jsonb_build_object(
+    'days', coalesce((select jsonb_agg(x order by x.d) from (
+      select d, sum(total_messages)::bigint as msgs, sum(avg_viewers)::bigint as avg, (count(*) filter (where minutes_live > 0))::int as chans
+      from s group by d) x), '[]'),
+    'top', coalesce((select jsonb_agg(x order by x.msgs desc) from (
+      select c, sum(total_messages)::bigint as msgs, coalesce(round(avg(avg_viewers) filter (where avg_viewers > 0)), 0)::int as avg
+      from s group by c order by 2 desc limit 8) x), '[]'))
 $$;
 
 -- Insertion d'événements de raid (Étape 2 : table raid_events séparée)
@@ -697,6 +722,7 @@ grant execute on function run_daily_overlap_rollup(date) to service_role;
 grant execute on function backfill_daily_rollup(int) to service_role;
 grant execute on function channel_history(text, int) to anon, authenticated, service_role;
 grant execute on function period_reach(text[], int) to anon, authenticated, service_role;
+grant execute on function network_history(int) to anon, authenticated, service_role;
 revoke all on function build_daily_hll(text) from public, anon, authenticated;
 grant execute on function build_daily_hll(text) to service_role;
 grant select on daily_hll to anon, authenticated;
