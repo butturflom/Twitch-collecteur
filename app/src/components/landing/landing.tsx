@@ -27,17 +27,17 @@ export function markLandingSeen() {
 const PILLARS = [
   {
     title: "Ce que les stats publiques ne montrent pas",
-    text: "Quels viewers regardent plusieurs chaînes, où ils vont quand un live se termine, et ce que le chat dit vraiment de l’ambiance.",
+    text: "Quels viewers actifs écrivent sur plusieurs chaînes, où ils vont quand un live se termine, et ce que le chat dit vraiment de l’ambiance. Les spectateurs silencieux ne sont pas visibles.",
     where: "Dans l’app : Chevauchement, Flux, Chat.",
   },
   {
     title: "Prépare tes raids, mesure ton audience",
-    text: "Des recommandations de raid d’après les flux réels, la fidélité du chat, et le Net Reach d’un groupe de chaînes sans compter deux fois le même viewer.",
+    text: "Des recommandations de raid d’après les flux réels, la fidélité du chat, et le Net Reach d’un groupe de chaînes sans compter deux fois le même viewer actif.",
     where: "Dans l’app : Par chaîne, Rosters, rapports PDF et CSV.",
   },
   {
     title: "Anonyme par construction",
-    text: "Les pseudos sont remplacés par une empreinte avant l’envoi, et le texte des messages n’est jamais conservé.",
+    text: "Les pseudos sont remplacés par une empreinte avant l’envoi, et le texte des messages n’est jamais conservé. Les données sont stockées dans ta propre base Supabase ; le collecteur tourne chez toi, sur ton PC ou dans Docker.",
     where: "Dans l’app : encart « Données anonymisées », en bas du menu latéral.",
   },
 ]
@@ -64,7 +64,7 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
           </svg>
           <span className="text-sm font-semibold tracking-[-0.015em]">Twitch Overlap</span>
         </div>
-        <Button variant="secondary" className="border border-white/10 bg-zinc-900/70 transition-colors duration-200 hover:bg-zinc-800" onClick={() => onEnter()}>
+        <Button variant="secondary" className="border border-white/10 transition-colors duration-200" onClick={() => onEnter()}>
           Ouvrir le tableau de bord
         </Button>
       </header>
@@ -76,11 +76,11 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
               Cartographie les flux invisibles des communautés Twitch.
             </h1>
             <p className="mt-5 max-w-[52ch] text-[1.0625rem]/[1.6] text-pretty text-muted-foreground">
-              Suis les déplacements des viewers actifs d’une chaîne à l’autre, anticipe les raids et mesure le Net Reach de tes groupes de chaînes.
+              Suis les déplacements des viewers actifs (ceux qui écrivent dans le chat) d’une chaîne à l’autre, anticipe les raids et mesure le Net Reach de tes groupes de chaînes.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button autoFocus className="h-11 px-5 text-[15px] shadow-action" onClick={() => onEnter()}>
-                Explorer l’observatoire
+                Ouvrir le tableau de bord
               </Button>
               <Button
                 variant="ghost"
@@ -90,7 +90,6 @@ export function Landing({ onEnter }: { onEnter: (tab?: TabId) => void }) {
                 Voir ce que ça mesure
               </Button>
             </div>
-            <p className="mt-4 text-xs text-dusk">Tes données restent dans ta propre base Supabase, et le collecteur tourne sur ton PC.</p>
           </div>
           <figure className="mx-auto w-full max-w-[520px]">
             <LandingMap className="w-full" />
