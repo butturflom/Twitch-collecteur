@@ -2,7 +2,7 @@
 // panneau à deux colonnes par-dessus la carte : à gauche les rubriques, à droite leur contenu. La carte garde toute la largeur et
 // reste visible à droite du panneau : chaque réglage se voit tout de suite.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { Filter, LayoutGrid, Menu, Radio, RotateCcw, Search, Shuffle, Telescope, Wrench, X } from "lucide-react"
+import { Filter, LayoutGrid, Radio, RotateCcw, Search, Shuffle, Telescope, Wrench, X } from "lucide-react"
 import { LangBadge } from "@/components/lang-badge"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { Input } from "@/components/ui/input"
@@ -218,24 +218,12 @@ const PAGES: { id: Page; label: string; icon: ReactNode }[] = [
   { id: "outils", label: "Outils", icon: <Telescope /> },
 ]
 
-/** Le bouton « Menu » et les pastilles de filtres actifs, posés en haut à gauche de la carte (sous le bandeau du moteur). */
-export function MenuButton({ d, open, onToggle }: { d: MapData; open: boolean; onToggle: () => void }) {
+/** Les filtres actifs, en pastilles en haut à gauche de la carte (sous le bandeau du moteur) : chacune se retire d'un clic. Rien si aucun filtre. */
+export function FilterChips({ d }: { d: MapData }) {
   const chips = activeFilters(d)
+  if (!chips.length) return null
   return (
     <div className="absolute top-11 left-2.5 z-20 flex max-w-[calc(100%-70px)] flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="map-menu"
-        onClick={onToggle}
-        title="Menu de la carte : filtres, vue, recherche (M)"
-        className={cn(
-          "inline-flex h-8 items-center gap-2 rounded-lg border px-3 text-xs font-semibold tracking-wide text-zinc-100 shadow-lg shadow-black/40 backdrop-blur-xl transition-[color,background-color,border-color] duration-150 motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none",
-          open ? "border-primary/50 bg-primary/20" : "border-white/15 bg-zinc-900/75 hover:border-white/30 hover:bg-zinc-800",
-        )}
-      >
-        <Menu className="size-3.5" />Menu<kbd className="rounded border border-white/15 bg-zinc-950/60 px-1 font-mono text-[10px] font-normal text-zinc-400 max-sm:hidden">M</kbd>
-      </button>
       {chips.map((c) => (
         <button
           key={c.id}
@@ -265,7 +253,7 @@ export function GameMenu({ d, api, grp, log, onClose, openHelp }: { d: MapData; 
       id="map-menu"
       role="dialog"
       aria-label="Menu de la carte"
-      className="absolute top-2.5 left-2.5 z-30 flex h-[min(540px,calc(100%-20px))] w-[min(540px,calc(100%-20px))] animate-in fade-in-0 slide-in-from-left-2 flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/85 shadow-2xl shadow-black/60 backdrop-blur-xl backdrop-saturate-150 duration-200 motion-reduce:animate-none"
+      className="absolute top-2.5 right-14 z-30 flex h-[min(540px,calc(100%-20px))] w-[min(540px,calc(100%-76px))] animate-in fade-in-0 slide-in-from-right-2 flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/85 shadow-2xl shadow-black/60 backdrop-blur-xl backdrop-saturate-150 duration-200 motion-reduce:animate-none"
     >
       <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
         <div>

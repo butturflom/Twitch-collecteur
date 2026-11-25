@@ -2,13 +2,13 @@
 // La carte elle-même (radar, disposition, rotation, glisser, zoom, activité en direct) est dessinée image par image par le
 // moteur de l’ancien code, dans les éléments que React lui fournit (mount) ; il renvoie ses commandes (MapApi).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { ChevronDown, CircleQuestionMark, Crosshair, Globe, Maximize2, Minus, Pause, Play, Plus, RotateCcw, X } from "lucide-react"
+import { ChevronDown, CircleQuestionMark, Crosshair, Globe, Maximize2, Menu, Minus, Pause, Play, Plus, RotateCcw, X } from "lucide-react"
 import { Tabs } from "radix-ui"
 import { Button } from "@/components/ui/button"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { MeterList } from "@/components/overview/parts"
 import { Galaxy } from "@/components/map/galaxy"
-import { GameMenu, MenuButton } from "@/components/map/menu"
+import { FilterChips, GameMenu } from "@/components/map/menu"
 import { fmt, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useMapData, type MapApi, type MapData, type MapNotice, type MapViewState } from "@/legacy/bridge"
@@ -152,8 +152,8 @@ export function MapView() {
       else if (k === "+" || k === "=") api.zoomIn()
       else if (k === "-" || k === "_") api.zoomOut()
       else if (k === "0") api.fit()
-      else if (k === "?") setHelp((h) => !h)
-      else if (k === "m" || k === "M") setMenu((m) => !m)
+      else if (k === "?") { setMenu(false); setHelp((h) => !h) }
+      else if (k === "m" || k === "M") { setHelp(false); setMenu((m) => !m) }
       else return
       e.preventDefault()
     }
@@ -218,6 +218,10 @@ export function MapView() {
       </div>
     )
   const info = st.info
+  // le bouton Menu reste là même quand les filtres vident la carte : c'est par lui qu'on les élargit
+  const menuBtn = (
+    <button type="button" className={cn(ctl, menu && "border-primary/40 text-primary-soft")} aria-expanded={menu} aria-controls="map-menu" title="Menu de la carte : filtres, vue, recherche (M)" aria-label="Menu de la carte" onClick={() => { setHelp(false); setMenu((m) => !m) }}><Menu /></button>
+  )
   return (
     <div className="relative flex h-[calc(100dvh-84px)] min-h-[420px]">
       <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/50">
@@ -234,11 +238,12 @@ export function MapView() {
           </div>
         </div>
 
-        <MenuButton d={d} open={menu} onToggle={() => setMenu((m) => !m)} />
-        {menu && <GameMenu d={d} api={api} grp={st.grp} log={st.log} onClose={() => setMenu(false)} openHelp={() => setHelp(true)} />}
+        <FilterChips d={d} />
+        {menu && <GameMenu d={d} api={api} grp={st.grp} log={st.log} onClose={() => setMenu(false)} openHelp={() => { setMenu(false); setHelp(true) }} />}
 
         {d.empty ? (
           <div className="absolute inset-0 grid place-items-center p-6">
+            <div className="absolute top-2.5 right-2.5">{menuBtn}</div>
             <div className="flex flex-col items-center gap-3">
               <p className="max-w-md rounded-2xl border border-dashed border-white/15 bg-card px-5 py-6 text-center text-[13px] text-muted-foreground">{d.empty}</p>
               {d.view === "sel" && <Button size="sm" className="h-8 text-xs" onClick={() => act("view", "all")}>Afficher toutes les chaînes</Button>}
@@ -247,6 +252,7 @@ export function MapView() {
         ) : (
           <>
             <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5">
+              {menuBtn}
               {!still && (
                 <button
                   type="button"
@@ -278,7 +284,7 @@ export function MapView() {
               <button type="button" className={ctl} title="Tout afficher, sans rotation (0)" aria-label="Tout afficher" onClick={() => api?.fit()}><Maximize2 /></button>
               <button type="button" className={ctl} title="Recentrer : la chaîne choisie, le groupe mis en avant, ou sinon le centre de la carte (C)" aria-label="Recentrer la carte" onClick={() => api?.recenter()}><Crosshair /></button>
               {st.pins > 0 && <button type="button" className={ctl} title="Remettre à leur place les chaînes déplacées" aria-label="Remettre les chaînes à leur place" onClick={() => act("pins")}><RotateCcw /></button>}
-              <button type="button" className={cn(ctl, help && "border-primary/40 text-primary-soft")} aria-haspopup="dialog" aria-expanded={help} title="Aide : lire, signaux, manipuler (?)" aria-label="Aide de la carte" onClick={() => setHelp((h) => !h)}><CircleQuestionMark /></button>
+              <button type="button" className={cn(ctl, help && "border-primary/40 text-primary-soft")} aria-haspopup="dialog" aria-expanded={help} title="Aide : lire, signaux, manipuler (?)" aria-label="Aide de la carte" onClick={() => { setMenu(false); setHelp((h) => !h) }}><CircleQuestionMark /></button>
             </div>
             {help && <MapHelp d={d} onClose={() => setHelp(false)} />}
             <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "hidden")}>
