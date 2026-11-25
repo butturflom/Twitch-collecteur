@@ -164,7 +164,7 @@ export function Channel() {
         )}
       </Section>
 
-      <History ch={d.ch.c} color={d.ch.color} />
+      <History ch={d.ch.c} color={d.ch.color} chans={d.list.map((x) => x.c)} />
     </div>
   )
 }
