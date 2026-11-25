@@ -13,6 +13,10 @@ create extension if not exists pg_cron with schema pg_catalog;
 -- et ses présences sont encore en base (cleanup() garde d >= aujourd'hui - joursPresence, joursPresence >= 1).
 select cron.schedule('daily-overlap-rollup', '30 3 * * *', $$ select run_daily_overlap_rollup(); $$);
 
+-- 25/11/2026 : APPLIQUÉ en production (job n° 2). Esquisses HyperLogLog de la veille (voir schema.sql, build_daily_hll) : 10 minutes
+-- après le rollup, pour compter des viewers uniques sur 7, 30 ou 90 jours (period_reach).
+select cron.schedule('daily-hll', '40 3 * * *', $$ select build_daily_hll(to_char((now() at time zone 'Europe/Paris')::date - 1, 'YYYY-MM-DD')); $$);
+
 -- Exécution manuelle pour une date précise (sans effet si les présences de ce jour ont déjà été purgées)
 -- select run_daily_overlap_rollup('2026-11-23'::date);
 

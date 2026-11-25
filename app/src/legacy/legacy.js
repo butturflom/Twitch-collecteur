@@ -2479,6 +2479,13 @@ async function channelHistory(c,days){
     return {days:h.days||[],out:(h.out||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid})),in:(h.in||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid}))}}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.channelHistory = channelHistory
+// Viewers uniques sur 7, 30 ou 90 jours (fonction SQL period_reach, esquisses HyperLogLog, voir schema.sql). null : pas de base Supabase
+// ou base pas à jour. Les jours incomplets ne comptent pas : aujourd'hui n'est agrégé que cette nuit.
+async function periodReach(chans,days){
+  if(!isCloud())return null;
+  try{return await sbReq('rpc/period_reach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chans,days})})}
+  catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
+window.periodReach = periodReach
 window.showTab = showTab
 window.openAddStreamer = openAddStreamer
 window.renderFlows = renderFlows
