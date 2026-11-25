@@ -1,9 +1,16 @@
-// Prototype B2 de l'intro de la page d'accueil (storyboard B1 de IDEES.md), isolé : il ne s'affiche que sur l'adresse `?intro`
-// (aiguillage dans main.tsx) et ne touche ni au tableau de bord ni à la vraie page d'accueil.
+// Intro de la page d'accueil (chantier B, storyboard B1 de IDEES.md). Calque posé PAR-DESSUS la page d'accueil (landing.tsx), qui est déjà
+// dans la page dessous, invisible et inerte. Landing décide si l'intro se joue (une seule fois, drapeau `to2-intro-seen`) et la monte ici.
 // Le moteur est Three.js (noyau seulement, imports ciblés, sans @react-three/fiber) : la scène est créée dans un useEffect et détruite
 // au démontage. Séquence de 4,0 s au total, pilotée par l'horloge (pas par le nombre d'images) : 0 nuit, 1 approche, 2 mise en orbite,
-// 3 titre, 4 arrivée sur la pose de l'illustration (landing-map.tsx).
-// Options d'adresse : `&fps` (compteur d'images par seconde) et `&t=2.7` (fige l'image à cet instant, en secondes, pour les captures).
+// 3 titre « Observer », 4 arrivée : la galaxie glisse vers l'illustration de la page (écran large) ou s'efface (sous 1 024 px), puis le
+// calque est retiré et la page d'accueil, intacte, prend le relais.
+//
+// Galaxie : décidée UNE SEULE FOIS, à 0,3 s, et jamais changée ensuite.
+//  - si le tableau de bord connaît déjà des chaînes en direct à ce moment-là (données de la Vue d'ensemble, `useOverviewData`, aucune
+//    requête de plus) : ce sont elles, 12 au plus, en planètes de 20 à 40 px (`ChannelAvatar` posé en HTML, car une photo Twitch en
+//    texture WebGL serait refusée sous file://) ;
+//  - sinon : l'illustration de landing-map.tsx (douze planètes de formes, sans nom ni chiffre).
+// Jamais de nom de chaîne ni de chiffre à l'écran.
 import { useEffect, useRef, useState } from "react"
 import {
   BufferGeometry,
@@ -16,6 +23,7 @@ import {
   LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
+  Object3D,
   PerspectiveCamera,
   PlaneGeometry,
   Points,
@@ -24,18 +32,30 @@ import {
   Scene,
   SphereGeometry,
   SRGBColorSpace,
+  Vector3,
   WebGLRenderer,
 } from "three"
 import { Button } from "@/components/ui/button"
+import { ChannelAvatar } from "@/components/channel-avatar"
+import { useOverviewData, type ChannelInfo, type Who } from "@/legacy/bridge"
+
+export interface IntroProps {
+  /** L'arrivée commence (plan 4, ou tout de suite si on passe l'intro) : la page d'accueil se révèle. `fast` : fondu de 0,2 s. */
+  onArrive: (fast: boolean) => void
+  /** L'intro est finie (fin naturelle, « Passer », Échap, clic) ou a échoué : le calque peut être retiré. */
+  onDone: () => void
+  /** Cadre de l'illustration de la page d'accueil (pour y ranger la galaxie), ou null si on ne le trouve pas. */
+  getTarget: () => DOMRect | null
+}
 
 // ---------------------------------------------------------------------------------------------------------------------------
-// Données FICTIVES : galaxie illustrée de 12 planètes (aucune vraie chaîne, aucun pseudo). Les neuf premières sont celles de
-// landing-map.tsx (mêmes rayons d'orbite 92, 152 et 214, mêmes angles, mêmes couleurs) ; j, k et l complètent à douze.
-// Dans la version livrée (B3), ce sont les chaînes en direct qui prendront leur place.
+// Galaxie : douze emplacements. Les neuf premiers sont ceux de landing-map.tsx (mêmes rayons d'orbite 92, 152 et 214, mêmes angles,
+// mêmes couleurs) ; j, k et l complètent à douze. Rangés de l'orbite intérieure vers l'extérieure : en direct, les chaînes les plus
+// regardées prennent les premiers.
 // ---------------------------------------------------------------------------------------------------------------------------
 type Token = "--primary" | "--primary-soft" | "--map-link" | "--star-gold"
-interface Planet { id: string; r: number; deg: number; size: number; fill: Token }
-const PLANETS: Planet[] = [
+interface Slot { id: string; r: number; deg: number; size: number; fill: Token }
+const SLOTS: Slot[] = [
   { id: "a", r: 92, deg: 25, size: 11, fill: "--primary-soft" },
   { id: "b", r: 92, deg: 205, size: 8, fill: "--map-link" },
   { id: "j", r: 92, deg: 115, size: 9, fill: "--primary" },
@@ -60,17 +80,34 @@ const FALLBACK: Record<Token | "--primary-strong" | "--foreground", string> = {
   "--foreground": "#f4f4f5",
 }
 
+/** Une chaîne en direct devenue planète : sa photo et sa couleur, et son diamètre (20 à 40 px à l'échelle de l'illustration). */
+interface LivePlanet extends Who { d: number }
+const MAX_LIVE = 12
+
+/** Les chaînes en direct connues du tableau de bord, les plus regardées d'abord. Vide si aucune n'est connue. */
+function pickLive(channels: ChannelInfo[] | undefined): LivePlanet[] {
+  const l = (channels ?? []).filter((c) => c.live === true).sort((a, b) => (b.viewers ?? 0) - (a.viewers ?? 0)).slice(0, MAX_LIVE)
+  if (!l.length) return []
+  // Taille selon la racine carrée des viewers, entre 20 et 40 px ; le chiffre lui-même n'est jamais affiché.
+  const roots = l.map((c) => Math.sqrt(Math.max(0, c.viewers ?? 0)))
+  const lo = Math.min(...roots)
+  const hi = Math.max(...roots)
+  return l.map((c, i) => ({ c: c.c, color: c.color, img: c.img, d: hi > lo ? 20 + (20 * (roots[i] - lo)) / (hi - lo) : 30 }))
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------
 // Chronologie du storyboard (secondes)
 // ---------------------------------------------------------------------------------------------------------------------------
 const END = 4.0
-const T_APPROACH = 0.3 // début du plan 1
+const T_APPROACH = 0.3 // début du plan 1, et instant de la décision « galaxie en direct ou illustrée »
 const T_ORBIT = 1.7 // début du plan 2
 const T_TITLE = 2.5 // début du plan 3
 const T_ARRIVAL = 3.5 // début du plan 4
+const T_LAST_FADE = 3.8 // la galaxie s'efface alors, en laissant l'illustration de la page dessous
 const SPEED_FAST = 4 // °/s pendant l'approche
 const SPEED_SLOW = 1.5 // °/s : la vitesse de .landing-orbit (un tour en 240 s)
 const BOX = 520 // le viewBox de landing-map.tsx : une unité de la scène = une unité du SVG
+const SKIP_MS = 200 // « Passer » : fondu du calque en 0,2 s
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k
@@ -154,35 +191,53 @@ interface Fade { mat: Fadable; base: number; start: number; dur: number; kind: "
 // ---------------------------------------------------------------------------------------------------------------------------
 // Composant
 // ---------------------------------------------------------------------------------------------------------------------------
-export function IntroProto() {
-  const params = new URLSearchParams(location.search)
-  const showFps = params.has("fps")
-  const frozenRaw = params.get("t")
-  const frozen = frozenRaw !== null && frozenRaw !== "" && !Number.isNaN(Number(frozenRaw)) ? Number(frozenRaw) : null
-
-  const stageRef = useRef<HTMLDivElement>(null)
+export function Intro({ onArrive, onDone, getTarget }: IntroProps) {
+  const overlayRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
+  const bgRef = useRef<HTMLDivElement>(null)
   const veilRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
-  const captionRef = useRef<HTMLDivElement>(null)
   const skipRef = useRef<HTMLDivElement>(null)
-  const fpsRef = useRef<HTMLDivElement>(null)
+  const avatarEls = useRef<(HTMLDivElement | null)[]>([])
   const skipNow = useRef<() => void>(() => {})
-  const [run, setRun] = useState(0)
-  const [done, setDone] = useState(false)
-  const [reduced] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches)
+  const [live, setLive] = useState<LivePlanet[]>([]) // rempli une seule fois, à la décision de 0,3 s
+
+  // Les chaînes en direct déjà connues du tableau de bord : lues à 0,3 s par la scène, sans que le composant se redessine pour elles.
+  const overview = useOverviewData()
+  const overviewRef = useRef(overview)
+  overviewRef.current = overview
+  const cbs = useRef({ onArrive, onDone, getTarget })
+  cbs.current = { onArrive, onDone, getTarget }
 
   useEffect(() => {
     const host = hostRef.current!
-    const stage = stageRef.current!
-    setDone(false)
+    const overlay = overlayRef.current!
+
+    let finished = false
+    let skipped = false
+    let arrived = false
+    let raf = 0
+    let timer = 0
+    const cleanups: (() => void)[] = []
+    const finish = () => {
+      if (finished) return
+      finished = true
+      cbs.current.onDone()
+    }
 
     // Couleurs : les jetons de DESIGN.md lus dans la page, avec leur valeur écrite en secours.
     const css = getComputedStyle(document.documentElement)
     const tok = (n: keyof typeof FALLBACK) => new Color(css.getPropertyValue(n).trim() || FALLBACK[n])
 
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" })
+    let renderer: WebGLRenderer
+    try {
+      renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" })
+    } catch {
+      // Pas de WebGL : pas d'intro, la page d'accueil s'affiche directement.
+      cbs.current.onArrive(true)
+      finish()
+      return
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     renderer.setClearColor(0x000000, 0)
     host.appendChild(renderer.domElement)
@@ -256,7 +311,7 @@ export function IntroProto() {
     dustSet(40, tok("--map-link"), 0.6, 2.2)
     dustSet(30, tok("--star-gold"), 0.45, 1.8)
 
-    // Orbites (traits fins, tracés au plan 2) et liens entre planètes (tracés ensuite).
+    // Orbites (traits fins, tracés au plan 2).
     const link = tok("--map-link")
     const orbitLines: { line: Line; n: number }[] = []
     for (const r of ORBITS) {
@@ -278,45 +333,8 @@ export function IntroProto() {
       orbitLines.push({ line, n })
     }
 
-    const at = (id: string) => {
-      const p = PLANETS.find((x) => x.id === id)!
-      const a = (p.deg * Math.PI) / 180
-      return [p.r * Math.cos(a), -p.r * Math.sin(a)] as const
-    }
-    const linkLines: { attr: Float32BufferAttribute; a: readonly [number, number]; b: readonly [number, number] }[] = []
-    for (const [ia, ib] of LINKS) {
-      const a = at(ia)
-      const b = at(ib)
-      const attr = new Float32BufferAttribute([a[0], a[1], 0, a[0], a[1], 0], 3)
-      const g = keep(geoms, new BufferGeometry())
-      g.setAttribute("position", attr)
-      const m = keep(mats, new LineBasicMaterial({ color: link, transparent: true, depthTest: false, depthWrite: false })) as LineBasicMaterial
-      fade(m, 0.34, 0, 0.01)
-      const line = new Line(g, m)
-      line.renderOrder = 3
-      spin.add(line)
-      linkLines.push({ attr, a, b })
-    }
-
-    // Planètes : elles s'allument toutes les 0,08 s (fondu de 0,3 s), des orbites internes vers l'externe.
-    const sphere = keep(geoms, new SphereGeometry(1, 22, 14))
-    const ordered = [...PLANETS].sort((p, q) => p.r - q.r)
-    ordered.forEach((p, i) => {
-      const [x, y] = at(p.id)
-      const col = tok(p.fill)
-      const start = T_APPROACH + i * 0.08
-      const body = new Mesh(sphere, basic(col, 0.92, start, 0.3))
-      body.scale.setScalar(p.size)
-      body.position.set(x, y, 0)
-      body.renderOrder = 5
-      const atmos = new Mesh(sphere, basic(col, 0.1, start, 0.3))
-      atmos.scale.setScalar(p.size + 5)
-      atmos.position.set(x, y, 0)
-      atmos.renderOrder = 4
-      spin.add(atmos, body)
-    })
-
     // L'astre central : Twitch.
+    const sphere = keep(geoms, new SphereGeometry(1, 22, 14))
     const core = new Mesh(sphere, basic(tok("--primary-strong"), 1, T_APPROACH, 0.3))
     core.scale.setScalar(34)
     core.renderOrder = 6
@@ -329,14 +347,91 @@ export function IntroProto() {
     glint.renderOrder = 8
     spin.add(core, ring, glint)
 
-    // ---- Mise en page : taille de l'écran, échelle plein cadre, pose finale (la colonne de l'illustration sur écran large)
+    // ---- Planètes et liens : construits UNE fois, à la décision de 0,3 s (galaxie en direct ou illustrée), jamais refaits.
+    const linkLines: { attr: Float32BufferAttribute; a: readonly [number, number]; b: readonly [number, number] }[] = []
+    const anchors: Object3D[] = [] // en direct : un point d'ancrage par chaîne, l'avatar HTML le suit à l'écran
+    let liveSizes: number[] = []
+    let decided = false
+    const decide = () => {
+      decided = true
+      const lv = pickLive(overviewRef.current?.channels)
+      const slots = lv.length ? SLOTS.slice(0, lv.length) : SLOTS // en direct : les plus regardées sur l'orbite intérieure
+      if (lv.length) {
+        liveSizes = lv.map((p) => p.d)
+        setLive(lv)
+      }
+
+      const at = (s: Slot) => {
+        const a = (s.deg * Math.PI) / 180
+        return [s.r * Math.cos(a), -s.r * Math.sin(a)] as const
+      }
+      const byId = new Map(slots.map((s) => [s.id, s]))
+      for (const [ia, ib] of LINKS) {
+        const sa = byId.get(ia)
+        const sb = byId.get(ib)
+        if (!sa || !sb) continue // en direct, un lien n'existe que si ses deux planètes existent
+        const a = at(sa)
+        const b = at(sb)
+        const attr = new Float32BufferAttribute([a[0], a[1], 0, a[0], a[1], 0], 3)
+        const g = keep(geoms, new BufferGeometry())
+        g.setAttribute("position", attr)
+        const m = keep(mats, new LineBasicMaterial({ color: link, transparent: true, depthTest: false, depthWrite: false })) as LineBasicMaterial
+        fade(m, 0.34, 0, 0.01)
+        const line = new Line(g, m)
+        line.renderOrder = 3
+        spin.add(line)
+        linkLines.push({ attr, a, b })
+      }
+
+      // Elles s'allument toutes les 0,08 s (fondu de 0,3 s), des orbites internes vers l'externe.
+      slots.forEach((s, i) => {
+        const [x, y] = at(s)
+        if (lv.length) {
+          const anchor = new Object3D()
+          anchor.position.set(x, y, 0)
+          spin.add(anchor)
+          anchors.push(anchor)
+          return
+        }
+        const col = tok(s.fill)
+        const start = T_APPROACH + i * 0.08
+        const body = new Mesh(sphere, basic(col, 0.92, start, 0.3))
+        body.scale.setScalar(s.size)
+        body.position.set(x, y, 0)
+        body.renderOrder = 5
+        const atmos = new Mesh(sphere, basic(col, 0.1, start, 0.3))
+        atmos.scale.setScalar(s.size + 5)
+        atmos.position.set(x, y, 0)
+        atmos.renderOrder = 4
+        spin.add(atmos, body)
+      })
+    }
+
+    // ---- Mise en page : taille de l'écran, échelle plein cadre, pose finale (le cadre de l'illustration sur écran large)
     let W = 1
     let H = 1
     let ppu = 1 // pixels par unité de scène, au plan de la galaxie
     let hero = 1 // échelle qui fait tenir la galaxie dans l'écran
+    let wide = false
     let finalScale = 1
     let finalX = 0
     let finalY = 0
+    let measured = false
+    const measureTarget = () => {
+      measured = true
+      const r = wide ? cbs.current.getTarget() : null
+      if (r && r.width > 0) {
+        // Le vrai cadre de l'illustration, mesuré dans la page d'accueil dessous : la galaxie s'y range au pixel près.
+        finalScale = r.width / (BOX * ppu)
+        finalX = (r.left + r.width / 2 - W / 2) / ppu
+        finalY = -(r.top + r.height / 2 - H / 2) / ppu
+      } else {
+        const finalPx = Math.min(BOX, W * 0.4, H * 0.8)
+        finalScale = finalPx / (BOX * ppu)
+        finalX = (W * 0.72 - W / 2) / ppu
+        finalY = 0
+      }
+    }
     const layout = () => {
       W = Math.max(host.clientWidth, 1)
       H = Math.max(host.clientHeight, 1)
@@ -345,27 +440,36 @@ export function IntroProto() {
       cam.updateProjectionMatrix()
       ppu = H / (2 * D * Math.tan((cam.fov * Math.PI) / 360))
       hero = (Math.min(W, H) * 0.95) / (BOX * ppu)
-      const wide = W >= 1024
-      const finalPx = wide ? Math.min(BOX, W * 0.4, H * 0.8) : Math.min(W * 0.8, 420, H * 0.45)
-      const cx = wide ? W * 0.72 : W * 0.5
-      const cy = wide ? H * 0.5 : H * 0.66
-      finalScale = finalPx / (BOX * ppu)
-      finalX = (cx - W / 2) / ppu
-      finalY = -(cy - H / 2) / ppu
+      wide = W >= 1024 // le seuil `lg` de la page d'accueil : en dessous, l'illustration est sous le texte
+      measureTarget()
     }
 
     // ---- Une image à l'instant t
-    let doneSet = false
-    const apply = (t: number, stageOpacity: number) => {
+    const vec = new Vector3()
+    const apply = (t: number) => {
+      if (!decided && t >= T_APPROACH) decide()
+      // L'animation d'entrée de la page d'accueil dessous est finie : on remesure le cadre de l'illustration juste avant l'arrivée.
+      if (!measured && t >= T_ARRIVAL - 0.1) measureTarget()
+      if (!arrived && t >= T_ARRIVAL) {
+        arrived = true
+        cbs.current.onArrive(false)
+      }
+
       const c = camera(t)
-      const s = lerp(hero * c.scale, finalScale, c.glide)
+      const glide = wide ? c.glide : 0 // sous 1 024 px, pas de déplacement : la galaxie s'efface sur place
+      const s = lerp(hero * c.scale, finalScale, glide)
       root.scale.setScalar(s)
-      root.position.set(lerp(0, finalX, c.glide), lerp(0, finalY, c.glide), 0)
+      root.position.set(lerp(0, finalX, glide), lerp(0, finalY, glide), 0)
       root.rotation.x = (c.tilt * Math.PI) / 180
       spin.rotation.z = -(spinDeg(t) * Math.PI) / 180
 
-      // Plan 3 : la galaxie descend à 30 % ; plan 4 : elle remonte à 100 %.
-      const galaxyAlpha = t < T_TITLE ? 1 : t < T_ARRIVAL ? lerp(1, 0.3, clamp01((t - T_TITLE) / 0.3)) : lerp(0.3, 1, clamp01((t - T_ARRIVAL) / (END - T_ARRIVAL)))
+      // Plan 3 : la galaxie descend à 30 % ; plan 4 : sur écran large elle remonte à 100 % puis s'efface sur l'illustration de la page ;
+      // sous 1 024 px elle s'efface directement.
+      let galaxyAlpha: number
+      if (t < T_TITLE) galaxyAlpha = 1
+      else if (t < T_ARRIVAL) galaxyAlpha = lerp(1, 0.3, clamp01((t - T_TITLE) / 0.3))
+      else if (wide) galaxyAlpha = lerp(0.3, 1, clamp01((t - T_ARRIVAL) / 0.3)) * (1 - clamp01((t - T_LAST_FADE) / (END - T_LAST_FADE)))
+      else galaxyAlpha = lerp(0.3, 0, clamp01((t - T_ARRIVAL) / 0.3))
       const dustOut = 1 - clamp01((t - T_ARRIVAL) / 0.3)
       for (const f of fades) {
         const k = drawer((t - f.start) / f.dur)
@@ -380,125 +484,105 @@ export function IntroProto() {
       }
       renderer.render(scene, cam)
 
-      // Habillage HTML : voile, titre « Observer » (masque de gauche à droite), en-tête, légende, bouton « Passer ».
+      // En direct : chaque avatar HTML suit son point d'ancrage (position projetée, taille selon la distance), et s'allume comme une planète.
+      for (let i = 0; i < anchors.length; i++) {
+        const el = avatarEls.current[i]
+        if (!el) continue
+        anchors[i].getWorldPosition(vec)
+        const k = (s * ppu * D) / (D - vec.z) // pixels par unité de scène à cette profondeur
+        vec.project(cam)
+        const x = (vec.x * 0.5 + 0.5) * W
+        const y = (-vec.y * 0.5 + 0.5) * H
+        const n = Math.round(liveSizes[i] * 2) // l'avatar est dessiné au double de sa taille (net quand la galaxie grandit), puis réduit
+        el.style.transform = `translate(${(x - n / 2).toFixed(2)}px, ${(y - n / 2).toFixed(2)}px) scale(${(k / 2).toFixed(4)})`
+        el.style.opacity = String(drawer((t - (T_APPROACH + i * 0.08)) / 0.3) * galaxyAlpha)
+      }
+
+      // Habillage HTML : fond, voile, titre « Observer » (masque de gauche à droite), bouton « Passer ». L'en-tête et la légende sont ceux
+      // de la page d'accueil, dessous : ils apparaissent avec elle (onArrive).
       const titleIn = drawer((t - 2.6) / 0.5)
       const titleOut = 1 - clamp01((t - T_ARRIVAL) / 0.3)
-      const veil = veilRef.current
-      if (veil) veil.style.opacity = String(clamp01((t - T_TITLE) / 0.3) * titleOut)
+      if (bgRef.current) bgRef.current.style.opacity = String(1 - clamp01((t - T_ARRIVAL) / 0.3))
+      if (veilRef.current) veilRef.current.style.opacity = String(clamp01((t - T_TITLE) / 0.3) * titleOut)
       const title = titleRef.current
       if (title) {
         title.style.clipPath = `inset(0 ${((1 - titleIn) * 100).toFixed(2)}% 0 0)`
         title.style.opacity = String(titleOut)
       }
-      if (headerRef.current) headerRef.current.style.opacity = String(clamp01((t - T_ARRIVAL) / 0.3))
-      if (captionRef.current) captionRef.current.style.opacity = String(clamp01((t - 3.7) / 0.3))
       const skipEl = skipRef.current
       if (skipEl) {
         const o = 1 - clamp01((t - 3.7) / 0.2)
         skipEl.style.opacity = String(o)
         skipEl.style.pointerEvents = o < 0.5 ? "none" : "auto"
       }
-      stage.style.opacity = String(stageOpacity)
-      if (!doneSet && t >= END) {
-        doneSet = true
-        setDone(true)
-      }
     }
 
     layout()
-    const ro = new ResizeObserver(() => {
-      layout()
-      if (reduced || frozen !== null) apply(frozen ?? END, 1) // pas de boucle : on redessine à la main
-    })
+    const ro = new ResizeObserver(layout)
     ro.observe(host)
 
-    // ---- Mouvement réduit : pas d'intro, image fixe de la pose finale (fondu d'opacité de 0,2 s seulement).
-    let raf = 0
-    let stopped = false
-    const cleanups: (() => void)[] = []
-    if (reduced) {
-      stage.style.transition = "opacity 0.2s linear"
-      apply(END, 0)
-      requestAnimationFrame(() => { stage.style.opacity = "1" })
-    } else {
-      // ---- Lecture : l'horloge décide, pas le nombre d'images. Si l'onglet est caché au chargement, on attend qu'il soit visible.
-      let t0 = -1
-      let skipAt = -1
-      let tAtSkip = 0
-      let lastT = 0
-      let frames = 0
-      let winStart = -1
-      let fpsMin = Infinity
-      let worst = 0
-      let prevTs = -1
-      let sumFrames = 0
-      let sumStart = -1
-      const SKIP_FADE = 0.1 // 0,1 s pour s'éteindre, 0,1 s pour revenir : fin en 0,2 s
-
-      skipNow.current = () => {
-        if (skipAt >= 0 || lastT >= END || frozen !== null) return
-        skipAt = performance.now() / 1000
-        tAtSkip = lastT
-        if (skipRef.current) skipRef.current.style.pointerEvents = "none"
-      }
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          e.stopPropagation()
-          skipNow.current()
-        }
-      }
-      window.addEventListener("keydown", onKey, true)
-      cleanups.push(() => window.removeEventListener("keydown", onKey, true))
-
-      const frame = (ts: number) => {
-        if (stopped) return
-        raf = requestAnimationFrame(frame)
-        const now = ts / 1000
-        if (t0 < 0) t0 = now
-        let t = now - t0
-        let op = 1
-        if (frozen !== null) t = frozen
-        else if (skipAt >= 0) {
-          const e = now - skipAt
-          t = e < SKIP_FADE ? tAtSkip + e : END + (e - SKIP_FADE)
-          op = e < SKIP_FADE ? 1 - e / SKIP_FADE : clamp01((e - SKIP_FADE) / SKIP_FADE)
-        }
-        lastT = t
-        apply(t, op)
-
-        if (showFps && fpsRef.current) {
-          if (prevTs >= 0) worst = Math.max(worst, ts - prevTs)
-          prevTs = ts
-          if (winStart < 0) { winStart = ts; sumStart = ts }
-          frames++
-          sumFrames++
-          if (ts - winStart >= 500) {
-            const fps = (frames * 1000) / (ts - winStart)
-            if (t < END + 0.2) fpsMin = Math.min(fpsMin, fps)
-            const avg = (sumFrames * 1000) / (ts - sumStart)
-            fpsRef.current.textContent = `${Math.round(fps)} i/s · mini ${Math.round(fpsMin)} · moy. ${Math.round(avg)} · pire image ${Math.round(worst)} ms`
-            ;(window as unknown as { __introFps?: object }).__introFps = { fps, min: fpsMin, avg, worstMs: worst, t }
-            frames = 0
-            winStart = ts
-          }
-        }
-      }
-      const start = () => { raf = requestAnimationFrame(frame) }
-      if (document.hidden) {
-        const onVis = () => {
-          if (!document.hidden) {
-            document.removeEventListener("visibilitychange", onVis)
-            start()
-          }
-        }
-        document.addEventListener("visibilitychange", onVis)
-        cleanups.push(() => document.removeEventListener("visibilitychange", onVis))
-      } else start()
+    // ---- « Passer » (bouton, Échap, clic) : le calque s'efface en 0,2 s sur la page d'accueil, qui se révèle en même temps.
+    skipNow.current = () => {
+      if (skipped || finished) return
+      skipped = true
+      cancelAnimationFrame(raf)
+      cbs.current.onArrive(true)
+      overlay.style.transition = `opacity ${SKIP_MS}ms linear`
+      overlay.style.opacity = "0"
+      if (skipRef.current) skipRef.current.style.pointerEvents = "none"
+      timer = window.setTimeout(finish, SKIP_MS)
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation() // le premier Échap passe l'intro ; il ne doit pas fermer la page d'accueil
+        skipNow.current()
+      }
+    }
+    window.addEventListener("keydown", onKey, true)
+    cleanups.push(() => window.removeEventListener("keydown", onKey, true))
+
+    // ---- Lecture : l'horloge décide, pas le nombre d'images. Si l'onglet est caché au chargement, on attend qu'il soit visible.
+    let t0 = -1
+    const bail = () => {
+      // Une erreur de dessin : on laisse la place à la page d'accueil plutôt que de montrer un film cassé.
+      cancelAnimationFrame(raf)
+      cbs.current.onArrive(true)
+      finish()
+    }
+    const frame = (ts: number) => {
+      if (skipped || finished) return
+      raf = requestAnimationFrame(frame)
+      const now = ts / 1000
+      if (t0 < 0) t0 = now
+      const t = Math.min(now - t0, END)
+      try {
+        apply(t)
+      } catch (err) {
+        console.error(err)
+        bail()
+        return
+      }
+      if (t >= END) {
+        cancelAnimationFrame(raf)
+        finish()
+      }
+    }
+    const start = () => { raf = requestAnimationFrame(frame) }
+    if (document.hidden) {
+      const onVis = () => {
+        if (!document.hidden) {
+          document.removeEventListener("visibilitychange", onVis)
+          start()
+        }
+      }
+      document.addEventListener("visibilitychange", onVis)
+      cleanups.push(() => document.removeEventListener("visibilitychange", onVis))
+    } else start()
 
     return () => {
-      stopped = true
+      finished = true
       cancelAnimationFrame(raf)
+      clearTimeout(timer)
       ro.disconnect()
       cleanups.forEach((f) => f())
       geoms.forEach((g) => g.dispose())
@@ -508,13 +592,30 @@ export function IntroProto() {
       renderer.forceContextLoss()
       renderer.domElement.remove()
     }
-  }, [run, reduced, frozen, showFps])
+  }, [])
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-hidden bg-background text-foreground" onClick={() => skipNow.current()}>
+    <div ref={overlayRef} className="fixed inset-0 z-[70] overflow-hidden text-foreground" onClick={() => skipNow.current()}>
       {/* Le film : aria-hidden, seul « Passer l'intro » est annoncé aux lecteurs d'écran. */}
-      <div ref={stageRef} aria-hidden="true" className="absolute inset-0">
+      <div aria-hidden="true" className="absolute inset-0">
+        <div ref={bgRef} className="absolute inset-0 bg-background" />
         <div ref={hostRef} className="absolute inset-0" />
+        {/* En direct : les chaînes sont des planètes HTML (ChannelAvatar), placées image par image sur leur point de la scène. */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {live.map((p, i) => {
+            const n = Math.round(p.d * 2)
+            return (
+              <div key={p.c} ref={(el) => { avatarEls.current[i] = el }} className="absolute top-0 left-0" style={{ width: n, height: n, opacity: 0 }}>
+                <ChannelAvatar c={p.c} color={p.color} img={p.img} size={n} />
+                {/* point rouge « en direct » : fixe, sans pulsation */}
+                <span
+                  className="absolute rounded-full"
+                  style={{ right: "4%", top: "4%", width: n * 0.16, height: n * 0.16, background: "var(--live-red)", boxShadow: "0 0 0 2px var(--background)" }}
+                />
+              </div>
+            )
+          })}
+        </div>
         <div
           ref={veilRef}
           className="pointer-events-none absolute inset-0 opacity-0"
@@ -529,29 +630,13 @@ export function IntroProto() {
             Observer
           </div>
         </div>
-        <div ref={headerRef} className="pointer-events-none absolute left-4 top-4 text-sm font-semibold opacity-0 sm:left-6 sm:top-5">
-          Twitch Overlap
-        </div>
-        <div ref={captionRef} className="pointer-events-none absolute inset-x-0 bottom-5 px-6 text-center text-xs text-dusk opacity-0">
-          Illustration. La Carte de ton tableau de bord affiche tes vraies chaînes.
-        </div>
       </div>
 
-      {!reduced && !done && (
-        <div ref={skipRef} className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6" onClick={(e) => e.stopPropagation()}>
-          <Button variant="secondary" autoFocus aria-keyshortcuts="Escape" className="h-11 border border-white/10 bg-popover sm:h-9" onClick={() => skipNow.current()}>
-            Passer l'intro
-          </Button>
-        </div>
-      )}
-      {!reduced && done && (
-        <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6" onClick={(e) => e.stopPropagation()}>
-          <Button variant="secondary" className="h-11 border border-white/10 bg-popover sm:h-9" onClick={() => setRun((n) => n + 1)}>
-            Rejouer l'intro
-          </Button>
-        </div>
-      )}
-      {showFps && <div ref={fpsRef} className="pointer-events-none absolute bottom-3 left-3 font-mono text-xs text-muted-foreground">mesure en cours…</div>}
+      <div ref={skipRef} className="absolute right-4 bottom-4 sm:right-6 sm:bottom-6" onClick={(e) => e.stopPropagation()}>
+        <Button variant="secondary" autoFocus aria-keyshortcuts="Escape" className="h-11 border border-white/10 bg-popover sm:h-9" onClick={() => skipNow.current()}>
+          Passer l'intro
+        </Button>
+      </div>
     </div>
   )
 }

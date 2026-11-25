@@ -51,8 +51,8 @@ Critère de fin : plus aucune photo de chaîne plate dans l'info-bulle de la Car
 | Étape | Exécutant | Modèle, effort | Sortie |
 |---|---|---|---|
 | B1. Écrire la séquence (storyboard : durée, mouvement de caméra, apparition du titre, effet du nom, bouton « Passer », rappel `prefers-reduced-motion`). Typographie et lueurs selon `DESIGN.md` | Session | Opus 5.5, high | Storyboard dans `IDEES.md`, accepté par toi avant tout code |
-| B2. Prototype isolé (`?intro`, page à part, mode démo, sans toucher à la vraie page d'accueil), moteur Three.js via les skills `three-js` et `react-three-fiber`. Option : maquette de la scène dans Spline | Session | Sonnet 5.5, high | Prototype et mesures |
-| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée |
+| B2. Prototype isolé (`?intro`, page à part, mode démo, sans toucher à la vraie page d'accueil), moteur Three.js via les skills `three-js` et `react-three-fiber`. Option : maquette de la scène dans Spline | Session | Sonnet 5.5, high | Prototype et mesures. **GO** (fluidité 60 i/s confirmée sur le PC de l'utilisateur, 25/11) : +141 Ko compressés, `file://` OK |
+| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée. **Fait, en attente de validation** (25/11) : `app/src/components/intro/intro.tsx` ; `?intro` et `intro-proto.tsx` retirés |
 | B4. Contrôle du mouvement | Sous-agent `impeccable-motion-reviewer`, une seule fois | par défaut | Liste de corrections |
 
 #### Storyboard (B1, 25/11, validé avec modifications)
@@ -153,7 +153,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 
 - Nouveau drapeau `to2-intro-seen`, posé quand l'intro se termine ou est passée.
 - L'intro joue seulement si la page d'accueil s'affiche **et** que le drapeau est absent, ou si l'adresse contient `?accueil` (elle rejoue alors à chaque chargement avec `?accueil`).
-- Jamais avec `?demo` (l'accueil ne s'y affiche pas ; le prototype de B2 vit sur `?intro`). Jamais quand on rouvre l'accueil par le lien de l'état vide de la Vue d'ensemble (`to2:landing`) : la personne y cherche l'explication, pas le film.
+- Jamais avec `?demo` (l'accueil ne s'y affiche pas). Le prototype `?intro` de B2 a été retiré en B3. Jamais quand on rouvre l'accueil par le lien de l'état vide de la Vue d'ensemble (`to2:landing`) : la personne y cherche l'explication, pas le film.
 - Si le stockage est indisponible : pas d'intro (on ne rejoue pas le film à chaque visite).
 
 **Variante S (SVG et CSS, sans Three.js).** Même séquence, mêmes durées, mêmes textes et même bouton. Ce qui change :
