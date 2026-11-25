@@ -226,7 +226,7 @@ Chaque étape complétée doit être marquée d'un [X] ci-dessous par l'utilisat
 [X] Étape 5 : Moteur d'Exportation de Rapports (CSV & PDF) (fait, PR #10)
 [X] Étape 6 : Conteneurisation Cloud du Collecteur (Docker 24/7) (build fait, PR #5 ; VPS non déployé)
 
-État au 25/11/2026 : Fonctionnalité 1 (Raid Recommender) faite ; Fonctionnalité 2 (Client View) abandonnée ; Fonctionnalité 3 (Sticky-Factor) codée, fonction SQL à déployer (seuils relatifs au réseau, voir SUIVI.md) ; landing page non faite. Détail et décisions : SUIVI.md.
+État au 25/11/2026 : Fonctionnalité 1 (Raid Recommender) faite ; Fonctionnalité 2 (Client View) abandonnée ; Fonctionnalité 3 (Sticky-Factor) faite, fonction déployée (seuils relatifs aux chaînes de taille voisine, voir SUIVI.md) ; landing page faite ; barre latérale en 4 groupes faite. Détail et décisions : SUIVI.md.
 
 FONCTIONNALITÉ 1 : Le "Raid Recommender" (Pour les Streamers)
 Objectif Métier :

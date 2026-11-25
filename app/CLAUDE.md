@@ -14,4 +14,6 @@ Chargé seulement quand on travaille dans `app/`. Les règles générales du pro
   - les clics `data-open` et `data-goto` sont gérés par le legacy ;
   - `LANG_FIX` dans legacy.js force la langue de certaines chaînes.
 - Mode démo : `?demo` ou `?demo=channel|chat|game|overlap|flows|settings|map`, et `&hover=0.4` pour figer un survol. Les données viennent de `src/dev/demo.ts`, qui est exclu du build. C'est le moyen de tester l'interface sans Supabase.
+- Page d'accueil (`components/landing/`) : posée PAR-DESSUS le tableau de bord, qui reste monté et `inert` dessous (l'ancien code a besoin de ses éléments dans la page). Drapeau `to2-landing-seen` ; `?accueil` la rouvre.
+- Données lues dans les rollups (historique, fidélité, rythme, comparaison) : fonctions SQL `channel_history`, `channel_stickiness`, `channels_rhythm`, `period_reach`, `network_history`, exposées par `window.*` dans legacy.js ; si la fonction manque, React affiche « demande la base à jour ».
 - Ajouter un composant 21st.dev : lancer `npx shadcn@latest add …`, remplacer `import { cn } from "cn"` par `@/lib/utils`, puis `npm uninstall cn`.

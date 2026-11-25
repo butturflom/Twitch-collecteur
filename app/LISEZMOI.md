@@ -68,4 +68,6 @@ Pièges :
 
 ### Mode démo
 
-`npm run dev`, puis ouvre http://localhost:5173/?demo (ou `?demo=channel`, `?demo=chat`, `?demo=game`, `?demo=overlap`, `?demo=flows`, `?demo=settings` qui ouvre simplement les Réglages, `?demo=map` qui remplit la base EN MÉMOIRE avec 12 chaînes et 3 000 viewers fictifs pour que le moteur de la Carte ait quelque chose à dessiner) : les onglets convertis affichent un jeu de données fictif (`src/dev/demo.ts`), pratique pour travailler le design sans vraie base. Ce mode n'est jamais inclus dans le build.
+`npm run dev`, puis ouvre http://localhost:5173/?demo (ou `?demo=channel`, `?demo=chat`, `?demo=game`, `?demo=overlap`, `?demo=flows`, `?demo=settings` qui ouvre simplement les Réglages, `?demo=map` qui remplit la base EN MÉMOIRE avec 12 chaînes et 3 000 viewers fictifs pour que le moteur de la Carte ait quelque chose à dessiner) : les onglets convertis affichent un jeu de données fictif (`src/dev/demo.ts`), pratique pour travailler le design sans vraie base. Ce mode n'est jamais inclus dans le build (il n'existe que dans `npm run dev`).
+
+Paramètres de démo ajoutés le 25/11 : `&sticky=bas|haut|petit|peu` (fidélité du chat), `&rythme=vide|calme` (alertes de rythme), `?demo=rosters&compare=etoiles,xari,gotaga` (comparaison de chaînes), `&histo=non` (base pas à jour, couvre l'historique, la fidélité et les alertes). La page d'accueil ne s'affiche jamais en démo ; `?accueil` la rouvre sur le fichier construit.
