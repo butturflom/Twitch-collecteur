@@ -21,7 +21,7 @@ export function Phase3Analysis() {
   return (
     <div className="space-y-6">
       {/* Top Streamers */}
-      <Section title="Top Streamers - Analyse des Viewers">
+      <Section title="Top des chaînes · analyse des viewers">
         {topStreamers.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
@@ -50,14 +50,13 @@ export function Phase3Analysis() {
           </>
         ) : (
           <Empty>
-            Pas assez de données pour calculer les Top Streamers.
-            Besoin d'au moins 1 snapshot par chaîne et de données de présence.
+            Pas encore assez de données pour classer les chaînes : il faut au moins un relevé de viewers par chaîne et des viewers actifs sur la période.
           </Empty>
         )}
       </Section>
 
       {/* Communautés Investies */}
-      <Section title="Communautés Investies - Taux d'Interaction">
+      <Section title="Communautés investies · taux d'interaction">
         {investedCommunities.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
@@ -86,8 +85,7 @@ export function Phase3Analysis() {
           </>
         ) : (
           <Empty>
-            Pas assez de données pour calculer les Communautés Investies.
-            Besoin de données d'événements (subs, bits, raids).
+            Pas encore assez de données pour mesurer l'investissement des communautés : il faut des événements (subs, bits, raids) sur la période.
           </Empty>
         )}
       </Section>

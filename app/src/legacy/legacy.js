@@ -1933,7 +1933,7 @@ function renderOverview(q){
   const msgs=q.mins.reduce((s,m)=>s+m.m,0);const {multi,flows}=flowsOf(q.pres);
   const subs=q.events.filter(e=>e.type==='sub'||e.type==='gift').reduce((s,e)=>s+e.n,0);
   const tr=msgTrend(q.mins);
-  const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'ont écrit au moins un message'},
+  const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'toutes chaînes, ont écrit au moins un message'},
     {label:'Messages',value:fmt(msgs),trend:tr.trend,trendLabel:tr.label,hint:'au total'},
     {label:'Actifs dans 2 chats ou plus',value:fmt(multi),hint:allU.size?pct(multi/allU.size)+' du total':''},
     {label:'Abonnements et subs offerts',value:fmt(subs)}]; // le temps d'écoute ignore la période : il est dans le détail de la pilule d'état (statusOf)
