@@ -211,6 +211,8 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 
 **Variante tuyaux (25/11)** : si le prototype C0 réussit en tuyaux, les trajets A→B→C deviennent une étape C3, après C2 : une tâche de nuit (Sonnet high, `schema.sql` rejouable, testée en transaction annulée) qui calcule, à partir des passages bruts de la veille, les trajets à deux sauts par jour et les garde dans une table agrégée. Sans cette table, on ne montre que des paires, jamais un parcours. Les planètes des nœuds réutilisent `ChannelAvatar` (déjà en planète dès 20 px). Décision prise le 25/11 : `DESIGN.md` l. 321 ne réserve plus l'atmosphère à la Carte ; le ciel étoilé la remplace sur toutes les pages. Les tuyaux peuvent donc être dessinés dans Flux, à condition de passer le critère de lisibilité du prototype.
 
+**Statut C3 (26/11) : abandonné.** Le prototype tuyaux (`?demo=paths`) ne se lit pas : les tuyaux d'un même pivot se superposent et se croisent, et les arcs de C2 restent plus clairs. Le calcul à deux sauts (table `daily_paths`, tests en transaction annulée) n'est pas livré : pas de SQL en production pour ce point. Le travail est gardé sur la branche locale `archive/c3-trajets-deux-sauts` (commit `855717e`), non fusionnée.
+
 Critère de fin : la carte se lit sans survol sur 14 journées, chaque arc donne son nombre de viewers uniques et la part organique, et le libellé dit « viewers actifs qui écrivent, par jour ». **Abandon** : si, sur 14 journées, la carte ne dit rien de plus que le Sankey, on ne la livre pas et on garde le Sankey.
 
 ### Chantier D · Hébergement et comptes clients (L, dormant)
