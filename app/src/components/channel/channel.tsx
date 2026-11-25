@@ -10,6 +10,7 @@ import { API_NOTE, CLIPS_NOTE, ChannelPicker, Clips, Hero, Kpis, Moments, NO_CLI
 import { fmt, fmt1, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { History } from "./history"
+import { Universe } from "./universe"
 import { useChannelData, type SwitchRow } from "@/legacy/bridge"
 
 // Copy raid command to clipboard and show feedback
@@ -145,6 +146,8 @@ export function Channel() {
       </Section>
 
       <RaidCopiedToast />
+
+      <Universe ch={d.ch} also={d.also} list={d.list} />
 
       <Section className="mt-9" title="Ses viewers actifs écrivent aussi chez">
         {d.also.length ? (
