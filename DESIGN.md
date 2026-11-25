@@ -250,10 +250,10 @@ Le verre flouté est réservé au cadre de l'application (barre latérale, en-t�
 - **Arête de coupole** (`box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 12px 32px -20px rgba(0,0,0,.9)`) : tous les panneaux, cartes de chaîne et groupes d'indicateurs.
 - **Flottant** (`box-shadow: 0 25px 50px -12px rgba(0,0,0,.6)`) : infobulles et tiroirs.
 - **Lueur d'action** (`box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 6px 16px -8px rgba(139,124,255,.75)`) : le bouton principal uniquement.
-- **Lueur de repère** (`box-shadow: 0 0 10px rgba(139,124,255,.7)`) : le carré devant un titre de section, la barre de l'onglet actif.
+- **Lueur de repère** (`box-shadow: 0 0 10px rgba(139,124,255,.7)`) : la barre de l'onglet actif. (25/11/2026, audit Hallmark, règle 63 : le carré violet devant chaque titre de section est retiré. Répété sur tous les titres, il ne signalait rien ; un titre se repère par sa taille et sa graisse.)
 
 ### Named Rules
-**La règle des lueurs signifiantes.** Une lueur violette signale « c'est ici » ou « c'est l'action » : repère de section, onglet actif, bouton principal, sélection sur la Carte. On n'en ajoute jamais pour décorer. Si deux éléments brillent à égalité dans un même écran, l'un des deux ne devrait pas briller.
+**La règle des lueurs signifiantes.** Une lueur violette signale « c'est ici » ou « c'est l'action » : onglet actif, bouton principal, sélection sur la Carte. On n'en ajoute jamais pour décorer. Si deux éléments brillent à égalité dans un même écran, l'un des deux ne devrait pas briller.
 
 ## Shapes
 
