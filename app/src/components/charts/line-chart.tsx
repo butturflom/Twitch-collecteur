@@ -5,7 +5,7 @@ import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent } from 
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { Empty } from "@/components/overview/parts"
 import { fmt, fmt1 } from "@/lib/format"
-import { dayKey, dayLbl, hhmm, when } from "@/lib/time"
+import { dayKey, dayLbl, dayNum, hhmm, when } from "@/lib/time"
 import { ChartFrame, niceMax, tableCls, useWidth } from "./frame"
 import type { LineSpec } from "@/legacy/bridge"
 
@@ -46,7 +46,10 @@ export function LineChart({ spec, bare, label }: { spec: LineSpec; bare?: boolea
   const tick = (v: number) => (spec.pct ? num(v) + " %" : y1 >= 10000 ? compact.format(v) : num(v))
   const val = (v: number) => (spec.pct ? fmt1(v) + " %" : (v < 10 ? fmt1(v) : fmt(v)) + spec.unit)
   const span = x1 - x0, multiDay = dayKey(x0) !== dayKey(x1)
-  const xLbl = (t: number) => (multiDay && span > 2 * DAY ? dayLbl(t) : hhmm(t))
+  // axe étroit (téléphone) : trois repères au lieu de cinq et des dates courtes (« 19/11 »), sinon les libellés se chevauchent
+  const narrow = W < 480
+  const xLbl = (t: number) => (multiDay && span > 2 * DAY ? (narrow ? dayNum(t) : dayLbl(t)) : hhmm(t))
+  const xTicks = narrow ? [0, 2, 4] : [0, 1, 2, 3, 4]
 
   // tracés : un chemin par série, coupé aux trous ; un point isolé devient un rond
   const paths = series.map((s) => {
@@ -148,7 +151,7 @@ export function LineChart({ spec, bare, label }: { spec: LineSpec; bare?: boolea
               </g>
             )
           })}
-          {[0, 1, 2, 3, 4].map((i) => (
+          {xTicks.map((i) => (
             <text key={i} x={X(x0 + (span * i) / 4)} y={H - 5} textAnchor={i === 0 ? "start" : i === 4 ? "end" : "middle"} fill={ink.dim}>{xLbl(x0 + (span * i) / 4)}</text>
           ))}
           {paths.map(({ s, d, dots }) => (

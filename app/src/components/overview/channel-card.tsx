@@ -94,7 +94,7 @@ export function ChannelCard({ ch }: { ch: ChannelInfo }) {
       <button
         type="button"
         data-open={ch.c}
-        className="relative mt-3.5 inline-flex items-center gap-1 self-start rounded-md text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="relative mt-3.5 inline-flex min-h-6 items-center gap-1 self-start rounded-md text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         Voir le détail <ArrowRight className="pointer-events-none size-3.5" />
       </button>
@@ -128,7 +128,7 @@ export function ChannelRow({ ch }: { ch: ChannelInfo }) {
       <button
         type="button"
         data-open={ch.c}
-        className="inline-flex items-center gap-1 rounded-md text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="inline-flex min-h-6 items-center gap-1 rounded-md text-[12.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         Voir le détail <ArrowRight className="pointer-events-none size-3.5" />
       </button>

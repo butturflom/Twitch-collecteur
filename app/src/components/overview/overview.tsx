@@ -174,7 +174,7 @@ function Extra({ children, count, pulse }: { children: ReactNode; count: number;
         aria-expanded={open}
         aria-controls="ov-extra"
         onClick={toggle}
-        className={cn("group inline-flex items-center gap-2 rounded-md text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        className={cn("group inline-flex min-h-6 items-center gap-2 rounded-md text-[13.5px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           pulse && "animate-pulse")}>
         <ChevronDown aria-hidden className={cn("size-4 transition-transform duration-200", open && "rotate-180")} />
         <span className="hidden sm:inline">
@@ -236,7 +236,7 @@ export function Overview() {
         : "Activité sur la période"} badge={!d.hasApi || period?.range === "Pas encore de relevé" ? "Données incomplètes" : undefined}>
         <StatCardGroup className="bg-linear-to-b from-dome-crest to-dome max-sm:[&>[data-slot=stat-card]]:basis-36">
           {d.kpis.map((k) => (
-            <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="overlap" className="underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
+            <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="overlap" className="-my-1 inline-block py-1 underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
           ))}
         </StatCardGroup>
       </Section>
@@ -267,8 +267,6 @@ export function Overview() {
       )}
       {chartNote && <p className="mt-2.5 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk">{chartNote}</p>}
 
-      <NetworkHistoryBlock />
-
       {d.part && (
         <div className="flex items-start gap-2">
           <div className="flex-1">
@@ -288,6 +286,9 @@ export function Overview() {
           />
         </div>
       )}
+
+      {/* l'historique long vient après l'essentiel, replié : il redit l'activité sur d'autres échelles de temps */}
+      <NetworkHistoryBlock />
 
       {(() => {
         const extraCnt = extraCount(d.followers, d.brand, d.mod)

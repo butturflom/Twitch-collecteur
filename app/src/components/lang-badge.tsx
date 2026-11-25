@@ -29,7 +29,7 @@ export function LangBadge({ langs, className }: { langs?: string[] | null; class
       title={sentence(langs)}
       aria-label={sentence(langs)}
       className={cn(
-        "h-5 gap-1 px-1.5 font-mono text-[10px]",
+        "h-5 gap-1 px-1.5 font-mono text-[11px]",
         multi ? "border-primary/60 bg-primary/15 text-violet-ink" : "border-input text-muted-foreground",
         className,
       )}
