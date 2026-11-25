@@ -16,17 +16,19 @@ const OverlapIcon: LucideIcon = ((p: SVGProps<SVGSVGElement>) => (
 )) as unknown as LucideIcon
 
 export const NAV: { label: string; items: { id: TabId; label: string; icon: LucideIcon }[] }[] = [
-  { label: "Analyse", items: [
+  { label: "Observatoire", items: [
+    { id: "map", label: "Carte", icon: MapIcon },
     { id: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
+  ] },
+  { label: "Analyse et flux", items: [
+    { id: "overlap", label: "Chevauchement", icon: OverlapIcon },
+    { id: "flows", label: "Flux", icon: ArrowLeftRight },
+    { id: "rosters", label: "Rosters", icon: Users },
+  ] },
+  { label: "Exploration", items: [
     { id: "channel", label: "Par chaîne", icon: Tv },
     { id: "game", label: "Par jeu", icon: Gamepad2 },
     { id: "chat", label: "Chat", icon: MessageSquare },
-  ] },
-  { label: "Audience", items: [
-    { id: "overlap", label: "Chevauchement", icon: OverlapIcon },
-    { id: "map", label: "Carte", icon: MapIcon },
-    { id: "flows", label: "Flux", icon: ArrowLeftRight },
-    { id: "rosters", label: "Rosters", icon: Users },
   ] },
   { label: "Configuration", items: [
     { id: "settings", label: "Réglages", icon: SlidersHorizontal },
