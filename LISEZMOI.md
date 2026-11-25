@@ -291,3 +291,12 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Vue d'ensemble** : bloc **Rythme des chaînes** (celles qui décollent ou ralentissent). Il faut 14 journées agrégées : il le dit tant qu'elles manquent.
 - **Rosters** : **Comparer des chaînes**, 2 à 4 côte à côte, avec l'audience nette du groupe et les viewers en commun.
 - **Carte** : filtre **Jeu principal** à côté de la langue.
+
+## Agences : un dossier par client et un rapport mensuel (25/11/2026)
+
+Pour servir une agence à la main, sans compte ni service hébergé : une base Supabase par client, son collecteur, et un rapport livré chaque mois. Le détail du raisonnement est dans `SUIVI.md` (§12) et `VALIDATION-AGENCES.md`.
+
+- **Préparer un client** : `node scripts/nouveau-client.mjs "Nom de l'agence" chaine1 chaine2 …` crée `clients/<nom>/` : `config.json` (sel et code du tableau propres au client, clés Supabase à remplir), `roster.json`, une copie du collecteur, de `oublier.mjs` et du schéma, `lancer.bat` et `INSTALLATION.md`. Le script ne crée rien chez Supabase ni chez Twitch : le projet Supabase se crée à la main. Le dossier `clients/` n'est pas versionné (il contient des clés).
+- **Rapport mensuel** : `node scripts/rapport-mensuel.mjs clients/<nom> [jours]` (30 par défaut, de 7 à 90) écrit `clients/<nom>/rapports/<date>/rapport.pdf`, `rapport.html` et `rapport.csv`. Le PDF vient de Chrome ou d'Edge en mode sans fenêtre ; sans navigateur trouvé, imprimer `rapport.html` (ou donner `CHROME_PATH`, `--sans-pdf` saute l'étape). Il reprend les chiffres du rapport de roster du tableau de bord (Net Reach, cannibalisation) et y ajoute, par chaîne, l'évolution par rapport à la période d'avant, la fidélité du chat, les alertes de rythme et les passages entre chaînes.
+- **Avant de le montrer** : laisser tourner le collecteur au moins 7 jours ; le rapport signale lui-même une couverture trop courte. Les viewers uniques sont des estimations à ± 2,3 %.
+- **Copies figées** : le dossier client contient une copie de `collecteur.mjs` et du schéma. La recopier quand la version de la racine change.

@@ -13,6 +13,7 @@
 - **Export PDF et CSV, Net Reach des rosters, onglet Flux** : faits (PR #10, #8, #7).
 - **Nouveautés du 25/11** : page d'accueil (une fois par navigateur), fidélité du chat (Sticky-Factor, comparée aux chaînes de taille voisine), comparaison de 2 à 4 chaînes (Rosters), alertes de rythme (Vue d'ensemble), « Son univers » et 5 indicateurs de tête (Par chaîne), filtre de la Carte par jeu principal. Détail : §13.
 - **Fonctions SQL déployées en base le 25/11** : `channel_stickiness` et `channels_rhythm` (ajouts seuls). Elles sont aussi dans `schema.sql`, à rejouer sur toute nouvelle base.
+- **Agences** : étape 1 (kit d'entretien) et étape 2 (dossier client, rapport mensuel PDF/CSV) préparées le 25/11, PR #42 ; rien n'est créé chez Supabase. Voir §12.
 - **Docker** : build réparé (PR #5). **VPS** : mis de côté par l'utilisateur.
 - **Carte** : critique n°7 à 28/40, aucune modification retenue. **Vue d'ensemble** : critique n°7 à 27/40, seul le bug Phase 3 traité (PR #22, fusionnée).
 
@@ -36,6 +37,9 @@
 | #37 | `regle-build-auto` | CLAUDE.md : reconstruction automatique du tableau de bord | fusionnée le 25/11 |
 | #38 | `docs-maj-25-11` | Cette mise à jour de la documentation | fusionnée le 25/11 (après #37) |
 | #39 | `carte-menu-lecture-protegee` | Menu de la Carte, classements, lecture protégée par code, effacement, CONFORMITE.md | fusionnée le 25/11 (§15) |
+
+| #40, #41 | `suivi-39-fusionnee`, `carte-sans-pastilles` | Suivi de #39 ; Carte : retrait des pastilles de filtres actifs | fusionnées le 25/11 |
+| #42 | `agences-validation-et-clients` | Direction agences : kit de validation, dossier client, rapport mensuel (§12) | fusionnée le 25/11, sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -130,7 +134,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 10. Journal
 
-- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée. Puis #27 à #36 : direction agences et streamers, comparaison de chaînes, fidélité (voisines, petites chaînes), alertes de rythme (fonction déployée), son univers, essentiel de Par chaîne, filtre de la Carte par jeu. Hook de build local.
+- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée. Puis #27 à #36 : direction agences et streamers, comparaison de chaînes, fidélité (voisines, petites chaînes), alertes de rythme (fonction déployée), son univers, essentiel de Par chaîne, filtre de la Carte par jeu. Hook de build local. Puis #37 à #41 (règle de build, documentation, menu de la Carte et lecture protégée, pastilles retirées) et #42 : kit de validation des agences, `scripts/nouveau-client.mjs` et `scripts/rapport-mensuel.mjs`.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
 
