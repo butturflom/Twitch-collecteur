@@ -232,7 +232,7 @@ export interface MapApi {
 export interface MapNotice {
   /** links : voisines reliées par un trait ; share : part des viewers actifs de la chaîne vue chez la voisine ; out / inn : passages mesurés vers elle / depuis elle */
   info?: (Who & { sub: string; links: (Who & { share: number; n: number; out: number; inn: number })[] }) | null
-  hidden?: string; pins?: number; grp?: number | null
+  pins?: number; grp?: number | null
   /** mouvement des orbites mis en pause par l'utilisateur */
   paused?: boolean
   /** mode Globe actif */
