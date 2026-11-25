@@ -144,4 +144,21 @@ Le texte décrit un cockpit spatial pour agences, marques et streameurs. La Cart
 - **Découverte pour marques** (« Affiliates ouverts aux deals ») : c'est un produit multi-utilisateurs avec comptes, hors du périmètre actuel (« une seule personne »).
 - **Prédiction à 90 jours** : trop de bruit sur des données vieilles de quelques semaines.
 
-**Question de fond à trancher plus tard** : le projet reste-t-il un outil personnel (`PRODUCT.md`) ou vise-t-il des agences et des marques (`plan.md.txt`, `Prompt.txt`) ? La réponse change l'ordre des chantiers : l'usage multi-utilisateurs demande d'abord comptes, rosters serveur et vie privée revue.
+
+## 12. Direction : viser les agences (décidée par l'utilisateur le 25/11)
+
+**Ce qu'on a déjà et que les agences n'ont pas ailleurs** : l'audience réellement unique d'un groupe de chaînes (Net Reach par esquisses HyperLogLog), le chevauchement et la cannibalisation entre créateurs, les flux de viewers entre chaînes, la fidélité du chat, des rapports PDF et CSV. Les sites publics ne donnent pas cela. C'est le point d'entrée.
+
+**Conseil, dans l'ordre**
+1. **Valider la demande avant de construire.** Montrer le rapport de roster (PDF) à 3 à 5 agences ou talent managers, avec des données réelles de leurs créateurs, et noter ce qu'ils demandent en plus. Un bon test : « ce rapport vous ferait-il payer ou changer une décision ? » C'est le chantier le moins cher et il évite de bâtir un SaaS sans client.
+2. **Commencer en service, pas en SaaS.** Pour un premier client : une base Supabase dédiée (une par agence), son roster, un rapport mensuel livré par vous. Pas de comptes ni de multi-utilisateur au départ : le code actuel reste valable.
+3. **Ne passer au multi-utilisateur que sur demande réelle**, avec ce qu'il faut : authentification, rosters côté serveur, une base ou un schéma par client, hébergement 24/24 du collecteur (le VPS mis de côté redevient nécessaire), sauvegardes.
+
+**Blocages à lever avant tout partage** (dans l'état actuel du code)
+- **La clé publique lit toutes les tables** : donner l'accès à quelqu'un, c'est lui donner tout. À remplacer par des droits par client (RLS, ou une base par client).
+- **Vie privée** : les pseudos sont remplacés par une empreinte avec un sel fixe, ce qui est de la donnée pseudonymisée, pas anonyme. Suivre des chaînes tierces au profit d'un client commercial demande de vérifier le cadre RGPD (base légale, information, durées) avec un juriste.
+- **Conditions de Twitch** : relire les conditions du programme développeur sur le stockage, l'agrégation et la redistribution des données avant de vendre un service qui s'appuie dessus.
+- **Coûts et limites** : le palier gratuit Supabase (500 Mo) ne tient pas plusieurs clients ; l'API Twitch a des quotas ; un collecteur par client ou une base commune partitionnée.
+- **Positionnement** : ne pas promettre ce qu'on ne mesure pas (sponsors, deals, brand safety, démographie). Promettre l'audience unique, la cannibalisation, les flux et la fidélité.
+
+**Effet sur les chantiers** : les alertes de rythme, la comparaison de chaînes et le rapport de roster servent déjà les agences. Les filtres de Carte et la trajectoire aussi. Les comptes et le multi-utilisateur attendent le résultat de l'étape 1.
