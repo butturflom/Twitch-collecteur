@@ -192,5 +192,5 @@ Les conseils du §12 étaient écrits pour les agences seules : c'était incompl
 | #32 | Par chaîne : 5 indicateurs au premier regard, le reste replié | ouverte |
 | #33 | Fidélité comparée aux chaînes de taille voisine | ouverte, bâtie sur #31 (à fusionner après elle). Non vue au rendu : la démo a 4 chaînes, il en faut 6 |
 
-**Reste de la liste** : trajectoire à 30 jours (vers le 23/12), filtres de la Carte par langue et par jeu (moteur de l'ancien code). Les seuils des alertes (15 %, 2 erreurs types, 30 viewers actifs) sont dans `app/src/lib/rhythm.ts` : à ajuster avec de vraies alertes.
+**Reste de la liste** : trajectoire à 30 jours (vers le 23/12). Le filtre de la Carte par langue existait déjà ; celui par jeu principal est dans la PR « Carte : filtre par jeu principal ». Les seuils des alertes (15 %, 2 erreurs types, 30 viewers actifs) sont dans `app/src/lib/rhythm.ts` : à ajuster avec de vraies alertes.
 **Pas fait** : critique Impeccable de Par chaîne (coût) ; à lancer si l'on veut revoir l'ordre des sections.

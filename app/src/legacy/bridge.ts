@@ -245,6 +245,7 @@ export interface MapData {
   live: { on: boolean; count: number; total: number } // filtre « En live » : chaînes en live / toutes, parmi celles qui ont un viewer actif sur la période
   periods: { key: string; label: string; on: boolean }[]
   langs: { key: string; label: string; count: number; on: boolean }[] | null
+  games: { key: string; label: string; count: number; on: boolean }[] | null // jeu principal de chaque chaîne ; null : moins de 2 jeux
   pick: (Who & { langs: string[]; n: number; on: boolean })[] | null // vue « Ma sélection »
   pins: number
   empty: string // message quand il n'y a pas assez de chaînes pour une carte
@@ -312,7 +313,7 @@ declare global {
     resetDb?: () => Promise<void>
     forceFullResync?: () => Promise<boolean>
     // Carte
-    mapAction?: (a: "side" | "period" | "lang" | "view" | "live" | "pick" | "pins" | "relayout", v?: string | string[], on?: boolean) => void
+    mapAction?: (a: "side" | "period" | "lang" | "game" | "view" | "live" | "pick" | "pins" | "relayout", v?: string | string[], on?: boolean) => void
     __legacyLoaded?: boolean
   }
 }
