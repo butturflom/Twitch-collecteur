@@ -181,3 +181,16 @@ Les conseils du §12 étaient écrits pour les agences seules : c'était incompl
 2. **Streamers ensuite, sur un service hébergé**, quand il existe : un collecteur et une base partagés, des droits par utilisateur. C'est le même chantier de fond que le multi-utilisateur des agences (authentification, droits par client, hébergement 24/24, RGPD). Le faire une fois pour les deux cibles.
 3. **En attendant**, rendre le produit lisible pour une petite chaîne : seuils adaptés, vue « mon univers ». Cela se code sans attendre l'hébergement et sert aussi aux gros.
 4. **Gratuit ou payant** : à décider avec la demande. Les streamers payent peu : l'outil des agences peut financer le service, les streamers en bénéficient en version simple.
+
+## 13. Chantiers lancés le 25/11 après le tri de `Prompt.txt`
+
+| PR | Chantier | État |
+|---|---|---|
+| #28, #29 | Comparer 2 à 4 chaînes (Rosters) ; fidélité du chat dès 30 viewers actifs | fusionnées |
+| #30 | Alertes de rythme (Vue d'ensemble) : « décolle », « ralentit » | ouverte. **Fonction SQL `channels_rhythm` à déployer** (ajout seul) ; le bloc dit « pas encore 14 journées » jusque vers le 8/12 |
+| #31 | Son univers (Par chaîne) : voisines et chaînes juste au-dessus | ouverte |
+| #32 | Par chaîne : 5 indicateurs au premier regard, le reste replié | ouverte |
+| #33 | Fidélité comparée aux chaînes de taille voisine | ouverte, bâtie sur #31 (à fusionner après elle). Non vue au rendu : la démo a 4 chaînes, il en faut 6 |
+
+**Reste de la liste** : trajectoire à 30 jours (vers le 23/12), filtres de la Carte par langue et par jeu (moteur de l'ancien code). Les seuils des alertes (15 %, 2 erreurs types, 30 viewers actifs) sont dans `app/src/lib/rhythm.ts` : à ajuster avec de vraies alertes.
+**Pas fait** : critique Impeccable de Par chaîne (coût) ; à lancer si l'on veut revoir l'ordre des sections.
