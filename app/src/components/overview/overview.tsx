@@ -21,10 +21,49 @@ const PAIR = "flex flex-col [&>:last-child]:flex-1"
 const MULTI = "Actifs dans 2 chats ou plus"
 const maxOf = <T,>(a: T[], f: (x: T) => number | null) => Math.max(0, ...a.map((x) => f(x) ?? 0)) || 1
 const nf = (x: number | null, f: (n: number) => string) => (x != null && isFinite(x) ? f(x) : "—")
-/** Les deux blocs de Phase3Analysis (classement des chaînes, communautés investies) comptent dans le repli. */
-const PHASE3 = 2
 const extraCount = (followers: FollowerRow[], brand: BrandRow[] | null, mod: { rows: ModRow[]; noDel: boolean } | null) =>
   (followers.length > 0 ? 1 : 0) + (brand && brand.length > 0 ? 1 : 0) + (mod ? 1 : 0)
+
+/**
+ * Barre de sauts en tête de page : la Vue d'ensemble est longue, et ce qu'on cherche (un classement, le rythme) se trouvait au bout du
+ * défilement. Chaque saut vise la région dont le titre est donné ; un saut sans région sur la page (bloc vide, sans API) est omis.
+ */
+const JUMPS: [string, string][] = [
+  ["Recoupements", "Recoupements"],
+  ["Les chaînes", "Les chaînes"],
+  ["Messages par minute", "Courbes"],
+  ["Participation du chat pendant les lives", "Participation"],
+  ["Classements · audience et communautés", "Classements"],
+  ["Rythme des chaînes", "Rythme"],
+  ["Historique du réseau", "Historique"],
+]
+const regionOf = (title: string) => Array.from(document.querySelectorAll<HTMLElement>("[role=region]")).find((e) => e.getAttribute("aria-label") === title) ?? null
+function JumpNav() {
+  const [titles, setTitles] = useState<string[]>([])
+  // les blocs de l'historique et du rythme se montent un peu après la page : on relit la liste quand le DOM change
+  useEffect(() => {
+    const read = () => setTitles((old) => {
+      const next = JUMPS.filter(([t]) => regionOf(t)).map(([t]) => t)
+      return old.length === next.length && old.every((t, i) => t === next[i]) ? old : next
+    })
+    read()
+    const t = setInterval(read, 1500)
+    return () => clearInterval(t)
+  }, [])
+  if (titles.length < 3) return null
+  return (
+    <nav aria-label="Aller à une section" className="-mt-2 mb-6 flex flex-wrap items-center gap-1">
+      <span className="mr-1 text-xs text-dusk">Aller à</span>
+      {JUMPS.filter(([t]) => titles.includes(t)).map(([t, label]) => (
+        <button key={t} type="button"
+          onClick={() => regionOf(t)?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" })}
+          className="inline-flex h-7 items-center rounded-full border border-white/10 bg-zinc-950/50 px-2.5 text-xs font-medium text-zinc-300 transition-colors hover:border-white/25 hover:text-white focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none">
+          {label}
+        </button>
+      ))}
+    </nav>
+  )
+}
 
 function Participation({ rows }: { rows: PartRow[] }) {
   const mP = maxOf(rows, (r) => r.perMin), mK = maxOf(rows, (r) => r.msgK), mI = maxOf(rows, (r) => r.inter)
@@ -235,6 +274,8 @@ export function Overview() {
         </p>
       )}
 
+      <JumpNav />
+
       {/* la page ouvre sur ce qu'aucun site public ne montre : les recoupements, puis l'activité de la même période */}
       <Recoup d={d.recoup} />
 
@@ -284,6 +325,9 @@ export function Overview() {
             </Section>
       )}
 
+      {/* les classements (ex-Phase 3) : ce qu'on cherche en ouvrant la page, donc hors du repli, juste après la participation */}
+      <Phase3Analysis />
+
       {/* l'historique long vient après l'essentiel, replié : il redit l'activité sur d'autres échelles de temps */}
       <RhythmBlock />
       <NetworkHistoryBlock />
@@ -291,7 +335,7 @@ export function Overview() {
       {(() => {
         const extraCnt = extraCount(d.followers, d.brand, d.mod)
         return (
-          <Extra count={extraCnt + PHASE3} pulse={pulseExtra}>
+          <Extra count={extraCnt} pulse={pulseExtra}>
             {d.followers.length > 0 && (
               <Section title="Audience et followers" note="Le nombre de followers est relevé chaque heure. Un rapport viewers ÷ followers élevé veut dire que la communauté suit le live en direct plutôt que de seulement suivre la chaîne." action={<ShareButton title="Audience et followers" kpis={[ { label: "Chaînes analysées", value: String(d.followers.length) }, { label: "Followers moyens", value: fmt(d.followers.reduce((a, r) => a + r.fol, 0) / d.followers.length) } ]} />}>
                     <Followers rows={d.followers} />
@@ -316,7 +360,6 @@ export function Overview() {
                     <Empty>Aucune sanction ni message supprimé sur cette période.</Empty>
                   )}
                 </Section>
-            <Phase3Analysis />
           </Extra>
         )}
       )()}
