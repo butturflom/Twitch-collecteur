@@ -9,6 +9,7 @@ import { useOverviewData, usePeriodInfo, type BrandRow, type ChannelInfo, type F
 import { Phase3Analysis } from "./phase3-analysis"
 import { ChannelCard, ChannelRow } from "./channel-card"
 import { NetworkHistoryBlock } from "./network-history"
+import { RhythmBlock } from "./rhythm"
 import { Recoup } from "./recoup"
 import { LineChart } from "@/components/charts/line-chart"
 import { ChannelCell, DataTable, Delta, Empty, Section, ShowMore, heat, muted, panel, type Col, Pending } from "./parts"
@@ -284,6 +285,7 @@ export function Overview() {
       )}
 
       {/* l'historique long vient après l'essentiel, replié : il redit l'activité sur d'autres échelles de temps */}
+      <RhythmBlock />
       <NetworkHistoryBlock />
 
       {(() => {

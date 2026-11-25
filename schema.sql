@@ -589,6 +589,24 @@ language sql stable set search_path = public, pg_catalog as $$
       'q3', (select round(percentile_cont(0.75) within group (order by score)::numeric, 1) from net)))
 $$;
 
+-- Rythme des chaînes (alertes « décolle » / « ralentit » de la Vue d'ensemble), lu dans les rollups quotidiens.
+-- 25/11/2026. Lecture seule. Pour chaque chaîne qui a au moins 14 journées agrégées : la moyenne des viewers actifs (unique_chatters) des
+-- 7 dernières journées (recent), celle des journées d'avant (base, jusqu'à 3 semaines) et son écart type (sd). Le tableau de bord
+-- décide s'il y a une alerte : écart d'au moins 15 % ET hors des variations habituelles (écart de plus de 2 erreurs types), ce qui
+-- demande un changement plus net aux petites chaînes, plus irrégulières.
+create or replace function channels_rhythm(days int default 28) returns jsonb
+language sql stable set search_path = public, pg_catalog as $$
+  with p as (select to_char((now() at time zone 'Europe/Paris')::date - least(greatest(days, 14), 120), 'YYYY-MM-DD') as d0),
+  x as (select s.c, s.unique_chatters as v, row_number() over (partition by s.c order by s.d desc) as k
+        from daily_streamer_rollup s, p where s.d >= p.d0 and s.unique_chatters > 0),
+  r as (select c,
+          count(*) filter (where k <= 7) as nr, avg(v) filter (where k <= 7) as recent,
+          count(*) filter (where k > 7) as nb, avg(v) filter (where k > 7) as base, stddev_samp(v) filter (where k > 7) as sd
+        from x group by c)
+  select coalesce(jsonb_agg(jsonb_build_object('c', c, 'nr', nr, 'nb', nb, 'recent', round(recent, 1), 'base', round(base, 1), 'sd', round(coalesce(sd, 0), 1))), '[]')
+  from r where nr >= 7 and nb >= 7
+$$;
+
 -- Estimation d'un HyperLogLog à 2 048 registres : inv = somme des 2^-registre, zeros = registres vides.
 -- Petits comptes (≤ 5 120) : comptage linéaire, plus exact.
 create or replace function hll_card(inv float8, zeros int) returns bigint

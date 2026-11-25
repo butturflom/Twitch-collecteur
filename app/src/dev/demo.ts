@@ -395,6 +395,14 @@ export function installDemo() {
     window.periodReach = async (chans, days) => (histo() === "non" ? null : reachDemo(chans, days))
     // &sticky=bas|haut : chaîne en bas ou en haut du classement de fidélité ; &sticky=peu : trop peu de viewers actifs (&histo=non couvre aussi la fidélité)
     const sticky = () => new URLSearchParams(location.search).get("sticky")
+    // &rythme=vide : pas encore 14 journées ; &rythme=calme : aucune chaîne ne sort de son rythme ; &histo=non : base pas à jour
+    window.channelsRhythm = async () => {
+      const m = new URLSearchParams(location.search).get("rythme")
+      if (histo() === "non") return null
+      if (m === "vide") return []
+      const mk = (i: number, base: number, recent: number, sd: number) => ({ c: CH[i][0], color: CH[i][1], img: "", nr: 7, nb: 14, recent, base, sd })
+      return m === "calme" ? [mk(0, 4000, 4100, 300), mk(1, 5200, 5000, 400)] : [mk(0, 4000, 5600, 350), mk(1, 5200, 3900, 420), mk(2, 6100, 6200, 500), mk(3, 90, 130, 60)]
+    }
     window.channelSticky = async (c, days) => (histo() === "non" ? null : stickyDemo(c, histo() === "1" ? 1 : days, sticky()))
     window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(histo() === "1" ? 1 : days))
     window.renderRosters = () => window.dispatchEvent(new CustomEvent("legacy:rosters", { detail: rostersDemo() }))
