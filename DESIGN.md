@@ -166,7 +166,7 @@ Deux refus sont confirmés. Ce n'est pas un **dashboard SaaS générique** : pas
 - Un seul accent, le violet nébuleuse, réservé aux repères et aux actions principales.
 - Chaque chaîne apporte sa propre couleur, tirée de son logo, en liseré et en halo très léger.
 - Les chiffres sont en JetBrains Mono, en chasse fixe ; le texte est en Inter.
-- La profondeur vient des tons et des liserés ; les lueurs sont rares et signifiantes.
+- La profondeur vient des tons et des liserés ; les lueurs vives sont rares et signifiantes, les lueurs ambiantes (halo des panneaux, atmosphère des planètes) restent très faibles.
 - Chaque bloc de données a une note sous lui et une vue Tableau à côté du Graphique.
 
 ## Colors
@@ -242,19 +242,19 @@ Sous `lg`, la barre latérale devient un tiroir avec un voile `black/55` flouté
 
 ## Elevation & Depth
 
-Le système est **tonal, avec des lueurs rares**. La profondeur vient d'abord des paliers de surface (ciel profond, coupole, orbite, orbite haute) et d'un liseré intérieur clair de 1 px en haut de chaque panneau, comme une arête qui accroche la lumière. Les ombres sont ambiantes : très larges, très décalées vers le bas et presque invisibles. Elles détachent un panneau du fond sans former de contour.
+Le système est **tonal, avec des lueurs rares et douces**. La profondeur vient d'abord des paliers de surface (ciel profond, coupole, orbite, orbite haute) et d'un liseré intérieur clair de 1 px en haut de chaque panneau, comme une arête qui accroche la lumière. Les ombres sont ambiantes : très larges, très décalées vers le bas et presque invisibles. Elles détachent un panneau du fond sans former de contour.
 
-Le verre flouté est réservé au cadre de l'application (barre latérale, en-tête, infobulles) et aux surcouches qui flottent sur le dessin de la Carte (bandeau, colonne de boutons, légende, fiche de la chaîne choisie, menu et rail des filtres), c'est-à-dire aux surfaces posées au-dessus de quelque chose qui bouge. Le contenu lui-même n'est jamais en verre : un état vide, un panneau, un tableau sont opaques.
+Le verre flouté est réservé au cadre de l'application (barre latérale, en-tête, infobulles) et aux surcouches qui flottent sur le dessin de la Carte (bandeau, colonne de boutons, légende, fiche de la chaîne choisie, menu et rail des filtres), c'est-à-dire aux surfaces posées au-dessus de quelque chose qui bouge. Le contenu lui-même n'est pas en verre : pas de flou derrière un état vide, un panneau ou un tableau. Sur les pages qui montrent le ciel étoilé (voir plus bas), les panneaux sont très légèrement translucides (crête à 90 %, coupole à 85 %) pour laisser affleurer les étoiles ; un tableau et un état vide restent opaques.
 
 ### Shadow Vocabulary
 - **Arête de coupole** (`box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 12px 32px -20px rgba(0,0,0,.9)`) : tous les panneaux, cartes de chaîne et groupes d'indicateurs.
-- **Console** (25/11/2026, choix de l'utilisateur pour la Vue d'ensemble : `shadow-console`) : arête de coupole, plus un filet violet à 5 % et un halo violet très diffus (`0 0 28px -14px rgba(139,124,255,.22)`). Panneaux, cartes de chaîne et groupes d'indicateurs de la Vue d'ensemble, légèrement translucides (crête à 90 %, coupole à 85 %) pour que le ciel étoilé affleure. **Écart assumé** avec la règle des lueurs signifiantes et avec « le contenu n'est jamais en verre » : la lueur est ici décorative, voulue pour l'ambiance d'observatoire, et reste faible. Sans flou (il serait invisible devant ce fond).
+- **Console** (`shadow-console`, 25/11/2026) : arête de coupole, plus un filet violet à 5 % et un halo violet très diffus (`0 0 28px -14px rgba(139,124,255,.22)`). Panneaux, cartes de chaîne et groupes d'indicateurs des pages qui montrent le ciel étoilé (la Vue d'ensemble pour l'instant). Sans flou : il serait invisible devant ce fond.
 - **Flottant** (`box-shadow: 0 25px 50px -12px rgba(0,0,0,.6)`) : infobulles et tiroirs.
 - **Lueur d'action** (`box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 6px 16px -8px rgba(139,124,255,.75)`) : le bouton principal uniquement.
 - **Lueur de repère** (`box-shadow: 0 0 10px rgba(139,124,255,.7)`) : la barre de l'onglet actif. (25/11/2026, audit Hallmark, règle 63 : le carré violet devant chaque titre de section est retiré. Répété sur tous les titres, il ne signalait rien ; un titre se repère par sa taille et sa graisse.)
 
 ### Named Rules
-**La règle des lueurs signifiantes.** Une lueur violette signale « c'est ici » ou « c'est l'action » : onglet actif, bouton principal, sélection sur la Carte. On n'en ajoute jamais pour décorer. Si deux éléments brillent à égalité dans un même écran, l'un des deux ne devrait pas briller.
+**La règle des deux niveaux de lueur.** Une lueur *vive* signale « c'est ici » ou « c'est l'action » : onglet actif, bouton principal, sélection sur la Carte. Une lueur *ambiante* (halo « console » des panneaux, atmosphère des avatars-planètes) fait l'ambiance d'observatoire : elle reste très faible, ne varie pas selon l'état et ne s'allume jamais au survol. Si deux éléments brillent de façon vive à égalité dans un même écran, l'un des deux ne devrait pas briller. La lueur ambiante ne s'ajoute que sur les pages du ciel étoilé, pas sur une surface isolée.
 
 ## Shapes
 
