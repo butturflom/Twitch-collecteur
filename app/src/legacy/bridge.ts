@@ -264,6 +264,15 @@ export interface HistoryDay { d: string; chatters: number; msgs: number; mins: n
 export interface HistoryRoute extends Who { n: number; raid: number }
 export interface ChannelHistory { days: HistoryDay[]; out: HistoryRoute[]; in: HistoryRoute[] }
 
+/**
+ * Fidélité du chat d'une chaîne (« Sticky-Factor »), lue dans les rollups quotidiens : par jour, les viewers actifs et ceux qui ont
+ * écrit chez une autre chaîne suivie juste après (partis). Le score sur 100 se calcule côté React : 100 × (1 − partis / actifs).
+ */
+export interface StickyDay { d: string; actives: number; leavers: number }
+/** Quartiles du score parmi les chaînes suivies assez actives sur la période (n : leur nombre) ; null tant qu'aucune chaîne ne compte. */
+export interface StickyNet { n: number; q1: number | null; med: number | null; q3: number | null }
+export interface ChannelSticky { days: StickyDay[]; actives: number; leavers: number; net: StickyNet }
+
 /** Viewers uniques sur plusieurs jours, estimés par HyperLogLog (± 2,3 %) : réunion des chaînes (net) et chaque chaîne. */
 export interface PeriodReach { from: string | null; to: string | null; days: number; net: number; chans: { c: string; n: number }[] }
 
@@ -278,6 +287,7 @@ declare global {
     networkHistory?: (days: number) => Promise<NetworkHistory | null>
     periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>
     channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
+    channelSticky?: (c: string, days: number) => Promise<ChannelSticky | null>
     showTab?: (t: TabId) => void
     openAddStreamer?: () => void
     runDiscover?: (q: string, lang: string) => void

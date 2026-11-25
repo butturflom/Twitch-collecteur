@@ -156,6 +156,8 @@
   --dome: #121217;
   --well: #0c0c10;
   --signal-green: #3ccf86;
+  --signal-amber: #e0ad4a;
+  --signal-red: #f2636f;
   --live-red: #ff4757;
   --live-ink: #ffd9dc;
   --live-wash: rgba(240, 64, 80, 0.14);
@@ -222,6 +224,8 @@
   --color-dome: var(--dome);
   --color-well: var(--well);
   --color-signal-green: var(--signal-green);
+  --color-signal-amber: var(--signal-amber);
+  --color-signal-red: var(--signal-red);
   --color-live-red: var(--live-red);
   --color-live-ink: var(--live-ink);
   --color-live-wash: var(--live-wash);

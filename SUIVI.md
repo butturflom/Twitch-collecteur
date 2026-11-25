@@ -40,7 +40,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 | Étape 6 : Docker | Fait pour le build (PR #5) | VPS non déployé. |
 | Fonctionnalité 1 : Raid Recommender | Fait | Score = passages organiques A→B × (1 + réciprocité B→A / total). |
 | Fonctionnalité 2 : Client View | Abandonnée | Il faudrait des rosters côté serveur et une authentification. |
-| Fonctionnalité 3 : Sticky-Factor | En cours | Prochain chantier, lancé le 25/11 (branche `sticky-factor`). L'alerte « fuite pendant les pubs » est impossible sans jeton du diffuseur. |
+| Fonctionnalité 3 : Sticky-Factor | Codé, fonction SQL à déployer | Branche `sticky-factor`. Score sur 100 dans Par chaîne → Historique, comparé aux quartiles des chaînes suivies : les seuils du plan (70 et 40) colorieraient tout en vert (minimum observé le 24/11 : 72). L'alerte « fuite pendant les pubs » est impossible sans jeton du diffuseur. |
 | §3 : barre latérale | Fait (PR #24) | Observatoire, Analyse et flux, Exploration, Configuration. La Carte est en tête. « Par jeu » est rangé dans Exploration, que le plan ne prévoyait pas. |
 | §4 : landing page | Non fait | Texte et visuel à valider (§5). |
 | Roadmap « Complet », §4 et §5 | Non commencé | Reporté par l'utilisateur. |
@@ -57,7 +57,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 
 ## 5. À décider
 
-1. **Sticky-Factor : définition.** Proposition : part des viewers actifs de A qui n'ont été voir aucune autre chaîne suivie sur la période. Sources : `daily_switches_rollup` (passages a→b par jour) et `daily_streamer_rollup` (agrégat quotidien par chaîne). Limite : un viewer qui part vers deux chaînes compte deux fois, donc le score est une estimation basse. Il faut une fonction SQL : vous la relancez dans le SQL Editor, ou je l'applique après votre accord.
+1. **Sticky-Factor : déployer la fonction SQL `channel_stickiness`** (dans `schema.sql`). Sans elle, la page affiche « demande la base à jour ». Vous rejouez `schema.sql` dans le SQL Editor, ou je l'applique après votre accord (ajout seul, rien n'est modifié ni supprimé). Définition retenue : part des viewers actifs qui n'ont écrit chez aucune autre chaîne suivie juste après (moins de 3 h), depuis `daily_switches_rollup` et `daily_streamer_rollup`. Un viewer parti vers deux chaînes compte deux fois : biais mesuré à 0,4 point au plus le 24/11. Couleur : vert dans le quart le plus fidèle des chaînes suivies, ambre dans le quart le moins fidèle.
 2. **Landing page (§4).** Faire maintenant, ou plus tard ? Elle demande un texte validé (celui du plan, ou un autre) et une capture à contrôler avant fusion.
 3. **Deux copies du collecteur.** `collecteur.mjs` (PC) et `collecteur/collecteur.mjs` (Docker) ont divergé, avec la même version 1.6.13 : délai de `sb()` de 60 s contre 30 s ; file de relance et `/metrics` seulement dans la copie Docker ; compteur global seulement dans la copie Docker. Proposition : une seule source avant de remettre le VPS en service.
 4. **Permissions** : `.claude/settings.json` (versionné) ne contient que les refus de lecture. Les autorisations `git push` et `gh pr create` sont dans `.claude/settings.local.json` (non versionné). À confirmer.
@@ -116,6 +116,6 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 10. Journal
 
-- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Prochain chantier lancé : Sticky-Factor.
+- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor codé (PR ouverte), fonction SQL à déployer.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
