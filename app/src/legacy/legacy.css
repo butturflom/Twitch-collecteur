@@ -111,7 +111,8 @@ body.mapmode .legacy .wrap{padding-top:16px}
 .legacy .card h3{margin:0 0 12px;font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:-.015em}
 .legacy .card h3 .trunc{flex:1;min-width:0}
 .legacy .card h3 .av.lg{margin:2px 4px 2px 2px}
-.legacy .legend .av{width:16px;height:16px;margin:0 1px 0 2px;font-size:8px}
+.legacy .legend .av{--halo:0 0 0 0 transparent;width:16px;height:16px;margin:0 1px 0 2px;font-size:8px}
+.legacy .legend .av.mono{font-size:8px}
 .legacy .card .row{padding:4px 0;border-top:1px solid var(--grid);margin:0}
 .legacy .card h3+.row,.legacy .card .lbl+.row{border-top:0}
 .legacy .card .row>span:last-child{font-family:var(--mono);font-size:12.5px;font-weight:500}
@@ -123,13 +124,19 @@ body.mapmode .legacy .wrap{padding-top:16px}
 .legacy .lbl{color:var(--mut);font-size:12px}
 .legacy .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-variant-numeric:tabular-nums;margin-top:4px}
 .legacy .trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.legacy .av{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;flex:none;vertical-align:middle;object-fit:cover;
-  background:var(--card3);box-shadow:0 0 0 1.5px var(--bg),0 0 0 3px var(--c,var(--line2));margin:0 4px 0 4px}
-.legacy .av.mono{background:color-mix(in srgb,var(--c,var(--c-555555)) 28%,var(--card2));color:var(--c-ffffff);font:600 10px/1 var(--sans)}
-.legacy .av.md{width:30px;height:30px;font-size:13px}
-.legacy .av.xl{width:56px;height:56px;font-size:22px;box-shadow:0 0 0 2.5px var(--bg),0 0 0 5px var(--c,var(--line2)),0 10px 28px -8px var(--c,transparent)}
-.legacy .av.lg{width:40px;height:40px;font-size:16px;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--c,var(--line2)),0 8px 20px -8px var(--c,transparent)}
-.legacy .chip .av{width:18px;height:18px;margin-left:-8px;font-size:9px}
+/* Pastille-planète (même sens que ChannelAvatar) : liseré de la couleur de la chaîne, atmosphère (--halo, très douce) et relief
+   (--relief : lumière en haut à gauche, ombre en bas à droite). Dès 20 px : relief + halo ; en dessous : relief seul. */
+.legacy .av{--hc:color-mix(in srgb,var(--c,var(--line2)) 40%,transparent);--halo:0 0 11px 1px var(--hc);
+  --relief:radial-gradient(circle at 32% 26%,rgba(255,255,255,.16),transparent 46%),radial-gradient(circle at 72% 78%,transparent 42%,rgba(5,4,20,.42) 100%);
+  position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;flex:none;vertical-align:middle;
+  background:var(--card3);box-shadow:0 0 0 1.5px var(--bg),0 0 0 3px var(--c,var(--line2)),var(--halo);margin:0 4px 0 4px}
+.legacy .av .avimg{display:block;flex:none;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.legacy .av:not(.mono)::after{content:'';position:absolute;inset:0;border-radius:50%;background:var(--relief);pointer-events:none}
+.legacy .av.mono{background:var(--relief),color-mix(in srgb,var(--c,var(--c-555555)) 30%,var(--dome-crest,var(--card2)));color:var(--c-ffffff);font:600 10px/1 var(--sans)}
+.legacy .av.md{--halo:0 0 17px 1px var(--hc);width:30px;height:30px;font-size:13px}
+.legacy .av.xl{--halo:0 0 31px 2px var(--hc);width:56px;height:56px;font-size:22px;box-shadow:0 0 0 2.5px var(--bg),0 0 0 5px var(--c,var(--line2)),var(--halo),0 10px 28px -8px var(--c,transparent)}
+.legacy .av.lg{--halo:0 0 22px 2px var(--hc);width:40px;height:40px;font-size:16px;box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--c,var(--line2)),var(--halo),0 8px 20px -8px var(--c,transparent)}
+.legacy .chip .av{--halo:0 0 0 0 transparent;width:18px;height:18px;margin-left:-8px;font-size:9px}
 .legacy td.l .av{margin-right:8px}
 .legacy .mxh{display:flex;flex-direction:column;align-items:center;gap:8px}
 .legacy .mxh span,.legacy .mxr{text-transform:none;letter-spacing:0;font:500 12.5px var(--sans);color:var(--txt)}
@@ -147,7 +154,8 @@ body.mapmode .legacy .wrap{padding-top:16px}
 .legacy .avstack{display:inline-flex;align-items:center;vertical-align:middle;padding-left:8px}
 .legacy .avstack>span,.legacy .avstack>.more{margin-left:-8px;display:inline-flex}
 .legacy td.l .avstack .av{margin:0}
-.legacy .av.more{--c:var(--line2);background:var(--card3);color:var(--mut);font:600 9px/1 var(--sans);width:20px;height:20px;margin:0 0 0 -8px}
+.legacy .av.more::after{content:none}
+.legacy .av.more{--c:var(--line2);--halo:0 0 0 0 transparent;background:var(--card3);color:var(--mut);font:600 9px/1 var(--sans);width:20px;height:20px;margin:0 0 0 -8px}
 .legacy .avn{display:inline-block;min-width:22px;margin-left:12px;font-family:var(--mono);font-size:12.5px;text-align:right}
 .legacy .avlist{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:12.5px}
 .legacy .avlist span{display:inline-flex;align-items:center;gap:4px}

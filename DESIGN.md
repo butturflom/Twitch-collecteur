@@ -295,7 +295,7 @@ Le choix de la période (Tout, Aujourd'hui, 7 jours, 30 jours) et la bascule Gra
 `.to2-sky` (`index.css`), monté par `App.tsx` pour les onglets de `SKY_TABS` (toutes les pages sauf la Carte, qui garde son canvas). Des étoiles en dégradés radiaux sur deux mailles de tailles différentes, et deux lueurs très diffuses (violet de la palette, bleu de signal). Statique, sans flou ni animation. Les étoiles restent à peine visibles : c'est voulu.
 
 ### Avatar-planète (25/11/2026)
-`ChannelAvatar`, dès 20 px : photo ou initiale cerclée de la couleur de la chaîne, avec une atmosphère (halo de cette couleur) et un voile de relief (lumière en haut à gauche, ombre en bas à droite, comme les planètes de la Carte). Le voile est léger : la photo doit rester reconnaissable. Sous 20 px (légendes, filtres) : pastille sans relief.
+`ChannelAvatar`, dès 20 px : photo ou initiale cerclée de la couleur de la chaîne, avec une atmosphère (halo de cette couleur) et un voile de relief (lumière en haut à gauche, ombre en bas à droite, comme les planètes de la Carte). Le voile est léger : la photo doit rester reconnaissable. Sous 20 px (légendes, filtres) : même pastille avec un relief léger, sans halo (chantier A, 25/11).
 
 ### Constellation des recoupements (25/11/2026)
 En tête du bloc « Recoupements » (`recoup.tsx`, à partir de 768 px) : les chaînes des paires les plus proches (7 au plus) posées sur une orbite en pointillés, voisines reliées par un trait d'autant plus épais et lumineux que leur part commune est grande. C'est un résumé des chiffres de la colonne « Paires les plus proches », décoratif pour la lecture et masqué aux lecteurs d'écran.

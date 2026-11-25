@@ -54,14 +54,16 @@ const colorOf=c=>{const i=shown().indexOf(c); // rang dans la liste affichée (f
 cfg.avatars=cfg.avatars||{};
 const setAvatar=(c,u)=>{if(c&&u&&/^https:\/\//.test(u)&&cfg.avatars[c]!==u){cfg.avatars[c]=u;saveCfg();return true}return false};
 const avUrl=c=>(info[c]&&info[c].img)||cfg.avatars[c]||'';
+// Planète : une pastille (classe « av », relief et halo dans legacy.css) qui porte l'image « avimg » ou l'initiale.
+// Le relief est un voile posé sur la photo (un <img> n'a pas de pseudo-élément) : d'où la pastille autour de l'image.
 function av(c,size=''){const u=avUrl(c),st=`--c:${colorOf(c)}`,cl='av'+(size?' '+size:'');
-  return u?`<img class="${cl}" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-c="${esc(c)}" style="${st}">`
+  return u?`<span class="${cl}" style="${st}"><img class="avimg" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-c="${esc(c)}"></span>`
     :`<span class="${cl} mono" style="${st}">${esc((c||'?')[0].toUpperCase())}</span>`}
-// photo introuvable (lien périmé) : on l'oublie et on remet l'initiale
+// photo introuvable (lien périmé) : on l'oublie et la pastille reprend l'initiale
 document.addEventListener('error',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('avsvg')){t.remove();return}
-  if(!t||t.tagName!=='IMG'||!t.classList.contains('av'))return;const c=t.dataset.c;
+  if(!t||t.tagName!=='IMG'||!t.classList.contains('avimg'))return;const c=t.dataset.c,w=t.parentElement;
   if(c&&cfg.avatars[c]===t.getAttribute('src')){delete cfg.avatars[c];saveCfg()}
-  const s=document.createElement('span');s.className=t.className+' mono';s.style.cssText=t.style.cssText;s.textContent=(c||'?')[0].toUpperCase();t.replaceWith(s)},true);
+  if(w){w.classList.add('mono');w.textContent=(c||'?')[0].toUpperCase()}},true);
 const avTried=new Set();
 async function loadAvatars(extra=[]){
   if(!apiReady())return;const need=[...new Set(cfg.chans.concat(extra))].filter(c=>!cfg.avatars[c]&&!avTried.has(c));if(!need.length)return;need.forEach(c=>avTried.add(c));
