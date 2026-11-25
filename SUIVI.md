@@ -9,6 +9,7 @@
 - **Rollups** : les crons `daily-overlap-rollup` (03 h 30 UTC) et `daily-hll` (03 h 40 UTC) sont actifs ; leurs derniers passages ont réussi le 25/11. Journées agrégées : 23/11 et 24/11 (1 915 lignes de chevauchement ; esquisses HyperLogLog pour le 24/11 seul).
 - **Historique 30 et 90 jours, viewers uniques, historique du réseau** : en production (PR #11, #12, #13). Les trois fonctions répondent sur la base (testé le 25/11). Sur deux journées, les courbes restent courtes : voir §6.
 - **Raid Recommender** : fait, section « Recommandations de raid » dans Par chaîne.
+- **Barre latérale** : quatre groupes selon le plan (Observatoire, Analyse et flux, Exploration, Configuration). PR #24 ouverte, à valider.
 - **Export PDF et CSV, Net Reach des rosters, onglet Flux** : faits (PR #10, #8, #7).
 - **Docker** : build réparé (PR #5). **VPS** : mis de côté par l'utilisateur.
 - **Carte** : critique n°7 à 28/40, aucune modification retenue. **Vue d'ensemble** : critique n°7 à 27/40, seul le bug Phase 3 traité (PR #22).
@@ -22,7 +23,8 @@
 | #20 | `carte-noms-masques` | Carte : noms masqués dits dans le bandeau | ouverte : à fusionner en premier |
 | #21 | `hallmark-redesign` | Retrait du carré violet devant les titres de section | ouverte : après #20 (elle contient son commit) |
 | #22 | `vue-ensemble-critique-7` | Phase 3 : noms de chaîne et croissance moyenne corrigés | ouverte, indépendante |
-| — | `suivi-2026-11-25` | Ce fichier, règles de lecture, permissions | ouverte avec ce fichier |
+| #23 | `suivi-2026-11-25` | Ce fichier, règles de lecture, permissions | ouverte (cette PR) |
+| #24 | `sidebar-plan-3` | Barre latérale : groupes selon le plan V2 (§3) | ouverte : à fusionner si l'ordre convient, sinon fermer |
 
 Les fusions sont décidées par l'utilisateur. Claude ne fusionne pas.
 
@@ -39,7 +41,7 @@ Les fusions sont décidées par l'utilisateur. Claude ne fusionne pas.
 | Fonctionnalité 1 : Raid Recommender | Fait | Score = passages organiques A→B × (1 + réciprocité B→A / total). |
 | Fonctionnalité 2 : Client View | Abandonnée | Il faudrait des rosters côté serveur et une authentification. |
 | Fonctionnalité 3 : Sticky-Factor | Non fait | Définition à valider (§5). L'alerte « fuite pendant les pubs » est impossible sans jeton du diffuseur. |
-| §3 : barre latérale | Groupes en place | Analyse, Audience, Configuration. Écart : la Carte est dans « Audience », pas en tête. Alignement proposé (§5). |
+| §3 : barre latérale | Aligné, PR #24 | Observatoire, Analyse et flux, Exploration, Configuration. La Carte est en tête. « Par jeu » est rangé dans Exploration, que le plan ne prévoyait pas. |
 | §4 : landing page | Non fait | Texte et visuel à valider (§5). |
 | Roadmap « Complet », §4 et §5 | Non commencé | Reporté par l'utilisateur. |
 
@@ -57,7 +59,7 @@ Les fusions sont décidées par l'utilisateur. Claude ne fusionne pas.
 
 1. **Sticky-Factor : définition.** Proposition : part des viewers actifs de A qui n'ont été voir aucune autre chaîne suivie sur la période. Sources : `daily_switches_rollup` (passages a→b par jour) et `daily_streamer_rollup` (agrégat quotidien par chaîne). Limite : un viewer qui part vers deux chaînes compte deux fois, donc le score est une estimation basse. Il faut une fonction SQL : vous la relancez dans le SQL Editor, ou je l'applique après votre accord.
 2. **Landing page (§4).** Faire maintenant, ou plus tard ? Elle demande un texte validé (celui du plan, ou un autre) et une capture à contrôler avant fusion.
-3. **Carte en tête de la barre latérale (§3).** Oui : on aligne l'ordre sur le plan (branche `sidebar-plan-3`). Non : on garde l'ordre actuel.
+3. **Barre latérale (§3).** PR #24 applique l'ordre du plan. À fusionner si elle convient ; sinon, la fermer et garder l'ordre actuel.
 4. **Deux copies du collecteur.** `collecteur.mjs` (PC) et `collecteur/collecteur.mjs` (Docker) ont divergé, avec la même version 1.6.13 : délai de `sb()` de 60 s contre 30 s ; file de relance et `/metrics` seulement dans la copie Docker ; compteur global seulement dans la copie Docker. Proposition : une seule source avant de remettre le VPS en service.
 5. **Fusion des PR** : #20, puis #21, puis #22 (ou #22 seule, si la correction Phase 3 doit partir tout de suite).
 6. **Permissions** : `.claude/settings.json` (versionné) ne contient que les refus de lecture. Les autorisations `git push` et `gh pr create` sont dans `.claude/settings.local.json` (non versionné). À confirmer.
@@ -108,14 +110,14 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 9. Méthode de vérification
 
-- **Capture d'un rendu** (validée le 25/11, après `npm run build` dans `app/`) :
-  `chrome.exe --headless=new --disable-gpu --hide-scrollbars --window-size=1440,1000 --virtual-time-budget=6000 --screenshot=<png> "file:///C:/Users/User/Documents/twitch-collecteur/twitch-overlap.html?demo"`
-  Puis lire le PNG avec l'outil Read.
-- Limites : pas de données réelles (la configuration vit dans le navigateur de l'utilisateur), et le mode démo ne remplit pas tous les blocs.
-- Le navigateur intégré ne déroule pas les animations (`requestAnimationFrame`) : préférer la capture Chrome.
+- **Mise en page** (testée le 25/11, après `npm run build` dans `app/`) : capture du fichier construit, sans données.
+  `chrome.exe --headless=new --disable-gpu --hide-scrollbars --window-size=1440,1000 --virtual-time-budget=6000 --screenshot=<png> "file:///C:/Users/User/Documents/twitch-collecteur/twitch-overlap.html"`
+  Puis lire le PNG avec l'outil Read. Sans base, la page affiche « Les données n'arrivent pas » après environ 10 s : c'est normal.
+- **Données fictives** : `?demo` n'existe que dans le serveur de développement (`import.meta.env.DEV`, voir `app/src/main.tsx`). Lancer `npm run dev` dans `app/`, puis capturer `http://localhost:5173/?demo` (ou `?demo=<onglet>`). Non vérifié le 25/11.
+- Limites : pas de données réelles (la configuration vit dans le navigateur de l'utilisateur). Le navigateur intégré ne déroule pas les animations (`requestAnimationFrame`) : préférer la capture Chrome.
 
 ## 10. Journal
 
-- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Ouvertes : #20, #21, #22. Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. Cette PR de suivi.
+- **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Ouvertes : #20, #21, #22. Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #23 (ce suivi) et PR #24 (barre latérale) ouvertes.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
