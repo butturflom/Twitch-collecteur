@@ -1,5 +1,5 @@
-// Carte des migrations, jour par jour : prototype C0 du chantier C (IDEES.md). Montée seulement par la page de démo
-// `?demo=flows-map` (src/dev/flows-map-demo.tsx) ; aucun code de production ne l'importe.
+// Carte des migrations, jour par jour (chantier C, IDEES.md). Née prototype C0 (page de démo `?demo=flows-map`,
+// src/dev/flows-map-demo.tsx), montée en production par l'onglet Flux (flows.tsx) à partir de `byDay` (C1, SQL flows_by_day).
 //
 // Les chaînes sont posées en colonne, dans l'ordre du Sankey (total des passages, arrivées + départs, décroissant), pour
 // qu'on lise les deux côte à côte. Pour la journée choisie, un arc relie A à B : à droite si B est placé plus bas que A,
@@ -12,12 +12,29 @@ import { ChannelAvatar } from "@/components/channel-avatar"
 import { useWidth } from "@/components/charts/frame"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { Who } from "@/legacy/bridge"
+import type { FlowsData, Who } from "@/legacy/bridge"
 
 /** Un passage de A vers B pendant une journée. `organic` : combien de ces viewers sont venus sans raid (null si on ne sait pas). */
 export interface DayRoute { a: Who; b: Who; n: number; organic: number | null }
 /** Une journée agrégée (`d` au format AAAA-MM-JJ, fuseau Europe/Paris). */
 export interface FlowDay { d: string; routes: DayRoute[] }
+
+/**
+ * Passe des lignes `byDay` (une par jour et par paire) aux journées de la carte, triées par date.
+ * `n` = viewers distincts de la paire ce jour-là ; la part organique du SQL (organic / passages) est reportée sur ces viewers.
+ */
+export function daysFromByDay(rows: NonNullable<FlowsData["byDay"]>): FlowDay[] {
+  const by = new Map<string, DayRoute[]>()
+  for (const r of rows) {
+    if (!(r.viewers > 0) || r.a.c === r.b.c) continue
+    const org = r.passages > 0 ? Math.min(r.viewers, Math.round((r.viewers * r.organic) / r.passages)) : null
+    const list = by.get(r.d)
+    const route = { a: r.a, b: r.b, n: r.viewers, organic: org }
+    if (list) list.push(route)
+    else by.set(r.d, [route])
+  }
+  return [...by.entries()].sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)).map(([d, routes]) => ({ d, routes }))
+}
 
 /** Ordre des chaînes : même règle que le Sankey (somme des passages entrants et sortants, du plus grand au plus petit). */
 export function mapOrder(days: FlowDay[]): Who[] {
@@ -41,6 +58,7 @@ const STEP_MS = 1400 // lecture automatique : une journée toutes les 1,4 s
 
 const dayOf = (d: string) => new Date(d + "T12:00:00")
 const longDay = (d: string) => dayOf(d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+const shortDay = (d: string) => dayOf(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
 const weekday = (d: string) => dayOf(d).toLocaleDateString("fr-FR", { weekday: "short" })
 const dayNum = (d: string) => String(dayOf(d).getDate())
 const pct = (part: number, n: number) => Math.round((100 * part) / Math.max(1, n))
@@ -57,8 +75,11 @@ function totals(day: FlowDay) {
   return { n, org, raid, unk }
 }
 
-export function FlowsMap({ days, order, maxArcs = 12 }: { days: FlowDay[]; order: Who[]; maxArcs?: number }) {
+/** `onlyActive` : ne pose que les chaînes qui ont un arc ce jour-là (l'ordre reste celui de `order`) ; sinon, une colonne trop haute quand
+ *  beaucoup de chaînes apparaissent sur la fenêtre. */
+export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { days: FlowDay[]; order: Who[]; maxArcs?: number; onlyActive?: boolean }) {
   const last = days.length - 1
+  const dense = days.length > 16
   const [idx, setIdx] = useState(last)
   const [playing, setPlaying] = useState(false)
   const [box, w] = useWidth()
@@ -102,8 +123,10 @@ export function FlowsMap({ days, order, maxArcs = 12 }: { days: FlowDay[]; order
 
   if (!day) return null
 
-  const N = order.length
-  const pos = new Map(order.map((o, i) => [o.c, i]))
+  const active = new Set(shown.flatMap((r) => [r.a.c, r.b.c]))
+  const rows = onlyActive ? order.filter((o) => active.has(o.c)) : order
+  const N = rows.length
+  const pos = new Map(rows.map((o, i) => [o.c, i]))
   const yOf = (i: number) => PAD_T + i * ROW
   const H = PAD_T + Math.max(0, N - 1) * ROW + PAD_B
   const cx = w / 2
@@ -111,7 +134,7 @@ export function FlowsMap({ days, order, maxArcs = 12 }: { days: FlowDay[]; order
   const apexMax = 0.75 * base(Math.max(1, N - 1))
   const k = Math.min(1, Math.max(0.35, (w / 2 - R - LABEL_W - 10) / apexMax))
 
-  const t = dayTotals[idx]
+  const t = dayTotals[Math.min(idx, last)]
   const top = routes[0]
   const known = t.n - t.unk
 
@@ -193,7 +216,7 @@ export function FlowsMap({ days, order, maxArcs = 12 }: { days: FlowDay[]; order
                 )
               })}
             </svg>
-            {order.map((o, i) => (
+            {rows.map((o, i) => (
               <div key={o.c} className="absolute flex flex-col items-center" style={{ left: cx, top: yOf(i) - PLANET / 2, transform: "translateX(-50%)" }}>
                 <ChannelAvatar {...o} size={PLANET} />
                 <span className="mt-1.5 rounded-full bg-background/70 px-1.5 text-[11.5px] leading-4 whitespace-nowrap text-muted-foreground">{o.c}</span>
@@ -206,10 +229,10 @@ export function FlowsMap({ days, order, maxArcs = 12 }: { days: FlowDay[]; order
       <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
         {t.n ? (
           <>
-            <span className="font-mono tabular-nums text-foreground">{fmt(t.n)}</span> passages entre chaînes suivies ce jour-là
+            <span className="font-mono tabular-nums text-foreground">{fmt(t.n)}</span> viewers sur ces trajets entre chaînes suivies ce jour-là
             {known > 0 && <>, dont <span className="font-mono tabular-nums text-foreground">{pct(t.org, known)}&nbsp;%</span> organiques{t.unk ? " (parmi ceux dont le type est connu)" : ""}</>}
             {top && <>. Le plus gros : {top.a.c} → {top.b.c} (<span className="font-mono tabular-nums text-foreground">{fmt(top.n)}</span>)</>}.
-            {hidden > 0 && <> {hidden} passages plus petits ne sont pas dessinés.</>}
+            {hidden > 0 && <> {hidden} trajets plus petits ne sont pas dessinés.</>}
           </>
         ) : (
           "Aucun passage entre chaînes suivies ce jour-là."
@@ -228,27 +251,29 @@ export function FlowsMap({ days, order, maxArcs = 12 }: { days: FlowDay[]; order
         onKeyDown={onKey}
         onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); fromPointer(e) }}
         onPointerMove={(e) => { if (e.buttons & 1) fromPointer(e) }}
-        className="mt-4 grid cursor-pointer touch-none gap-1 rounded-[10px] outline-none select-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className={cn("mt-4 grid cursor-pointer touch-none rounded-[10px] outline-none select-none focus-visible:ring-[3px] focus-visible:ring-ring/50", dense ? "gap-px" : "gap-1")}
         style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
       >
         {days.map((dd, i) => {
           const tt = dayTotals[i]
           const h = (v: number) => `${(v / maxT) * 100}%`
           return (
-            <div key={dd.d} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-[8px] border px-0.5 pt-1.5 pb-1 transition-colors", i === idx ? "border-primary/60 bg-white/[0.06]" : "border-transparent hover:bg-white/[0.03]")}>
-              <span className="font-mono text-[10.5px] text-foreground tabular-nums">{fmt(tt.n)}</span>
+            <div key={dd.d} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-[8px] border pt-1.5 pb-1 transition-colors", dense ? "px-0" : "px-0.5", i === idx ? "border-primary/60 bg-white/[0.06]" : "border-transparent hover:bg-white/[0.03]")}>
+              {!dense && <span className="font-mono text-[10.5px] text-foreground tabular-nums">{fmt(tt.n)}</span>}
               <span className="flex h-12 w-full max-w-5 flex-col-reverse overflow-hidden rounded-[3px] bg-white/[0.04]">
                 <span className="bg-primary" style={{ height: h(tt.org) }} />
                 <span className="bg-chart-2" style={{ height: h(tt.raid) }} />
                 <span className="bg-white/25" style={{ height: h(tt.unk) }} />
               </span>
-              <span className="text-center text-[10.5px] leading-tight text-dusk">{weekday(dd.d)}<br /><span className="text-muted-foreground">{dayNum(dd.d)}</span></span>
+              {!dense && <span className="text-center text-[10.5px] leading-tight text-dusk">{weekday(dd.d)}<br /><span className="text-muted-foreground">{dayNum(dd.d)}</span></span>}
             </div>
           )
         })}
       </div>
+      {/* Au-delà de 16 journées, les colonnes sont trop étroites pour leurs chiffres : on garde les deux bornes et le jour choisi (en tête). */}
+      {dense && <p className="mt-1 flex justify-between px-0.5 text-[10.5px] text-dusk"><span>{shortDay(days[0].d)}</span><span>{shortDay(days[last].d)}</span></p>}
       <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-dusk">
-        <span>Passages par jour :</span>
+        <span>Viewers par jour :</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-[2px] bg-primary" />organiques</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-[2px] bg-chart-2" />raids</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-[2px] bg-white/25" />type inconnu</span>

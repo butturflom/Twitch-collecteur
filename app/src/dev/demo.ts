@@ -271,6 +271,27 @@ export function flowsDemo(): FlowsData {
   }
 }
 
+// Passages par jour et par paire (format de FlowsData.byDay, fictifs) : les n derniers jours, les paires de flowsDemo avec un poids
+// qui varie d'un jour à l'autre ; la paire « raid » (Etoiles > Xari) porte surtout des raids, l'une des autres un peu.
+function byDayDemo(nDays: number): NonNullable<FlowsData["byDay"]> {
+  const P = flowsDemo()
+  const raid = new Set(P.flowsRaid.map((f) => f.a.c + ">" + f.b.c))
+  const out: NonNullable<FlowsData["byDay"]> = []
+  for (let k = nDays - 1; k >= 0; k--) {
+    const dt = new Date(Date.now() - k * 86400000)
+    const d = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
+    P.flows.forEach((f, i) => {
+      const w = 0.04 + 0.06 * (1 + Math.sin(k * 1.7 + i * 2.3)) // 4 % à 16 % du total de la paire
+      const viewers = Math.round(f.n * w)
+      if (viewers < 3) return
+      const passages = Math.round(viewers * 1.35)
+      const r = raid.has(f.a.c + ">" + f.b.c) ? Math.round(passages * 0.85) : i === 2 ? Math.round(passages * 0.12) : 0
+      out.push({ d, a: f.a, b: f.b, viewers, passages, organic: passages - r, raid: r })
+    })
+  }
+  return out
+}
+
 // ?demo=map : la Carte a besoin de vraies présences pour que son moteur calcule la disposition. On remplit la base locale
 // EN MÉMOIRE (rien n'est enregistré) : 12 chaînes, 3 000 viewers fictifs répartis en 3 communautés qui se recoupent un peu.
 // ?demo=map&dense : beaucoup de chevauchements entre groupes, pour qu'une chaîne ait plus de 4 voisines (fiche : « Voir les N autres »)
@@ -392,7 +413,13 @@ export function installDemo() {
     }
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
-    window.renderFlows = () => window.dispatchEvent(new CustomEvent("legacy:flows", { detail: flowsDemo() }))
+    // &byday=non : base pas à jour (pas de byDay, donc pas de carte) ; &byday=14 : 14 journées (3 par défaut)
+    window.renderFlows = () => {
+      const q = new URLSearchParams(location.search).get("byday")
+      const d = flowsDemo()
+      if (q !== "non") d.byDay = byDayDemo(Math.max(1, Math.min(60, Number(q) || 3)))
+      window.dispatchEvent(new CustomEvent("legacy:flows", { detail: d }))
+    }
     // &histo=non : base pas à jour ; &histo=1 : une seule journée agrégée
     const histo = () => new URLSearchParams(location.search).get("histo")
     window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
