@@ -35,6 +35,7 @@
 | #36 | `carte-filtre-jeu` | Carte : filtre par jeu principal | fusionnée le 25/11 |
 | #37 | `regle-build-auto` | CLAUDE.md : reconstruction automatique du tableau de bord | fusionnée le 25/11 |
 | #38 | `docs-maj-25-11` | Cette mise à jour de la documentation | fusionnée le 25/11 (après #37) |
+| #39 | `carte-menu-lecture-protegee` | Menu de la Carte, classements, lecture protégée par code, effacement, CONFORMITE.md | fusionnée le 25/11 (§15) |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -210,7 +211,7 @@ Les conseils du §12 étaient écrits pour les agences seules : c'était incompl
 
 Après toute modification de `app/src`, Claude lance `npm run build` dans `app/` (règle de `CLAUDE.md`, PR #37). Un hook git local (`.git/hooks/post-merge`, non versionné) le fait aussi après un `git pull` qui change `app/`. À recréer si le dépôt est cloné ailleurs.
 
-## 15. Chantiers du 25/11 (après-midi), non commités
+## 15. Chantiers du 25/11 (après-midi), fusionnés (PR #39)
 
 - **Menu de la Carte** : la colonne de filtres est remplacée par un menu façon jeu vidéo (`app/src/components/map/menu.tsx`), ouvert par le bouton « Menu » (touche M), premier bouton de la colonne de droite (pause, globe, zoom, aide) ; le panneau s'ouvre à gauche de cette colonne, l'aide et le menu ne s'ouvrent pas ensemble, et le bouton reste là quand les filtres vident la carte. La carte garde toute sa largeur. Emplacement choisi par l'utilisateur le 25/11 (après un premier essai en haut à gauche). Rubriques : Filtres, Vue (modes, chaînes cochées, groupes), Aller à (recherche), Journal, Outils. Les filtres actifs restent en pastilles en haut à gauche de la carte, chacune se retire d'un clic. Nouveau filtre « Audience minimale » (10+, 50+, 200+, seulement les seuils qui laissent 3 chaînes ou plus) ; effectifs par langue comptés sur les chaînes actives de la période ; action `reset`. Démo : `?demo=map&menu=filtres|vue|aller|journal|outils` (dev seulement).
 - **Vue d'ensemble** : Phase 3 sortie du repli, rebaptisée « Classements · audience et communautés » (deux onglets, 10 lignes visibles), placée après la Participation ; barre « Aller à » en tête de page.
