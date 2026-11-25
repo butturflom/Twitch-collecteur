@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils"
 import type { ChannelSticky, StickyNet } from "@/legacy/bridge"
 
 /** Viewers actifs sur la période en dessous desquels le score ne dit rien : une poignée de personnes suffit à le faire bouger. */
+export const STICKY_FLOOR = 30
+/** Au-dessus, le score est solide et on le compare aux chaînes suivies ; entre les deux, il est donné comme fragile, sans comparaison. */
 export const STICKY_MIN = 200
 /** Nombre minimal de chaînes suivies pour se comparer à elles. */
 export const NET_MIN = 5
@@ -63,10 +65,12 @@ export function Sticky({ ch, days }: { ch: string; days: 30 | 90 }) {
 
   const { r } = st
   const score = stickyScore(r.leavers, r.actives)
-  if (score == null || r.actives < STICKY_MIN) {
-    return <p className={note}>Fidélité du chat : pas assez de viewers actifs agrégés pour la mesurer ({fmt(r.actives)} sur la période, il en faut au moins {fmt(STICKY_MIN)}).</p>
+  if (score == null || r.actives < STICKY_FLOOR) {
+    return <p className={note}>Fidélité du chat : pas assez de viewers actifs agrégés pour la mesurer ({fmt(r.actives)} sur la période, il en faut au moins {fmt(STICKY_FLOOR)}).</p>
   }
-  const tier = stickyTier(score, r.net)
+  // petite chaîne : le score existe mais bouge au moindre départ, et le réseau suivi est fait de chaînes plus grosses : pas de comparaison
+  const fragile = r.actives < STICKY_MIN
+  const tier = fragile ? null : stickyTier(score, r.net)
   const trend = r.days.filter((d) => d.actives >= DAY_MIN).map((d) => stickyScore(d.leavers, d.actives) ?? 0)
 
   return (
@@ -84,9 +88,11 @@ export function Sticky({ ch, days }: { ch: string; days: 30 | 90 }) {
         />
       </StatCardGroup>
       <p className="mt-2 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk">
-        {tier ? TIER_TEXT[tier] : "Pas assez de chaînes suivies pour se comparer."}
+        {fragile
+          ? `Estimation fragile : ${fmt(r.actives)} viewers actifs sur la période, moins de ${fmt(STICKY_MIN)}. Quelques départs font bouger le score ; la comparaison aux autres chaînes suivies viendra avec plus de viewers.`
+          : tier ? TIER_TEXT[tier] : "Pas assez de chaînes suivies pour se comparer."}
         {tier && r.net.med != null ? ` Médiane des chaînes suivies : ${fmt(Math.round(r.net.med))}.` : ""}
-        {" "}Estimation : un viewer parti vers deux chaînes compte deux fois.
+        {" "}{fragile ? "" : "Estimation : un viewer parti vers deux chaînes compte deux fois."}
       </p>
     </div>
   )

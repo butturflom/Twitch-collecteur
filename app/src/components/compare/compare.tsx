@@ -3,7 +3,7 @@
 // (± 2,3 %) : une même personne n'est comptée qu'une fois par chaîne, et une fois pour le groupe.
 import { useEffect, useState } from "react"
 import { ChannelAvatar } from "@/components/channel-avatar"
-import { STICKY_MIN, stickyScore } from "@/components/channel/sticky"
+import { STICKY_FLOOR, stickyScore } from "@/components/channel/sticky"
 import { DataTable, Empty, Section, panel, type Col } from "@/components/overview/parts"
 import { Kpis } from "@/components/shared/blocks"
 import { Segmented } from "@/components/shared/segmented"
@@ -43,7 +43,7 @@ async function load(sel: string[], days: number): Promise<Result | null> {
       peak: Math.max(0, ...h.days.map((d) => d.peak)),
       msgs: h.days.reduce((s, d) => s + d.msgs, 0),
       uniq: nOf(c, reach),
-      sticky: st && st.actives >= STICKY_MIN ? stickyScore(st.leavers, st.actives) : null,
+      sticky: st && st.actives >= STICKY_FLOOR ? stickyScore(st.leavers, st.actives) : null,
     }
   })
   const pairs = pairIdx.flatMap(([a, b], k): Pair[] => {
@@ -128,7 +128,7 @@ export function Compare({ chans }: { chans: RosterChannel[] }) {
       title="Comparer des chaînes"
       className="mt-9"
       action={<Segmented value={days} onChange={setDays} label="Durée de la comparaison" options={[[30, "30 jours"], [90, "90 jours"]]} />}
-      note="Journées déjà agrégées (la veille et avant, pas aujourd'hui). La meilleure valeur de chaque ligne est en gras. Une même personne n'est comptée qu'une fois par chaîne."
+      note="Journées déjà agrégées (la veille et avant, pas aujourd'hui). La meilleure valeur de chaque ligne est en gras. La fidélité d'une chaîne de moins de 200 viewers actifs est fragile. Une même personne n'est comptée qu'une fois par chaîne."
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {sel.map((c) => (
