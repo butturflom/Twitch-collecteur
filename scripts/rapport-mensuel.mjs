@@ -73,14 +73,14 @@ const lignes = det.map(({ c, h, s }) => {
   const moy = a => (a.length ? a.reduce((x, d) => x + d.avg, 0) / a.length : 0);
   const msgs = a => a.reduce((x, d) => x + d.msgs, 0);
   const actifs = s?.actives || 0;
-  const score = actifs >= 30 ? 100 * (1 - (s.leavers || 0) / actifs) : null;
+  const score = actifs >= 200 ? 100 * (1 - (s.leavers || 0) / actifs) : null;
   const q = s?.net && s.net.n >= 4 ? s.net : null;
   const lecture = score == null ? '' : !q ? '' : score >= q.q3 ? 'quart haut' : score <= q.q1 ? 'quart bas' : 'milieu';
   return {
     c, uniques: nParChaine.get(c) ?? 0, pic: Math.max(0, ...cur.map(d => d.peak || 0)),
     avg: moy(enLive(cur)), avgPrev: moy(enLive(prev)), msgs: msgs(cur), msgsPrev: msgs(prev),
     heures: cur.reduce((x, d) => x + (d.mins || 0), 0) / 60, nCur: cur.length, nPrev: prev.length,
-    score, fragile: actifs < 200, lecture, out: h.out || [],
+    score, lecture, out: h.out || [],
   };
 }).sort((a, b) => b.uniques - a.uniques);
 
@@ -107,7 +107,7 @@ const est = '≈ ';
 const kpi = (l, v, h = '') => `<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div>${h ? `<div class="h">${esc(h)}</div>` : ''}</div>`;
 const maxU = Math.max(1, ...lignes.map(l => l.uniques));
 const court = joursCouverts < 7;
-const lectureScore = l => l.score == null ? '—' : `${Math.round(l.score)}${l.fragile ? '*' : ''}${l.lecture ? ` · ${l.lecture}` : ''}`;
+const lectureScore = l => l.score == null ? '—' : `${Math.round(l.score)}${l.lecture ? ` · ${l.lecture}` : ''}`;
 
 const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ${esc(titre)}</title><style>
 @page { size: A4; margin: 0; }
@@ -160,7 +160,7 @@ ${lignes.map(l => {
   return `<tr><td class="name">${esc(l.c)}</td><td><span class="bar" style="width:${Math.round(l.uniques / maxU * 14)}mm"></span>${est}${num(l.uniques)}</td><td>${num(l.avg)}</td><td>${evol(l.avg, l.avgPrev, okPrev)}</td><td>${num(l.pic)}</td><td>${num(l.msgs)}</td><td>${evol(l.msgs, l.msgsPrev, okPrev)}</td><td>${num(l.heures)}</td><td>${esc(lectureScore(l))}</td></tr>`;
 }).join('')}
 </tbody></table>
-<p class="note"><b>Viewers moy.</b> : moyenne des viewers moyens des jours où la chaîne était en live. <b>Évol.</b> : comparaison avec les ${JOURS} jours d'avant, affichée seulement si cette période précédente est assez couverte. <b>Fidélité</b> : score sur 100 = part des viewers actifs qui ne partent pas écrire chez une autre chaîne suivie dans les 3 h ; « quart haut » ou « quart bas » la situe parmi les chaînes suivies (si elles sont au moins 4 avec 200 viewers actifs). * : moins de 200 viewers actifs, score fragile. « — » : sous 30 viewers actifs.</p>
+<p class="note"><b>Viewers moy.</b> : moyenne des viewers moyens des jours où la chaîne était en live. <b>Évol.</b> : comparaison avec les ${JOURS} jours d'avant, affichée seulement si cette période précédente est assez couverte. <b>Fidélité</b> : score sur 100 = part des viewers actifs qui ne partent pas écrire chez une autre chaîne suivie dans les 3 h ; « quart haut » ou « quart bas » la situe parmi les chaînes suivies (si elles sont au moins 4 avec 200 viewers actifs). « — » : moins de 200 viewers actifs.</p>
 
 <h2>Rythme récent</h2>
 ${rythmeRoster.length ? `<table><thead><tr><th>Chaîne</th><th>7 derniers jours</th><th>Jours d'avant</th><th>Écart</th></tr></thead><tbody>${rythmeRoster.map(r => `<tr><td class="name">${esc(r.c)}</td><td>${num(r.recent)}</td><td>${num(r.base)}</td><td class="${r.up ? 'up' : 'down'}">${r.up ? '↑ décolle' : '↓ ralentit'} ${(r.rel > 0 ? '+' : '−') + Math.abs(Math.round(r.rel * 100))} %</td></tr>`).join('')}</tbody></table>
@@ -181,11 +181,11 @@ const cell = v => { const s = typeof v === 'number' ? String(Math.round(v * 10) 
 const lignesCsv = [
   ['Client', titre], ['Période', `${d0} au ${moins(aujourdhui, 1)}`], ['Jours agrégés', joursCouverts], ['Méthode', 'Viewers uniques : estimation HyperLogLog, erreur type 2,3 %'],
   ['Net Reach estimé', net], ['Audience brute estimée', brut], ['Cannibalisation (%)', brut ? Math.round(cannibal * 1000) / 10 : ''], [],
-  ['Chaîne', 'Viewers uniques estimés', 'Viewers moyens', 'Évolution viewers (%)', 'Pic', 'Messages', 'Évolution messages (%)', 'Heures en live', 'Fidélité (/100)', 'Fidélité fragile'],
+  ['Chaîne', 'Viewers uniques estimés', 'Viewers moyens', 'Évolution viewers (%)', 'Pic', 'Messages', 'Évolution messages (%)', 'Heures en live', 'Fidélité (/100)'],
   ...lignes.map(l => {
     const ok = l.nPrev >= Math.max(3, Math.floor(JOURS / 2));
     const e = (c, p) => (ok && p > 0 ? Math.round((c - p) / p * 100) : '');
-    return [l.c, l.uniques, l.avg, e(l.avg, l.avgPrev), l.pic, l.msgs, e(l.msgs, l.msgsPrev), l.heures, l.score == null ? '' : l.score, l.score == null ? '' : l.fragile ? 'oui' : 'non'];
+    return [l.c, l.uniques, l.avg, e(l.avg, l.avgPrev), l.pic, l.msgs, e(l.msgs, l.msgsPrev), l.heures, l.score == null ? '' : l.score];
   }),
   [], ['Passage', 'Nombre'], ...topPaires.map(([k, n]) => [k, n]),
 ];

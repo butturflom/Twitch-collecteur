@@ -128,7 +128,7 @@ export function Compare({ chans }: { chans: RosterChannel[] }) {
       title="Comparer des chaînes"
       className="mt-9"
       action={<Segmented value={days} onChange={setDays} label="Durée de la comparaison" options={[[30, "30 jours"], [90, "90 jours"]]} />}
-      note="Journées déjà agrégées (la veille et avant, pas aujourd'hui). La meilleure valeur de chaque ligne est en gras. La fidélité d'une chaîne de moins de 200 viewers actifs est fragile. Une même personne n'est comptée qu'une fois par chaîne."
+      note="Journées déjà agrégées (la veille et avant, pas aujourd'hui). La meilleure valeur de chaque ligne est en gras. La fidélité n'est pas donnée pour une chaîne de moins de 200 viewers actifs. Une même personne n'est comptée qu'une fois par chaîne."
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {sel.map((c) => (
