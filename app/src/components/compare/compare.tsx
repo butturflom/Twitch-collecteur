@@ -3,7 +3,7 @@
 // (± 2,3 %) : une même personne n'est comptée qu'une fois par chaîne, et une fois pour le groupe.
 import { useEffect, useState } from "react"
 import { ChannelAvatar } from "@/components/channel-avatar"
-import { STICKY_FLOOR, stickyScore } from "@/components/channel/sticky"
+import { STICKY_MIN, stickyScore } from "@/components/channel/sticky"
 import { DataTable, Empty, Section, panel, type Col } from "@/components/overview/parts"
 import { Kpis } from "@/components/shared/blocks"
 import { Segmented } from "@/components/shared/segmented"
@@ -43,7 +43,7 @@ async function load(sel: string[], days: number): Promise<Result | null> {
       peak: Math.max(0, ...h.days.map((d) => d.peak)),
       msgs: h.days.reduce((s, d) => s + d.msgs, 0),
       uniq: nOf(c, reach),
-      sticky: st && st.actives >= STICKY_FLOOR ? stickyScore(st.leavers, st.actives) : null,
+      sticky: st && st.actives >= STICKY_MIN ? stickyScore(st.leavers, st.actives) : null,
     }
   })
   const pairs = pairIdx.flatMap(([a, b], k): Pair[] => {

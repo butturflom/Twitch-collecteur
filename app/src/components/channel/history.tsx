@@ -9,7 +9,7 @@ import { Segmented } from "@/components/shared/segmented"
 import { Sticky } from "./sticky"
 import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import type { ChannelHistory, HistoryRoute, LineSpec, PeriodReach } from "@/legacy/bridge"
+import type { ChannelHistory, HistoryDay, HistoryRoute, LineSpec, PeriodReach } from "@/legacy/bridge"
 
 type State = { s: "loading" } | { s: "none" } | { s: "error"; msg: string } | { s: "ok"; h: ChannelHistory }
 
@@ -17,9 +17,27 @@ const at = (d: string) => Date.parse(d + "T12:00:00") // midi du jour (heure loc
 
 function spec(h: ChannelHistory, series: { name: string; color: string; key: "peak" | "avg" | "chatters" | "msgs" }[], unit: string): LineSpec {
   return {
-    series: series.map((x) => ({ name: x.name, c: "", color: x.color, img: "", pts: h.days.map((d) => [at(d.d), d[x.key]] as [number, number]) })),
+    series: series.map((x) => ({ name: x.name, c: "", color: x.color, pts: h.days.map((d) => [at(d.d), d[x.key]] as [number, number]) })),
     unit, pct: false, yFloor: 0, gaps: [], height: 190,
   }
+}
+
+/** Une seule journée complète : une droite entre deux points du même jour ressemblerait à une tendance. On montre un repère par série. */
+function OneDay({ day, series }: { day: HistoryDay; series: { name: string; color: string; key: "peak" | "avg" | "chatters" }[] }) {
+  const date = new Date(at(day.d)).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+  return (
+    <div className={cn(panel, "px-4 py-3")}>
+      <p className="mb-2 text-xs text-dusk">Une seule journée complète ({date}) : pas de courbe, il faut au moins deux journées pour voir une évolution.</p>
+      <ul className="divide-y divide-border">
+        {series.map((s) => (
+          <li key={s.key} className="flex items-center justify-between gap-4 py-2.5 text-[13.5px]">
+            <span className="inline-flex items-center gap-2.5"><i className="size-2.5 rounded-full" style={{ background: s.color }} />{s.name}</span>
+            <span className="font-mono font-semibold tabular-nums">{fmt(day[s.key])}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 function Routes({ rows, note }: { rows: HistoryRoute[]; note: string }) {
@@ -61,7 +79,8 @@ export function History({ ch, color, chans }: { ch: string; color: string; chans
     return () => { live = false }
   }, [ch, days])
 
-  const toggle = <Segmented value={days} onChange={setDays} label="Durée de l'historique" options={[[30, "30 jours"], [90, "90 jours"]]} />
+  const single = st.s === "ok" && st.h.days.length === 1 // moins de 2 journées complètes : des repères, pas de courbe (0 journée a son propre message)
+  const toggle =<Segmented value={days} onChange={setDays} label="Durée de l'historique" options={[[30, "30 jours"], [90, "90 jours"]]} />
 
   return (
     <div className="mt-9">
@@ -76,8 +95,8 @@ export function History({ ch, color, chans }: { ch: string; color: string; chans
       {st.s === "ok" && st.h.days.length === 0 && <Empty>Aucune journée agrégée pour cette chaîne. Les agrégats se calculent chaque nuit pour la veille.</Empty>}
       {st.s === "ok" && st.h.days.length > 0 && (
         <>
-          {st.h.days.length < 2 && (
-            <p className="mb-3 text-xs text-dusk">{st.h.days.length} seule journée agrégée pour l'instant : les courbes se dessineront au fil des nuits.</p>
+          {single && (
+            <p className="mb-3 text-xs text-dusk">Une seule journée complète pour l'instant : les courbes se dessineront au fil des nuits.</p>
           )}
           {uniq && uniq.days > 0 && (
             <p className="mb-1 text-sm text-muted-foreground">
@@ -88,10 +107,12 @@ export function History({ ch, color, chans }: { ch: string; color: string; chans
           <Sticky ch={ch} days={days} chans={chans} />
           <Two>
             <Section title="Viewers (pic et moyenne par jour)" note="Relevés de l'API Twitch pendant les lives.">
-              <LineChart spec={spec(st.h, [{ name: "Pic", color, key: "peak" }, { name: "Moyenne", color: "#9a9aa8", key: "avg" }], "")} label="Viewers par jour" />
+              {single ? <OneDay day={st.h.days[0]} series={[{ name: "Pic", color, key: "peak" }, { name: "Moyenne", color: "#9a9aa8", key: "avg" }]} />
+                : <LineChart spec={spec(st.h, [{ name: "Pic", color, key: "peak" }, { name: "Moyenne", color: "#9a9aa8", key: "avg" }], "")} label="Viewers par jour" />}
             </Section>
             <Section title="Viewers actifs par jour" note="Personnes différentes qui ont écrit au moins un message ce jour-là.">
-              <LineChart spec={spec(st.h, [{ name: "Viewers actifs", color, key: "chatters" }], "")} label="Viewers actifs par jour" />
+              {single ? <OneDay day={st.h.days[0]} series={[{ name: "Viewers actifs", color, key: "chatters" }]} />
+                : <LineChart spec={spec(st.h, [{ name: "Viewers actifs", color, key: "chatters" }], "")} label="Viewers actifs par jour" />}
             </Section>
           </Two>
           <Two>

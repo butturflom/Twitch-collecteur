@@ -24,7 +24,7 @@ function demo(): OverviewData {
   const now = Date.now()
   const who = (c: string, color: string) => ({ c, color, img: "" })
   const chart = (k: number) =>
-    spec(CH.map(([c, color], i) => ({ name: c, c, color, img: "", pts: series(i, k * (4 - i), now) })), {
+    spec(CH.map(([c, color], i) => ({ name: c, c, color, pts: series(i, k * (4 - i), now) })), {
       unit: k > 50 ? " viewers" : " msg/min",
       gaps: k > 50 ? [] : [[now - 100 * MIN, now - 82 * MIN]], // une période sans écoute, pour la voir
     })
@@ -84,7 +84,13 @@ function demo(): OverviewData {
     msgChart: chart(30),
     viewerChart: chart(3000),
     chartOf: { shown: 4, total: 4 },
-    topStreamers: [] as TopStreamerRow[],
+    // croissance des followers : kamet0 a une petite base (60 followers au départ, +179 000 % sans le seuil) et doit afficher « — »
+    topStreamers: [
+      { ...who("etoiles", "#4d8dff"), viewers: 13900, peakViewers: 16204, hours: 21.5, growth: 0.4, growthBase: 1030000, avgMsgPerMin: 61, activeDays: 3 },
+      { ...who("gotaga", "#2fbf71"), viewers: 9800, peakViewers: 12100, hours: 14.2, growth: 0.1, growthBase: 4120000, avgMsgPerMin: 38, activeDays: 3 },
+      { ...who("xari", "#ff7a45"), viewers: 6100, peakViewers: 8300, hours: 17.8, growth: 1.9, growthBase: 512000, avgMsgPerMin: 70, activeDays: 3 },
+      { ...who("kamet0", "#f5b83d"), viewers: 2232, peakViewers: 3100, hours: 6.1, growth: 179000, growthBase: 60, avgMsgPerMin: 22, activeDays: 2 },
+    ] as TopStreamerRow[],
     investedCommunities: [] as InvestedCommunityRow[],
   }
 }
@@ -153,15 +159,18 @@ function channelDemo(c: string): ChannelData {
       { when: "mer. 19 nov. 20h15", from: "Teamfight Tactics", to: "Just Chatting", vB: 14800, vA: 12100, mB: 58.2, mA: 71.4 },
       { when: "mer. 19 nov. 18h02", from: "Just Chatting", to: "Teamfight Tactics", vB: 9200, vA: null, mB: 44.1, mA: null },
     ],
-    also: CH.filter(([x]) => x !== c).map(([x, col], k) => ({ ...who(x, col), share: [0.21, 0.12, 0.05][k], n: [1304, 745, 310][k] })),
+    // &also=petit : petite chaîne (6 viewers actifs), un viewer sur 6 = 17 % : le pourcentage ne doit pas s'afficher
+    ...(new URLSearchParams(location.search).get("also") === "petit"
+      ? { alsoBase: 6, also: CH.filter(([x]) => x !== c).map(([x, col], k) => ({ ...who(x, col), share: [2 / 6, 1 / 6, 1 / 6][k], n: [2, 1, 1][k] })) }
+      : { alsoBase: 6210, also: CH.filter(([x]) => x !== c).map(([x, col], k) => ({ ...who(x, col), share: [0.21, 0.12, 0.05][k], n: [1304, 745, 310][k] })) }),
     games: [{ g: "Teamfight Tactics", hours: 21.5 }, { g: "Just Chatting", hours: 8.2 }, { g: "League of Legends", hours: 3.1 }],
     raids: live ? [
       { to: who(CH[1][0], CH[1][1]), name: CH[1][0], live: true, score: 87, viewers: 1304, share: 0.21 },
       { to: who(CH[2][0], CH[2][1]), name: CH[2][0], live: false, score: 64, viewers: 745, share: 0.12 },
       { to: who(CH[3][0], CH[3][1]), name: CH[3][0], live: false, score: 42, viewers: 310, share: 0.05 },
     ] : null,
-    msgChart: spec([{ name: c, c, color, img: "", pts: series(i, 60, now) }], { unit: " msg/min" }),
-    viewerChart: spec([{ name: c, c, color, img: "", pts: series(i, 6000, now) }], { unit: " viewers" }),
+    msgChart: spec([{ name: c, c, color, pts: series(i, 60, now) }], { unit: " msg/min" }),
+    viewerChart: spec([{ name: c, c, color, pts: series(i, 6000, now) }], { unit: " viewers" }),
     hourChart: { items: hours, color, unit: " messages" },
   }
 }
@@ -192,8 +201,8 @@ function chatDemo(sel: string): ChatData {
     words: [["gg", 3120], ["mdr", 2810], ["top", 1504], ["chat", 1320], ["bien", 1102], ["jeu", 980], ["trop", 912], ["encore", 640]].map(([k, v]) => ({ k: k as string, v: v as number })),
     moments: channelDemo(all ? CH[1][0] : sel).moments,
     clips: channelDemo(all ? CH[1][0] : sel).clips,
-    moodChart: spec(MOODS.map(([name, c], k) => ({ name, c: "", color: c, img: "", pts: pctSeries(k, [14, 9, 3, 6][k]) })), { pct: true, yFloor: 10 }),
-    kindChart: spec(KIND_LINES.map(([name, c], k) => ({ name, c: "", color: c, img: "", pts: pctSeries(k, [48, 18, 17][k]) })), { pct: true, yFloor: 10, height: 170 }),
+    moodChart: spec(MOODS.map(([name, c], k) => ({ name, c: "", color: c, pts: pctSeries(k, [14, 9, 3, 6][k]) })), { pct: true, yFloor: 10 }),
+    kindChart: spec(KIND_LINES.map(([name, c], k) => ({ name, c: "", color: c, pts: pctSeries(k, [48, 18, 17][k]) })), { pct: true, yFloor: 10, height: 170 }),
   }
 }
 
@@ -440,6 +449,12 @@ export function installDemo() {
     // pilule d'état : collecteur en ligne ; ?demo&etat=erreur : synchro et API en échec (problèmes affichés avant l'état)
     window.statusOf = () => statusDemo(new URLSearchParams(location.search).get("etat") === "erreur")
     const t = new URLSearchParams(location.search).get("demo")
+    // anneaux des planètes : l'ancien code les calcule d'après la base locale, vide ici (sauf sur la Carte, qui la remplit) :
+    // on fige les trois chaînes les plus fortes de la démo
+    if (t !== "map") {
+      const ring = new Set(["etoiles", "xari", "gotaga"])
+      Object.defineProperty(window, "planetRing", { get: () => ring, set: () => {}, configurable: true })
+    }
     if (t === "map") seedMap()
     // ?demo=flows-map : onglet Flux, remplacé par le prototype C0 de la carte des migrations (voir App.tsx)
     window.showTab?.(t === "flows-map" ? "flows" : t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")

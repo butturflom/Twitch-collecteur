@@ -15,7 +15,7 @@ export type TabId = "overview" | "channel" | "game" | "chat" | "overlap" | "map"
 export interface Who { c: string; color: string; img: string }
 /** Graphique en courbes (préparé par lineSpec() dans l'ancien code). */
 export interface LineSpec {
-  series: { name: string; c: string; color: string; img: string; pts: [number, number | null][] }[]
+  series: { name: string; c: string; color: string; pts: [number, number | null][] }[]
   unit: string; pct: boolean; yFloor: number; gaps: [number, number][]; height: number
 }
 /** Diagramme en barres. */
@@ -60,7 +60,8 @@ export interface TopStreamerRow extends Who {
   viewers: number
   peakViewers: number
   hours: number
-  growth: number | null // croissance (%)
+  growth: number | null // croissance des followers entre le premier et le dernier relevé (%)
+  growthBase: number | null // followers au premier relevé : la base du pourcentage (null : pas assez de relevés)
   avgMsgPerMin: number
   activeDays: number
 }
@@ -133,6 +134,7 @@ export interface ChannelData {
   clips: ClipsData | null
   switches: SwitchRow[] | null // null : pas d'API Twitch
   also: (Who & { share: number; n: number })[]
+  alsoBase: number // viewers actifs de la chaîne : la base des pourcentages de « also »
   games: { g: string; hours: number }[] | null // null : pas d'API Twitch
   raids: RaidRecommendation[] | null // null : pas d'API Twitch ou pas en live
   msgChart: LineSpec

@@ -11,7 +11,7 @@ import { fmt, fmt1, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { History } from "./history"
 import { MoreKpis } from "./more"
-import { Universe } from "./universe"
+import { ALSO_BASE_MIN, Universe } from "./universe"
 import { useChannelData, type SwitchRow } from "@/legacy/bridge"
 
 // Copy raid command to clipboard and show feedback
@@ -146,14 +146,19 @@ export function Channel() {
 
       <RaidCopiedToast />
 
-      <Universe ch={d.ch} also={d.also} list={d.list} />
+      <Universe ch={d.ch} also={d.also} base={d.alsoBase} list={d.list} />
 
-      <Section className="mt-9" title="Ses viewers actifs écrivent aussi chez">
+      <Section
+        className="mt-9"
+        title="Ses viewers actifs écrivent aussi chez"
+        note={d.alsoBase < ALSO_BASE_MIN ? `Échantillon trop petit (${fmt(d.alsoBase)} viewer${d.alsoBase > 1 ? "s" : ""} actif${d.alsoBase > 1 ? "s" : ""}, ${ALSO_BASE_MIN} minimum) : nombres de viewers seulement, sans pourcentage.` : undefined}
+      >
         {d.also.length ? (
           <div className={cn(panel, "px-4 py-2")}>
             <MeterList
               rows={d.also.map((a) => ({
-                key: a.c, v: a.share, color: a.color, right: <>{pct(a.share)} · {fmt(a.n)}</>,
+                key: a.c, v: d.alsoBase < ALSO_BASE_MIN ? a.n : a.share, color: a.color,
+                right: d.alsoBase < ALSO_BASE_MIN ? <>{fmt(a.n)} viewer{a.n > 1 ? "s" : ""}</> : <>{pct(a.share)} · {fmt(a.n)}</>,
                 label: <button type="button" data-open={a.c} className="inline-flex items-center gap-2 hover:text-primary-soft"><ChannelAvatar {...a} className="pointer-events-none" /><span className="pointer-events-none">{a.c}</span></button>,
               }))}
             />

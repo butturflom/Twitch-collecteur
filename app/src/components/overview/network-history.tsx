@@ -21,7 +21,7 @@ const at = (d: string) => Date.parse(d + "T12:00:00") // midi du jour : le point
 const primary = () => (typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()) || "currentColor"
 
 function messagesSpec(h: NetworkHistory): LineSpec {
-  return { series: [{ name: "Messages", c: "", color: primary(), img: "", pts: h.days.map((d) => [at(d.d), d.msgs] as [number, number]) }], unit: "", pct: false, yFloor: 0, gaps: [], height: 190 }
+  return { series: [{ name: "Messages", c: "", color: primary(), pts: h.days.map((d) => [at(d.d), d.msgs] as [number, number]) }], unit: "", pct: false, yFloor: 0, gaps: [], height: 190 }
 }
 
 const plural = (n: number, one: string, many = one + "s") => (n > 1 ? many : one)

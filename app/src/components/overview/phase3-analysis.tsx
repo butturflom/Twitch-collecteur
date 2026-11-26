@@ -5,7 +5,15 @@ import { useOverviewData, type TopStreamerRow, type InvestedCommunityRow } from 
 import { StatCard } from "@/components/ui/stat-card"
 import { cn } from "@/lib/utils"
 import { fmt, pct } from "@/lib/format"
+import { quartiles } from "@/lib/universe"
 import { ChannelCell, DataTable, Section, Empty, heat, type Col } from "./parts"
+
+/** Followers au premier relevé en dessous desquels un pourcentage de croissance ne dit rien (une chaîne passée de 60 à 110
+ *  followers affiche 83 %, une autre de 1 à 1 790 affiche 179 000 %). Sous ce seuil la ligne montre « — ». */
+export const GROWTH_BASE_MIN = 100
+/** Nombre minimal de chaînes (de base suffisante) pour donner une médiane. */
+const GROWTH_CHANS_MIN = 3
+const hasGrowth = (r: TopStreamerRow) => r.growth != null && r.growthBase != null && r.growthBase >= GROWTH_BASE_MIN
 
 // Ré-export des types pour compatibilité avec d'anciens imports
 export type { TopStreamerRow, InvestedCommunityRow }
@@ -35,6 +43,9 @@ export function Phase3Analysis() {
   // Les données sont déjà calculées dans legacy.js, on les utilise directement
   const topStreamers = d?.topStreamers || []
   const investedCommunities = d?.investedCommunities || []
+  // la croissance n'est donnée que pour les chaînes dont la base est assez grande ; la médiane résiste aux valeurs extrêmes d'une petite base
+  const growable = topStreamers.filter(hasGrowth)
+  const growthMedian = quartiles(growable.map((r) => r.growth!), GROWTH_CHANS_MIN)?.med ?? null
 
   if (!d) return <PendingPhase3 />
 
@@ -62,9 +73,11 @@ export function Phase3Analysis() {
                 hint="Heures de stream cumulées"
               />
               <StatCard
-                label="Croissance moyenne"
-                value={pct(topStreamers.reduce((s, r) => s + (r.growth || 0), 0) / topStreamers.length / 100)}
-                hint="Croissance moyenne des followers"
+                label="Croissance médiane"
+                value={growthMedian == null ? "—" : pct(growthMedian / 100)}
+                hint={growthMedian == null
+                  ? `Moins de ${GROWTH_CHANS_MIN} chaînes avec au moins ${fmt(GROWTH_BASE_MIN)} followers au départ : pas de médiane`
+                  : `Médiane des followers gagnés, sur ${growable.length} chaîne${growable.length > 1 ? "s" : ""} de ${fmt(GROWTH_BASE_MIN)} followers ou plus au départ`}
               />
             </div>
             <TopStreamersTable rows={topStreamers} />
@@ -131,7 +144,7 @@ function TopStreamersTable({ rows }: { rows: TopStreamerRow[] }) {
     { head: "Viewers", cell: (r) => fmt(r.viewers) },
     { head: "Peak", cell: (r) => fmt(r.peakViewers) },
     { head: "Heures", cell: (r) => `${r.hours} h` },
-    { head: "Croissance", cell: (r) => r.growth != null ? pct(r.growth / 100) : "—" },
+    { head: "Croissance", cell: (r) => (hasGrowth(r) ? pct(r.growth! / 100) : "—") },
     { head: "Jours actifs", cell: (r) => fmt(r.activeDays) },
   ]
 
