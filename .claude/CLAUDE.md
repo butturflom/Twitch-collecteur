@@ -1,10 +1,8 @@
-# Twitch Analytics - Repères pour les agents
+# Twitch Analytics — repères pour les agents
 
-Les commandes du projet, l'architecture, les invariants et les pièges sont dans le `CLAUDE.md` à la racine du dépôt. Les agents (analyste, monitor, optimizer, app-developer) sont définis dans `.claude/agents/`.
-
-## 🎯 OBJECTIF
-Développer un observatoire analytique Twitch avec collecte automatisée, analyse comportementale, et workflow cloud-ready.
-
-## ⚙️ REPÈRES POUR LES AGENTS
-- Rétention : réglée dans `config.json` et appliquée par la fonction SQL `cleanup`. Valeurs notées le 24/11 : détail minute 7 j (`joursDetailMinute`), présence 1 j (`joursPresence`), événements et relevés 3 j (`joursEvenements`, `joursReleves`). Les rollups quotidiens ne sont pas purgés. Détail dans `SUIVI.md`, §8.
-- Stockage : le projet vise le palier gratuit de Supabase (500 Mo). Le collecteur déclenche une alerte au-delà de 400 Mo.
+- Les commandes, l'architecture, les invariants et les pièges sont dans le `CLAUDE.md` à la racine. À lire avant toute modification.
+- Agents du projet : `.claude/agents/` (analyste, app-developer, monitor, optimizer, agents Impeccable). Agent de session : `orchestrateur`, lancé par `lancer-orchestrateur.bat`.
+- Objectif : observatoire analytique Twitch (collecte automatisée, analyse comportementale), base prête pour un hébergement futur.
+- Conservation : défauts du code 14 / 21 / 60 / 30 jours, réglables dans `config.json` et appliqués par la fonction SQL `cleanup()`. Les valeurs réelles ne sont pas relues par la doc : voir `LISEZMOI.md` §5 et `SUIVI.md` §8. Les rollups quotidiens (`daily_*`) ne sont pas purgés.
+- Stockage : palier gratuit Supabase 500 Mo ; le collecteur alerte à 400 Mo.
+- Langue : documentation et interface en français.

@@ -2,7 +2,7 @@
 
 Chargé seulement quand on travaille dans `app/`. Les règles générales du projet sont dans le `CLAUDE.md` à la racine.
 
-- `vite-plugin-singlefile` produit un seul fichier HTML, que `scripts/publier.mjs` copie vers `../twitch-overlap.html`. **Ce fichier est généré, ne jamais l'éditer à la main.** Les fichiers `twitch-overlap.vanilla.html` et `twitch-overlap.avant-design.html` sont d'anciennes versions.
+- `vite-plugin-singlefile` produit un seul fichier HTML, que `scripts/publier.mjs` copie vers `../twitch-overlap.html`. **Ce fichier est généré, ne jamais l'éditer à la main.**
 - **Pont legacy** : `src/legacy/legacy.js` garde l'ancien code (données, accès Supabase, calculs, moteur de la Carte).
   - Les anciennes fonctions `renderXxx()` émettent un `CustomEvent('legacy:xxx')` pour overview, channel, chat, game, overlap, flows, settings, map et tab.
   - `bridge.ts` expose ces événements sous forme de stores (`useXxxData = legacyStore("legacy:xxx")`), et React rappelle le legacy via `showTab()`, `openAddStreamer()` et les actions de réglages.

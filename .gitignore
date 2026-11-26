@@ -55,3 +55,6 @@ dernier-menage.txt
 
 # Dossiers des clients (secrets : clés Supabase, sel des empreintes)
 clients/
+
+# Traces du serveur Playwright MCP (captures, journaux)
+.playwright-mcp/
