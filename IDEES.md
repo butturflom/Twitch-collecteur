@@ -10,6 +10,12 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. Le skill `
 - 2026-11-25 · « Pour la partie flux, construire l'onglet comme une map de flux qui représente les migrations des viewers actifs. » → (Carte animée des passages de viewers entre chaînes, jour par jour, à côté du Sankey existant.)
 - 2026-11-25 · « Je voyais la map comme un réseau de tuyaux ou de conduits qui représente les déplacements d'un point A à B, ou C, ou plus encore, avec les planètes des streamers. » → (Variante du chantier C : trajets à plusieurs sauts, dessinés en tuyaux, nœuds = planètes.)
 - 2026-11-25 · « Plus tard, l'application sera à télécharger ou consultable sur un site. Après la création d'un contrat, je donne accès à un compte que je prédéfinis avec le client ID et le secret. Le collecteur tourne 24 h/24 en ligne, et la base Supabase reste identique. » → (Hébergement du collecteur et du tableau de bord, comptes par client. Reprend la Client View abandonnée le 24/11 et l'étape 3 du §12.)
+- 2026-11-26 · « J'ai déjà regardé l'intro. Pour le moment, je la laisse et la considère comme prototype. J'ajouterai des idées et des inspirations à suivre pour cette animation. » → (L'intro reste en place, au rang de prototype, en attente d'inspirations. Voir « Inspirations pour l'intro ».)
+- 2026-11-26 · « Pour les planètes, je pense qu'il faut qu'on revoie comment on définit le design d'une planète comme sa forme ou sa texture, et comment l'icône de profil du streamer se colle à la planète. » → (Redéfinir la planète d'une chaîne : forme, texture, et pose de la photo de profil.)
+
+### Inspirations pour l'intro
+
+À remplir par l'utilisateur : liens, captures, films, jeux, avec une ligne sur ce qui plaît dans chacun.
 
 ## Évaluées
 
@@ -20,6 +26,8 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. Le skill `
 | Réseau de tuyaux des déplacements A→B→C, nœuds en planètes (variante du chantier C) | 5 : les trajets à plusieurs sauts montrent où les viewers vont après un passage, donc où un raid ou une collab a le plus de chances de marcher | 2 : `DESIGN.md` réserve l'atmosphère à la Carte (l. 321) ; les tuyaux lumineux risquent d'être du spectacle qui cache la donnée (`PRODUCT.md` principe 2). À réconcilier avec la règle du ciel étoilé posée par #43 et #44 | 2 : `daily_switches_rollup` donne des paires par jour, pas le parcours d'un viewer. Un trajet A→B→C exige un calcul quotidien sur les passages bruts, qui ne sont gardés qu'un jour : nouvelle étape de la tâche de nuit, à valider contre les délais de purge | 3 : une tâche de nuit de plus touche le pipeline des rollups, déjà source d'incidents (57014, 21000) | **17** | L (plusieurs sessions, une décision de design et une tâche de nuit) | **Prototype d'abord** | Le prototype n'a pas besoin de la nouvelle tâche : il part des paires par jour déjà agrégées (2 à 3 journées aujourd'hui). Critère de réussite : sans survol, on lit les 5 trajets les plus forts et leur sens ; sinon, on garde la carte à plat du chantier C. |
 | Application en ligne 24 h/24, comptes clients après contrat (reprend la Client View et l'étape 3 du §12) | 5 : supprime la dépendance au PC et l'installation pour un non-technicien (§12 bis, point 3), ce qui ouvre agences et petits streamers | 2 : remet en cause la Client View abandonnée le 24/11 et renvoie le multi-utilisateur à une demande réelle (§12, étape 3) ; le VPS a été mis de côté (§5) | 2 : hébergement permanent, authentification, isolation des données par client, sauvegardes, et une base Supabase gratuite de 500 Mo qui ne tient pas plusieurs clients (§12) | 1 : le client secret Twitch ne doit jamais sortir du serveur ; `board_ok()` ne suffit pas comme droit par utilisateur ; données personnelles à cadrer (RGPD, `CONFORMITE.md`) et conditions Twitch à relire | **16** | L (plusieurs mois de travail, avec juriste) | **Planifier à une date** : après le premier contrat signé, pas avant janvier | Voir « Chantier D » ci-dessous. Ne pas remettre le secret au client : il reste chez l'opérateur, seul l'accès au tableau de bord est donné. |
 | Planète partout (petits formats et avatars de `legacy.js`) | 2 : cohérence visuelle voulue, ne change aucune décision | 5 : prolonge `DESIGN.md` et la règle des deux niveaux de lueur | 5 : `ChannelAvatar` fait déjà la planète dès 20 px et couvre 17 composants | 4 : touche `legacy.js` (3 appels de `av()`) et `legacy.css`, sans toucher au moteur de la Carte | **18** | S (1 session) | **Faire** | Il reste très peu à faire (voir « Ce qui est déjà livré »). |
+| Intro d'accueil, suite (prototype) | 3 : première impression pour la prospection, aucune analyse | 4 : lisible avant spectaculaire à vérifier sur chaque inspiration | 4 : le calque Three.js existe | 4 : isolée dans `components/intro/` | **18** | M | **Planifier** : quand les inspirations sont là | [ton choix] Elle reste prototype mais joue déjà une fois chez tout nouveau visiteur : à décider avant de montrer l'outil à une agence (fin décembre). |
+| Redéfinir les planètes (forme, texture, pose de la photo) | 3 : reconnaître une chaîne d'un coup d'œil, utile devant une agence, aucune analyse nouvelle | 4 : revient sur la décision du 26/11 qui retirait la photo [ton choix] ; `DESIGN.md` (« Avatar-planète ») est à réécrire | 5 : photos déjà récupérées, source unique `lib/planet.ts` | 3 : touche `planetSvg` dans `legacy.js` et la fluidité de la Carte (une centaine de planètes avec images) | **18** | M (2 sessions) | **Prototype d'abord** | Le design n'est pas encore défini : comparer des pistes côte à côte avant de toucher à l'existant. |
 
 ### Ce qui est déjà livré du texte collé (PR #43 et #44)
 
@@ -35,7 +43,7 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. Le skill `
 
 ## Plan en cours
 
-**État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), en attente de validation à l'écran ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), `schema.sql` à rejouer et à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se fusionne ni ne se déploie sans ta demande.
+**État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), gardé comme prototype (26/11) ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), fonction `flows_by_day` présente en base (vérifié le 26/11), à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se fusionne ni ne se déploie sans ta demande.
 
 ### Chantier A · Planète partout (S, 1 session)
 
@@ -206,7 +214,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 
 **Statut (26/11)** :
 - C0 : prototype isolé livré (démo `?demo=flows-map`), verdict partiel : lisible, pas encore prouvé sur les vraies données.
-- C1 : fonction SQL `flows_by_day` et appel dans l'onglet Flux livrés (PR #53). Testée en transaction annulée : mauvais code → 0 ligne. Reste à relancer `schema.sql` en base et vérifier l'onglet Flux avec le bon code.
+- C1 : fonction SQL `flows_by_day` et appel dans l'onglet Flux livrés (PR #53). Testée en transaction annulée : mauvais code → 0 ligne. Fonction présente en base et identique à `schema.sql` (vérifié le 26/11). Reste à voir l'onglet Flux avec le bon code.
 - C2 : livré (PR #53). Carte masquée tant que `byDay` est absent, Sankey inchangé.
 
 **Variante tuyaux (25/11)** : si le prototype C0 réussit en tuyaux, les trajets A→B→C deviennent une étape C3, après C2 : une tâche de nuit (Sonnet high, `schema.sql` rejouable, testée en transaction annulée) qui calcule, à partir des passages bruts de la veille, les trajets à deux sauts par jour et les garde dans une table agrégée. Sans cette table, on ne montre que des paires, jamais un parcours. Les planètes des nœuds réutilisent `ChannelAvatar` (déjà en planète dès 20 px). Décision prise le 25/11 : `DESIGN.md` l. 321 ne réserve plus l'atmosphère à la Carte ; le ciel étoilé la remplace sur toutes les pages. Les tuyaux peuvent donc être dessinés dans Flux, à condition de passer le critère de lisibilité du prototype.
@@ -231,6 +239,39 @@ Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'ét
 
 **Critère d'abandon** : si le juriste ne valide pas la base commune, on passe à une base par client, plus lente à monter mais sans droits partagés. Le conseil de coûts est tenu dans `COUTS-CLIENTS.md` : à chaque nouveau client, on remplit le questionnaire de son §6 avant de chiffrer.
 
+### Chantier E · Redéfinir les planètes (M, 2 sessions, proposé le 26/11, pas lancé)
+
+**Aujourd'hui** : disque rond de la couleur de la chaîne, un motif tiré du nom (bandes, cratères ou taches), l'initiale au centre, un anneau sur les 3 chaînes les plus fortes de la vue. Sur la Carte, ce disque est posé en médaillon sur une sphère à facettes. La photo de profil n'apparaît plus.
+
+**E0, réponses de l'utilisateur (26/11)**
+- Priorités : l'absence de la photo et les textures.
+- Photo : posée comme un pin's accroché à la planète.
+- Forme et texture : seulement pour varier les modèles de la Carte, elles ne portent aucune donnée.
+- Références : `C:\Users\User\Desktop\hugo\SCREEN\Mood design` (hors dépôt, images d'autrui : s'en inspirer, ne pas les copier ni les versionner).
+
+**Décisions de l'utilisateur (26/11, second message)**, elles remplacent la lecture « jouet 3D » :
+- **Style de référence : low-poly** (`low 2.jpg`), sans détails extérieurs (ni arbres ni maisons).
+- **La planète Twitch suit le même style.**
+- **Taille d'une planète = viewers sur le live en ce moment.** À changer : aujourd'hui, viewers actifs de la période (`liveR`, `legacy.js` ; légendes de `map.tsx`).
+- **Périodes de la Carte à clarifier** : on s'y perd.
+
+**Constats dans le code** : les planètes des chaînes ont déjà une sphère à facettes, mais le médaillon peint en cache les deux tiers du rayon ; la planète Twitch est une icosphère low-poly lisse. La période choisit les chaînes affichées, la taille, l'étoile, l'épaisseur des liens, les groupes, les lueurs de passage et le filtre de jeu ; les signaux du direct (ondes, comètes, pastilles) ne la suivent pas. Avec une rétention de 1 à 2 jours, « 7 jours », « 30 jours » et « Tout » montrent la même chose.
+
+**Règle des deux temps, validée par l'utilisateur (26/11)** : la planète dit le présent (taille = viewers en direct, hors live = petite et éteinte) ; les liens disent la relation, calculée sur tout le détail disponible, sans sélecteur de période sur la Carte, avec la date de début écrite dans la légende. Conséquence : l'étoile d'un système n'est plus forcément la plus grosse planète.
+
+**Couleurs, décidé (26/11)** : chaque planète est teintée de la couleur de sa chaîne. La variété vient des formes et des reliefs.
+
+**Contrainte** : sur la Carte, une planète fait environ 22 à 48 px de diamètre hors zoom : peu de facettes, de gros reliefs, un pin's lisible. L'écart de taille est à élargir maintenant qu'il porte les viewers en direct.
+
+| Tâche | Fichiers | Modèle, effort | Vérification |
+|---|---|---|---|
+| E0. Cadrer avec l'utilisateur : références, ce qui gêne, ce que forme et texture doivent dire (identité seule, ou une donnée avec légende) | `IDEES.md` | session | Réponses écrites |
+| E1. Prototype isolé (`?demo=planets`) : modèles low-poly (silhouette et relief variés), pin's photo avec images factices, planète Twitch du même style, à 22, 30, 48 et 100 px | page de démo neuve dans `app/src/dev/` | Opus 5.5, high (décision de design) | Captures, choix de l'utilisateur |
+| E2. Appliquer la piste retenue partout | `app/src/lib/planet.ts`, `index.css`, `channel-avatar.tsx`, `planetSvg` et `av()` dans `legacy.js`, `DESIGN.md` | Sonnet 5.5, high | Build, `/verifier`, Carte dense testée dans un vrai navigateur |
+| E3. Taille = viewers en direct et périodes de la Carte (validé le 26/11 ; sélecteur retiré de la Carte seulement) | `legacy.js` (`liveR`, `renderMap`), `map.tsx`, `menu.tsx`, `DESIGN.md` | Sonnet 5.5, high | Build, `/verifier`, légende relue |
+
+Critère de réussite : on reconnaît la chaîne sans lire son nom à 40 px, et la Carte reste fluide avec toutes les chaînes. Chargement correct depuis `file://`, initiale en repli si la photo manque. **Abandon** : si la photo est illisible sous 20 px, ce format garde la planète peinte ; si la Carte saccade, la photo reste hors de la Carte.
+
 ### Coût estimé
 
 4 à 6 sessions au total : 1 Opus (B1), 3 à 4 Sonnet, 1 sous-agent d'une critique de mouvement. Le chantier A passe d'abord (peu cher, visible tout de suite).
@@ -240,7 +281,7 @@ Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'ét
 - Ne pas passer la Carte en Three.js maintenant : ta décision d'aujourd'hui fait de Three.js un complément, pas un remplaçant. La question se reposera si l'intro prouve un gain de rendu.
 - Ne pas afficher de noms de chaînes ou de chiffres inventés dans l'intro : si aucune donnée réelle n'est disponible à la première visite, l'intro montre la galaxie illustrée.
 
-**Prochaine action** : rejouer `schema.sql`, puis regarder l'intro et la carte des migrations avec les vraies données (`SUIVI.md` §0).
+**Prochaine action** : cadrer le chantier E (E0), et regarder l'onglet Flux avec le bon code (`SUIVI.md` §0).
 
 ## Écartées
 
@@ -252,5 +293,5 @@ Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'ét
 | Chantier | Sessions estimées | Sessions réelles | Modèles | Ce que ça a apporté |
 |---|---|---|---|---|
 | A · Planète partout | 1 | non relevé | | Planètes dans l'info-bulle et les légendes (#51), puis peintes (#55) |
-| B · Intro d'accueil | 3 | non relevé | | Intro de 4 s (#52), validation à l'écran en attente |
+| B · Intro d'accueil | 3 | non relevé | | Intro de 4 s (#52), gardée comme prototype (26/11) |
 | C · Carte des migrations | 2 à 3 | non relevé | | Passages par jour dans Flux (#53), à juger vers le 8/12 |
