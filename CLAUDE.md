@@ -4,6 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Projet en français (docs, interface, commentaires) : écrire dans la même langue. Le guide utilisateur est `LISEZMOI.md`, l'historique des versions `CHANGELOG.md`, l'état des chantiers `SUIVI.md`. Le tableau de bord a son propre guide technique dans `app/LISEZMOI.md`. La liste complète est dans « Documentation », en fin de fichier.
 
+## Hiérarchie des sources
+
+Quand deux documents se contredisent, le plus haut gagne ; corrige ensuite le plus bas.
+
+1. **Décisions de l'utilisateur** : ce qu'il demande dans la session, et ce qui est consigné dans `SUIVI.md` §4 et §5 (« ne pas reposer »).
+2. **Produit et design** : `PRODUCT.md` pour le produit, `DESIGN.md` pour l'apparence. Les suggestions de `ui-ux-pro-max` et des autres skills de design viennent après.
+3. **Règles et invariants** : ce fichier, et `app/CLAUDE.md` pour le tableau de bord.
+4. **Procédures** : `.claude/CLAUDE.md`, `.claude/agents/`, `.claude/skills/`. Elles disent comment faire, pas ce qui est vrai ; elles ne redéfinissent aucune règle des niveaux 1 à 3.
+5. **Copies** : texte des hooks (`.claude/hooks/`), mémoire personnelle. Une copie ne fait jamais autorité : elle renvoie à sa source. Le routage est dans `orchestrateur.md`, le barème de modèles dans `SUIVI.md` §7, la rétention dans `SUIVI.md` §8. La mémoire reflète ce qui a été dit à une date ; si elle contredit le dépôt, c'est elle qu'il faut corriger.
+
+`SUIVI.md` décrit l'état à une date (PR, chantiers) : il ne tranche que pour les décisions qu'il consigne.
+
 ## Commandes
 
 ```bash
@@ -70,7 +82,7 @@ Pas de tests ni de lint. La seule vérification automatique est le contrôle de 
 - Modèle et effort : `SUIVI.md`, §7. Un chantier = une session (`/clear`).
 - Lectures : `app/src/legacy/legacy.js` fait 2 562 lignes (229 Ko). Le chercher avec `grep -n`, puis le lire par plages (`offset` et `limit`). Ne pas relire un fichier déjà lu dans la session. `.claude/settings.json` refuse la lecture des fichiers générés, des journaux, des lockfiles, de `config.json` et des `node_modules`.
 - Vérifier un rendu : `npm run build` dans `app/`, puis capture Chrome headless (méthode dans `SUIVI.md`, §9), puis lecture du PNG. Le navigateur intégré ne déroule pas les animations.
-- Reconstruction automatique : après toute modification de `app/src` (code, CSS, démo), Claude lance `npm run build` dans `app/` sans qu'on le lui demande, pour que `twitch-overlap.html` (fichier généré) soit à jour ; si le build échoue, il le dit. Un hook git local (`.git/hooks/post-merge`, non versionné) fait de même après un `git pull` ou une fusion qui change `app/`.
+- Reconstruction automatique : après toute modification de `app/src` (code, CSS, démo), Claude lance `npm run build` dans `app/` sans qu'on le lui demande, pour que `twitch-overlap.html` (fichier généré) soit à jour ; si le build échoue, il le dit. Un hook git (copie de `scripts/hooks/post-merge`, versionné, à copier une fois dans `.git/hooks/` après un clone) fait de même après un `git pull` ou une fusion qui change `app/`.
 - Idées et planification : `/contremaitre` range les idées dans `IDEES.md`, les évalue (plus-value, coût, verdict) et planifie en déléguant aux modèles les moins chers capables (barème de `SUIVI.md`, §7).
 - Outils 3D et design (`SUIVI.md` §16) : skills `three-js`, `react-three-fiber`, `ui-ux-pro-max` (seul skill de critique de design depuis le 26/11 : Impeccable est archivé) ; connecteur Higgsfield (génération et scènes 3D, flux Blender) ; serveurs MCP `playwright` et `spline` (`.mcp.json`). Le moteur de la Carte reste impératif dans `legacy.js` ; depuis le 25/11 (décision de l'utilisateur), Three.js est un complément autorisé à modifier le code, et les évaluations de ces outils comptent comme légitimes. Sur une surface neuve, prototype isolé avec critère go/no-go d'abord. `DESIGN.md` prime sur les suggestions de `ui-ux-pro-max`.
 

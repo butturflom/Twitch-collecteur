@@ -15,7 +15,7 @@ But : un seul passage qui produit build, diff et captures, pour que l'utilisateu
 
 2. **Diff.** `git -C "<worktree>" diff --stat` et la liste des fichiers modifiés. Vérifie que chaque fichier est prévu par la tâche ; signale tout fichier inattendu, y compris un fichier parasite comme `nul`.
 
-3. **Captures.** Choisis les routes démo selon les fichiers modifiés (voir `app/CLAUDE.md`, section « Mode démo ») :
+3. **Captures.** Choisis les routes démo selon les fichiers modifiés (voir la ligne « Mode démo » de `app/CLAUDE.md`) :
    - `?demo` : Vue d'ensemble, Recoupements, Classements ;
    - `?demo=channel` : Par chaîne, avec `&histo=1` pour une seule journée, `&sticky=petit` pour un petit échantillon ;
    - `?demo=flows` : Flux (Sankey et carte des migrations), `&byday=non` pour l'absence de données par jour ;
