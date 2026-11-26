@@ -11,6 +11,9 @@ import type { ChannelData, PeriodReach } from "@/legacy/bridge"
 
 const MAX_NEAR = 6
 const C0 = 180
+/** Viewers actifs de la chaîne en dessous desquels un pourcentage « écrivent aussi chez » ne dit rien : 1 viewer sur 6 donne 17 %.
+ *  Sous ce seuil on montre seulement le nombre de viewers. */
+export const ALSO_BASE_MIN = 30
 
 function System({ ch, near, sizes }: { ch: ChannelData["ch"]; near: ChannelData["also"]; sizes: Map<string, number> | null }) {
   const maxShare = Math.max(...near.map((a) => a.share), 0.0001)
@@ -44,7 +47,7 @@ function System({ ch, near, sizes }: { ch: ChannelData["ch"]; near: ChannelData[
   )
 }
 
-export function Universe({ ch, also, list }: { ch: ChannelData["ch"]; also: ChannelData["also"]; list: ChannelData["list"] }) {
+export function Universe({ ch, also, base, list }: { ch: ChannelData["ch"]; also: ChannelData["also"]; base: number; list: ChannelData["list"] }) {
   const [reach, setReach] = useState<PeriodReach | null>(null)
   const key = list.map((x) => x.c).join(",")
   useEffect(() => {
@@ -92,6 +95,7 @@ export function Universe({ ch, also, list }: { ch: ChannelData["ch"]; also: Chan
                   {above.map((x) => {
                     const w = byC.get(x.c)
                     const sh = shareOf(x.c)
+                    const nShared = also.find((a) => a.c === x.c)?.n ?? 0
                     return (
                       <li key={x.c} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
                         <button type="button" data-open={x.c} className="inline-flex items-center gap-2 text-[13.5px] font-medium hover:text-primary-soft">
@@ -100,7 +104,7 @@ export function Universe({ ch, also, list }: { ch: ChannelData["ch"]; also: Chan
                         </button>
                         <span className="text-right text-xs text-muted-foreground">
                           <span className="font-mono tabular-nums">×{(x.n / mine).toFixed(1).replace(".", ",")}</span> son audience
-                          {sh != null ? <> · {pct(sh)} de ses viewers actifs y écrivent aussi</> : <> · aucun recoupement mesuré</>}
+                          {sh == null ? <> · aucun recoupement mesuré</> : base >= ALSO_BASE_MIN ? <> · {pct(sh)} de ses viewers actifs y écrivent aussi</> : <> · {fmt(nShared)} viewer{nShared > 1 ? "s" : ""} y écri{nShared > 1 ? "vent" : "t"} aussi</>}
                         </span>
                       </li>
                     )

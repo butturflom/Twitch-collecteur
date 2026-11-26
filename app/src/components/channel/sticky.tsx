@@ -10,9 +10,8 @@ import { bySize, peersOf, quartiles } from "@/lib/universe"
 import { cn } from "@/lib/utils"
 import type { ChannelSticky, StickyNet } from "@/legacy/bridge"
 
-/** Viewers actifs sur la période en dessous desquels le score ne dit rien : une poignée de personnes suffit à le faire bouger. */
-export const STICKY_FLOOR = 30
-/** Au-dessus, le score est solide ; en dessous, il est donné comme fragile. */
+/** Viewers actifs sur la période en dessous desquels le score n'est pas affiché : une poignée de personnes suffit à le faire bouger
+ *  (5 viewers donnaient un « score sur 100 »). Même seuil que la fonction SQL channel_stickiness (`actives >= 200`, schema.sql). */
 export const STICKY_MIN = 200
 /** Nombre minimal de chaînes pour se comparer à elles. */
 export const NET_MIN = 5
@@ -52,7 +51,7 @@ async function peersNet(ch: string, chans: string[], days: number): Promise<Peer
   const sized = bySize(await fr(chans, 30), chans)
   const peers = peersOf(sized, ch, PEERS)
   const rows = await Promise.all(peers.map((p) => fs(p.c, days).catch(() => null)))
-  const scores = rows.flatMap((r) => (r && r.actives >= STICKY_FLOOR ? [stickyScore(r.leavers, r.actives)!] : []))
+  const scores = rows.flatMap((r) => (r && r.actives >= STICKY_MIN ? [stickyScore(r.leavers, r.actives)!] : []))
   const q = quartiles(scores, NET_MIN)
   return q ? { n: scores.length, net: { n: scores.length, ...q } } : null
 }
@@ -85,13 +84,12 @@ export function Sticky({ ch, days, chans }: { ch: string; days: 30 | 90; chans?:
 
   const { r } = st
   const score = stickyScore(r.leavers, r.actives)
-  if (score == null || r.actives < STICKY_FLOOR) {
-    return <p className={note}>Fidélité du chat : pas assez de viewers actifs agrégés pour la mesurer ({fmt(r.actives)} sur la période, il en faut au moins {fmt(STICKY_FLOOR)}).</p>
+  if (score == null || r.actives < STICKY_MIN) {
+    return <p className={note}>Fidélité du chat : échantillon trop petit ({fmt(r.actives)} viewer{r.actives > 1 ? "s" : ""} actif{r.actives > 1 ? "s" : ""}, {fmt(STICKY_MIN)} minimum).</p>
   }
-  const fragile = r.actives < STICKY_MIN
-  // référence : les chaînes de taille voisine si on les a mesurées, sinon tout le réseau suivi (sauf pour une petite chaîne : trop de géants)
-  const ref = peers ? { net: peers.net, scope: "chaînes suivies de taille voisine" } : fragile ? null : { net: r.net, scope: "chaînes suivies" }
-  const tier = ref ? stickyTier(score, ref.net) : null
+  // référence : les chaînes de taille voisine si on les a mesurées, sinon tout le réseau suivi
+  const ref = peers ? { net: peers.net, scope: "chaînes suivies de taille voisine" } : { net: r.net, scope: "chaînes suivies" }
+  const tier = stickyTier(score, ref.net)
   const trend = r.days.filter((d) => d.actives >= DAY_MIN).map((d) => stickyScore(d.leavers, d.actives) ?? 0)
 
   return (
@@ -109,10 +107,9 @@ export function Sticky({ ch, days, chans }: { ch: string; days: 30 | 90; chans?:
         />
       </StatCardGroup>
       <p className="mt-2 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk">
-        {fragile && `Estimation fragile : ${fmt(r.actives)} viewers actifs sur la période, moins de ${fmt(STICKY_MIN)}. `}
-        {tier && ref ? tierText(tier, ref.scope) : fragile ? "La comparaison viendra avec plus de viewers ou de chaînes de taille voisine." : "Pas assez de chaînes suivies pour se comparer."}
-        {tier && ref?.net.med != null ? ` Médiane : ${fmt(Math.round(ref.net.med))}${peers ? `, sur ${peers.n} chaînes comparées` : ""}.` : ""}
-        {fragile ? "" : " Estimation : un viewer parti vers deux chaînes compte deux fois."}
+        {tier ? tierText(tier, ref.scope) : "Pas assez de chaînes suivies pour se comparer."}
+        {tier && ref.net.med != null ? ` Médiane : ${fmt(Math.round(ref.net.med))}${peers ? `, sur ${peers.n} chaînes comparées` : ""}.` : ""}
+        {" Estimation : un viewer parti vers deux chaînes compte deux fois."}
       </p>
     </div>
   )

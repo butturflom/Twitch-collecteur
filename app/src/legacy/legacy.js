@@ -54,11 +54,12 @@ const colorOf=c=>{const i=shown().indexOf(c); // rang dans la liste affichée (f
 cfg.avatars=cfg.avatars||{};
 const setAvatar=(c,u)=>{if(c&&u&&/^https:\/\//.test(u)&&cfg.avatars[c]!==u){cfg.avatars[c]=u;saveCfg();return true}return false};
 const avUrl=c=>(info[c]&&info[c].img)||cfg.avatars[c]||'';
-// Planète : une pastille (classe « av », relief et halo dans legacy.css) qui porte l'image « avimg » ou l'initiale.
-// Le relief est un voile posé sur la photo (un <img> n'a pas de pseudo-élément) : d'où la pastille autour de l'image.
-function av(c,size=''){const u=avUrl(c),st=`--c:${colorOf(c)}`,cl='av'+(size?' '+size:'');
-  return u?`<span class="${cl}" style="${st}"><img class="avimg" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-c="${esc(c)}"></span>`
-    :`<span class="${cl} mono" style="${st}">${esc((c||'?')[0].toUpperCase())}</span>`}
+// Planète peinte de la chaîne (décision du 26/11 : elle remplace la photo de profil). « planet » : style global (index.css) ;
+// « av » : taille et marges dans le contexte de l'ancien code (legacy.css). Le dessin vient de lib/planet.ts (window.planetInner),
+// le même que ChannelAvatar en React. window.planetRing : les 3 chaînes les plus fortes de la vue, mis à jour par render().
+const ringOf=c=>!!(window.planetRing&&window.planetRing.has(c));
+function av(c,size=''){const cl='planet av'+(size?' '+size:'');
+  return `<span class="${cl}" aria-hidden="true" style="--c:${colorOf(c)}">${window.planetInner?window.planetInner(c,ringOf(c)):esc((c||'?')[0].toUpperCase())}</span>`}
 // photo introuvable (lien périmé) : on l'oublie et la pastille reprend l'initiale
 document.addEventListener('error',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('avsvg')){t.remove();return}
   if(!t||t.tagName!=='IMG'||!t.classList.contains('avimg'))return;const c=t.dataset.c,w=t.parentElement;
@@ -1852,17 +1853,7 @@ function topStreamersData(q){
 
   }
 
-  // Indexer les subs pour calculer la croissance
-  const subByDay={};
   const shownList=shown();
-  for(const e of q.events){
-    if(e.type!=='sub' && e.type!=='gift') continue;
-    if(!shownList.includes(e.c)) continue;
-    if(!Number.isFinite(e.t)) continue;
-    const d=dayKey(e.t); // jour en heure de Paris, comme le reste du tableau de bord
-    subByDay[e.c]=subByDay[e.c]||{};
-    subByDay[e.c][d]=(subByDay[e.c][d]||0)+e.n;
-  }
 
   const rows=[];
   for(const c of shownList){
@@ -1873,16 +1864,14 @@ function topStreamersData(q){
     const totalMsgs=msgByChan[c]||0;
     const activeDays=daysByChan[c]?.size||0;
 
-    // Calculer la croissance
-    let growth=null;
-    const days=subByDay[c]||{};
-    const sortedDays=Object.keys(days).sort();
-    if(sortedDays.length>=2){
-      const firstDay=sortedDays[0],lastDay=sortedDays[sortedDays.length-1];
-      const firstCount=days[firstDay]||0,lastCount=days[lastDay]||0;
-      if(firstCount>0){
-        growth=((lastCount-firstCount)/firstCount)*100;
-      }
+    // Croissance des followers entre le premier et le dernier relevé d'état de la chaîne (au moins 20 h d'écart, comme followersData).
+    // Avant le 26/11 elle comparait les subs du premier et du dernier jour (une chaîne passant de 1 à 1790 subs affichait 179000 %).
+    // growthBase : followers au premier relevé, la base du pourcentage (le tableau de bord n'affiche rien sous 100).
+    let growth=null,growthBase=null;
+    const fa=metaList(c).filter(x=>x.fol!=null);
+    if(fa.length>=2&&fa[fa.length-1].t-fa[0].t>=20*HOUR){
+      growthBase=fa[0].fol;
+      if(growthBase>0)growth=(fa[fa.length-1].fol-growthBase)/growthBase*100;
     }
 
     rows.push({
@@ -1891,6 +1880,7 @@ function topStreamersData(q){
       peakViewers: Math.round(peakV),
       hours: Math.round(hours*10)/10,
       growth: growth,
+      growthBase: growthBase,
       avgMsgPerMin: activeDays>0?Math.round(totalMsgs/(activeDays*60*2)):0,
       activeDays: activeDays
     });
@@ -2075,7 +2065,7 @@ function renderChannel(q){
     ch:chHead(c),
     list:listFallback.map(x=>({...who(x),live:!!(info[x]&&info[x].live)})),
     main,more,hasApi:hasApi(),
-    moments:momentsData(moments(q.mins,[c],6)),clips:clipsData(q,[c]),switches,also:also.slice(0,10),games,raids,
+    moments:momentsData(moments(q.mins,[c],6)),clips:clipsData(q,[c]),switches,also:also.slice(0,10),alsoBase:U.size,games,raids,
     msgChart:lineSpec([{name:c,c,color,pts:minuteSeries(q.mins,c,'m')}],{unit:' msg/min',gaps:listenGaps([c],q.t0)}),
     viewerChart:hasApi()?lineSpec([{name:c,c,color,pts:viewerSeries(q.snaps,c)}],{unit:' viewers'}):null,
     hourChart:{items:hours,color:color===OTHER?'#5b93ff':color,unit:' messages'}}}));
@@ -2496,6 +2486,9 @@ function render(){
   else $('dot').className='dot'+(running&&ws&&ws.readyState===1?' on':apiState&&apiState!=='ok'&&running?' err':'');
   if(tab==='settings'){renderSettings();return}
   const q=Q();
+  // Anneau des planètes (lib/planet.ts) : les 3 chaînes qui ont le plus de viewers actifs dans la vue en cours ; sans anneau
+  // quand il y a 3 chaînes ou moins (toutes en auraient un, il ne distinguerait plus rien). Calculé avant l'événement de l'onglet.
+  {const by=usersBy(q.pres,p=>p.c);window.planetRing=new Set(by.size>3?[...by].sort((a,b)=>b[1].size-a[1].size).slice(0,3).map(x=>x[0]):[])}
   // 24/11/2026 : « rosters » manquait dans cette table : sur cet onglet, chaque rafraîchissement levait « is not a function ».
   ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,overlap:renderOverlap,map:renderMap,flows:renderFlows,rosters:window.renderRosters})[tab](q);
 }
