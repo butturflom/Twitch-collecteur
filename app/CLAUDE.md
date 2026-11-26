@@ -15,5 +15,8 @@ Chargé seulement quand on travaille dans `app/`. Les règles générales du pro
   - `LANG_FIX` dans legacy.js force la langue de certaines chaînes.
 - Mode démo : `?demo` ou `?demo=channel|chat|game|overlap|flows|settings|map`, et `&hover=0.4` pour figer un survol. Les données viennent de `src/dev/demo.ts`, qui est exclu du build. C'est le moyen de tester l'interface sans Supabase.
 - Page d'accueil (`components/landing/`) : posée PAR-DESSUS le tableau de bord, qui reste monté et `inert` dessous (l'ancien code a besoin de ses éléments dans la page). Drapeau `to2-landing-seen` ; `?accueil` la rouvre.
+- Intro (`components/intro/`) : calque Three.js de 4 s avant la page d'accueil, drapeau `to2-intro-seen`, jamais en démo ni avec les mouvements réduits. Imports ciblés de `three`, pas de `@react-three/fiber`.
+- Planètes des chaînes : une seule source, `src/lib/planet.ts`, pour `ChannelAvatar`, `av()` et la Carte (`planetSvg`) ; anneau via `window.planetRing`.
+- Carte des migrations (`components/flows/flows-map.tsx`) : lit `byDay` de `legacy:flows` (SQL `flows_by_day`) ; sans `byDay`, le Sankey reste seul. Démo : `?demo=flows-map`, `&byday=N` ou `&byday=non`.
 - Données lues dans les rollups (historique, fidélité, rythme, comparaison) : fonctions SQL `channel_history`, `channel_stickiness`, `channels_rhythm`, `period_reach`, `network_history`, exposées par `window.*` dans legacy.js ; si la fonction manque, React affiche « demande la base à jour ».
 - Ajouter un composant 21st.dev : lancer `npx shadcn@latest add …`, remplacer `import { cn } from "cn"` par `@/lib/utils`, puis `npm uninstall cn`.

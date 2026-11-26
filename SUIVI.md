@@ -2,6 +2,39 @@
 
 État au **26/11/2026**. Ce fichier est la référence de suivi : la mémoire de Claude y renvoie. À mettre à jour à chaque PR fusionnée ou décision prise.
 
+## 0. Pour reprendre (mis à jour le 26/11)
+
+**Où on en est** : tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+
+**Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
+
+| Quand | Quoi |
+|---|---|
+| Chaque matin | `select d, count(*) from daily_overlap_matrix group by d order by d;` doit gagner une journée (§6) |
+| Vers le 30/11 | juger l'historique 30 jours (7 journées agrégées) |
+| Vers le 8/12 | alertes de rythme sur de vraies chaînes (ajuster `app/src/lib/rhythm.ts`) ; carte des migrations sur 14 journées |
+| Vers le 23/12 | trajectoire à 30 jours (pente, écart à la moyenne, jamais une prédiction), à ajouter aussi au rapport mensuel |
+| Quand les données seront là | tester `scripts/rapport-mensuel.mjs` sur une vraie base (jamais fait : seulement un faux serveur) |
+
+**Ce que seul l'utilisateur peut faire**
+- Carte des migrations : relancer `schema.sql` en entier dans le SQL Editor de Supabase (fonction `flows_by_day`), puis ouvrir l'onglet Flux avec le bon code. **Pas encore confirmé.**
+- Regarder avec les vraies données : l'intro (en attente de validation, `?accueil` la rejoue), les planètes peintes (sur la Carte, les couleurs ont changé), le Sankey, la Vue d'ensemble spatiale, les classements, le filtre de la Carte par jeu. Claude n'a vu que le mode démo.
+- Confirmer les durées de rétention de `config.json` (§8).
+- Prendre les rendez-vous avec 3 à 5 agences (`VALIDATION-AGENCES.md`) ; décider d'un projet Supabase pour un premier client (coût, RGPD de `CONFORMITE.md`).
+
+**Fidélité du chat (tranché le 26/11)** : le score n'est donné qu'à partir de 200 viewers actifs partout, tableau de bord, comparaison de chaînes et rapport mensuel (PR #59). Conséquence : les petites chaînes n'ont plus de score (§12 bis, point 1).
+
+**Chantiers possibles ensuite** : trajectoire (après le 23/12) ; critique de design de « Par chaîne » (coûteuse, sur demande) ; étendre les analyses neuves au rapport mensuel. L'hébergement et les comptes clients (chantier D) attendent un premier contrat.
+
+**Pièges à ne pas oublier**
+- Après toute modification de `app/src` : `npm run build` dans `app/`. Après un `git pull`, le hook fait le build (et `npm install` si les dépendances changent) : `scripts/hooks/post-merge`, à copier une fois dans `.git/hooks/` (§14).
+- Une PR dont la base est une branche déjà fusionnée se fusionne dans cette branche : viser `main` (§13). Claude ne fusionne que sur demande explicite.
+- Deux copies du collecteur (`collecteur.mjs` fait foi) ; le dossier d'un client en contient une troisième, figée (`scripts/nouveau-client.mjs`).
+- `scripts/rapport-mensuel.mjs` et `roster-report.ts` recopient les mêmes chiffres et le même style : les garder alignés.
+- `DESIGN.md` : règle des « deux niveaux de lueur » (§17). Ne pas la durcir sans l'utilisateur, il l'a voulue.
+
+**Réglage de session** : un chantier par session (`/clear`), Sonnet pour le code, Opus pour décider d'un design (§7). Lire ce §0 puis le §6 en début de session.
+
 ## 1. État en bref
 
 - **Collecteur (PC)** : en marche, version 1.6.13. Une lecture de `collector_status` le 25/11 indique une API Twitch « ok ».
@@ -12,6 +45,8 @@
 - **Barre latérale** : quatre groupes selon le plan (Observatoire, Analyse et flux, Exploration, Configuration), fusionnée le 25/11 (PR #24).
 - **Export PDF et CSV, Net Reach des rosters, onglet Flux** : faits (PR #10, #8, #7).
 - **Nouveautés du 25/11** : page d'accueil (une fois par navigateur), fidélité du chat (Sticky-Factor, comparée aux chaînes de taille voisine), comparaison de 2 à 4 chaînes (Rosters), alertes de rythme (Vue d'ensemble), « Son univers » et 5 indicateurs de tête (Par chaîne), filtre de la Carte par jeu principal. Détail : §13.
+- **Soir du 25/11 et nuit du 26/11** (PR #46 à #58) : intro animée de l'accueil, planètes peintes à la place des photos, carte des migrations dans Flux, corrections de justesse, outils et skills, documentation nettoyée.
+- **Aspect** : ambiance spatiale sur toutes les pages sauf la Carte (ciel étoilé, panneaux « console », avatars en planètes, constellation des recoupements), PR #43 et #44. Voir §17.
 - **Fonctions SQL déployées en base le 25/11** : `channel_stickiness` et `channels_rhythm` (ajouts seuls). Elles sont aussi dans `schema.sql`, à rejouer sur toute nouvelle base.
 - **Agences** : étape 1 (kit d'entretien) et étape 2 (dossier client, rapport mensuel PDF/CSV) préparées le 25/11, PR #42 ; rien n'est créé chez Supabase. Voir §12.
 - **Docker** : build réparé (PR #5). **VPS** : mis de côté par l'utilisateur.
@@ -41,6 +76,17 @@
 | #43 | `vue-ensemble-spatiale` | Vue d'ensemble spatiale : ciel étoilé, cartes console, avatars en planètes, constellation des recoupements (choix de l'utilisateur, DESIGN.md mis à jour) | fusionnée le 25/11, sur demande (la règle des lueurs de DESIGN.md est devenue « deux niveaux ») |
 | #44 | `ciel-toutes-pages` | Ciel étoilé étendu à toutes les pages sauf la Carte (`SKY_TABS`) | fusionnée le 25/11, sur demande |
 | #42 | `agences-validation-et-clients` | Direction agences : kit de validation, dossier client, rapport mensuel (§12) | fusionnée le 25/11, sur demande |
+| #45 | `suivi-pause-25-11` | Documentation : reprise après la pause | fermée sans fusion le 26/11, contenu repris par #59 |
+| #46, #47 | `worktree-skills-3d-hud-contremaitre` (comme les suivantes) | Skills 3D et HUD, `/contremaitre`, `IDEES.md`, coûts clients, écran vide | fusionnées le 25/11 |
+| #48 à #50 | | Page d'accueil : corrections de la critique | fusionnées le 25/11 |
+| #51 | | Chantier A : planète partout | fusionnée le 25/11 |
+| #52 | | Chantier B : intro d'accueil (Three.js) | fusionnée le 25/11 |
+| #53 | | Chantier C : fonction `flows_by_day` et carte des migrations dans Flux | fusionnée le 26/11 ; `schema.sql` à rejouer |
+| #54 | | Chantier C3 abandonné (documentation) | fusionnée le 26/11 |
+| #55 | | Planètes peintes et corrections de justesse | fusionnée le 26/11 |
+| #56, #57 | | Hook post-merge versionné, skill `/verifier` | fusionnées le 26/11 |
+| #58 | | Documentation nettoyée, agent et lanceur orchestrateur | fusionnée le 26/11 |
+| #59 | `docs-26-11` | Documentation à jour ; rapport mensuel : fidélité à partir de 200 viewers actifs | fusionnée le 26/11, sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -70,6 +116,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Viewers uniques** : esquisses HyperLogLog (erreur d'environ 2,3 %). Pas d'exclusifs ni de paires en estimation.
 - **Hash `u` raccourci (≈ −45 Mo)** : déconseillé pour l'instant (271 Mo sur 500).
 - **Téléphone** : hors usage, ordinateur seulement.
+- **Planètes peintes (26/11)** : elles remplacent les photos de profil, y compris au centre des planètes à facettes de la Carte. Les couleurs de la Carte suivent désormais le rang de palette : choix signalé dans la PR #55 comme restant à valider à l'écran.
 - **Critiques** : l'utilisateur accepte qu'elles remettent en cause ses choix passés ; ces choix sont signalés « [ton choix] ».
 
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
@@ -80,7 +127,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 4. **Permissions** : les refus de lecture sont versionnés (`.claude/settings.json`), les autorisations `git push` et `gh pr create` restent en local (`.claude/settings.local.json`).
 5. **`.hallmark/run.txt`** : ignoré (ajouté au `.gitignore`).
 
-Plus rien n'attend l'utilisateur.
+Ce qui attend aujourd'hui l'utilisateur est dans le §0.
 
 ## 6. Vérifications à refaire
 
@@ -89,6 +136,8 @@ Plus rien n'attend l'utilisateur.
 - **Phase 3 (Top des chaînes, communautés investies)** : le rendu réel n'a pas été vu, les données de démo sont vides. À regarder dans votre navigateur (#22 est fusionnée).
 - **Alertes de rythme** : vers le 8/12 (14 journées agrégées), vérifier que les alertes sont plausibles et ajuster `lib/rhythm.ts`.
 - **Stockage** : suivre les 285 Mo (relevé du 25/11). Alerte à 400 Mo.
+- **Carte des migrations** : après avoir rejoué `schema.sql`, vérifier que l'onglet Flux l'affiche avec le bon code et que le Sankey est inchangé. Vers le 8/12, juger sur 14 journées : si elle ne dit rien de plus que le Sankey, la retirer (critère de `IDEES.md`).
+- **Intro d'accueil** : fluidité avec le tableau de bord qui charge dessous, et cas réel avec des chaînes en direct.
 
 ## 7. Modèles, effort et tokens
 
@@ -134,12 +183,15 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 - **Mise en page** (testée le 25/11, après `npm run build` dans `app/`) : capture du fichier construit, sans données.
   `chrome.exe --headless=new --disable-gpu --hide-scrollbars --window-size=1440,1000 --virtual-time-budget=6000 --screenshot=<png> "file:///C:/Users/User/Documents/twitch-collecteur/twitch-overlap.html"`
   Puis lire le PNG avec l'outil Read. Sans base, la page affiche « Les données n'arrivent pas » après environ 10 s : c'est normal.
-- **Données fictives** : `?demo` n'existe que dans le serveur de développement (`import.meta.env.DEV`, voir `app/src/main.tsx`). Lancer `npm run dev` dans `app/`, puis capturer `http://localhost:5173/?demo` (ou `?demo=<onglet>`). Non vérifié le 25/11.
+- **Données fictives** : `?demo` n'existe que dans le serveur de développement (`import.meta.env.DEV`, voir `app/src/main.tsx`). Lancer `npm run dev` dans `app/`, puis capturer `http://localhost:5173/?demo` (ou `?demo=<onglet>`). Vérifié le 26/11 : le skill `/verifier` enchaîne build, diff et captures sur le serveur de développement.
 - Limites : pas de données réelles (la configuration vit dans le navigateur de l'utilisateur). Le navigateur intégré ne déroule pas les animations (`requestAnimationFrame`) : préférer la capture Chrome.
 
 ## 10. Journal
 
 - **26/11** : documentation nettoyée. `LISEZMOI.md` ne garde que le guide ; l'historique des versions passe dans `CHANGELOG.md`. Les anciens plans (`plan.md.txt`, `PHASE2_ARCHITECTURE_SCALABLE.md`) et l'ancienne copie de la mémoire (`memory/`, liens morts) passent dans `archives/`, sans suppression. La roadmap devient `ROADMAP-COMPLET.txt`. `CLAUDE.md`, `.claude/CLAUDE.md`, `DOCKER.md` et `README.md` (encodé en UTF-16, illisible) sont réécrits ; `app/CLAUDE.md` perd les renvois à des fichiers qui n'existent plus. Ajout de l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`) et du lanceur `lancer-orchestrateur.bat`. Chantier C3 abandonné (§16, `IDEES.md`).
+- **26/11 (nuit)** : #53 (carte des migrations), #54 (C3 abandonné), #55 (planètes peintes, justesse), #56 et #57 (hook, `/verifier`), #58 (documentation).
+- **26/11 (journée)** : documentation remise à jour, #45 fermée, rapport mensuel aligné sur le seuil de 200 viewers actifs pour la fidélité (#59). Build vérifié ; le rapport n'a pas été relancé sur des données.
+- **25/11 (soir)** : #43 (Vue d'ensemble spatiale, constellation) et #44 (ciel sur toutes les pages sauf la Carte) fusionnées sur demande ; règle des lueurs de `DESIGN.md` modifiée. Puis #46 à #52 : skills 3D, `/contremaitre`, page d'accueil, planète partout, intro animée.
 - **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée. Puis #27 à #36 : direction agences et streamers, comparaison de chaînes, fidélité (voisines, petites chaînes), alertes de rythme (fonction déployée), son univers, essentiel de Par chaîne, filtre de la Carte par jeu. Hook de build local. Puis #37 à #41 (règle de build, documentation, menu de la Carte et lecture protégée, pastilles retirées) et #42 : kit de validation des agences, `scripts/nouveau-client.mjs` et `scripts/rapport-mensuel.mjs`.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
@@ -211,7 +263,7 @@ Les conseils du §12 étaient écrits pour les agences seules : c'était incompl
 | Chantier | Où | Notes |
 |---|---|---|
 | Comparer 2 à 4 chaînes | Rosters → « Comparer des chaînes » | Audience nette du groupe, doublons, tableau côte à côte, recoupements deux à deux. `?compare=a,b` en démo |
-| Fidélité du chat (Sticky-Factor) | Par chaîne → Historique | Score dès 30 viewers actifs, fragile sous 200. Comparée aux 8 chaînes de taille voisine (sinon au réseau). Vert dans le quart haut, ambre dans le quart bas |
+| Fidélité du chat (Sticky-Factor) | Par chaîne → Historique | Score affiché à partir de 200 viewers actifs depuis le 26/11 (#55 ; avant : dès 30, fragile sous 200). Comparée aux 8 chaînes de taille voisine (sinon au réseau). Vert dans le quart haut, ambre dans le quart bas |
 | Alertes de rythme | Vue d'ensemble → « Rythme des chaînes » | Écart ≥ 15 % et hors variations habituelles (2 erreurs types), 30 viewers actifs par jour minimum. Il faut 14 journées agrégées : premières alertes vers le 8/12. Seuils dans `app/src/lib/rhythm.ts` |
 | Son univers | Par chaîne | Voisines autour de la chaîne, rang par taille, 3 chaînes juste au-dessus. `app/src/lib/universe.ts` |
 | L'essentiel de Par chaîne | Par chaîne | 5 indicateurs de tête ; « Communauté et événements » replié (`to2-ch-more`) |
@@ -223,7 +275,7 @@ Les conseils du §12 étaient écrits pour les agences seules : c'était incompl
 
 ## 14. Reconstruction automatique
 
-Après toute modification de `app/src`, Claude lance `npm run build` dans `app/` (règle de `CLAUDE.md`, PR #37). Un hook git local (`.git/hooks/post-merge`, non versionné) le fait aussi après un `git pull` qui change `app/`. À recréer si le dépôt est cloné ailleurs.
+Après toute modification de `app/src`, Claude lance `npm run build` dans `app/` (règle de `CLAUDE.md`, PR #37). Un hook git le fait aussi après un `git pull` qui change `app/`, et lance `npm install` si les dépendances changent. Il est versionné dans `scripts/hooks/post-merge` (#56) et s'installe une fois : `Copy-Item "scripts\hooks\post-merge" ".git\hooks\post-merge" -Force`. Installé sur le PC de l'utilisateur le 26/11.
 
 ## 15. Chantiers du 25/11 (après-midi), fusionnés (PR #39)
 
@@ -238,7 +290,7 @@ Après toute modification de `app/src`, Claude lance `npm run build` dans `app/`
 
 | Outil | Rôle | Installé comme | Points d'attention |
 |---|---|---|---|
-| `three-js` (Mindrally) | Conseils Three.js et React Three Fiber | skill, `.claude/skills/three-js` | Court et générique (suppose Tailwind, TypeScript). Ne crée **aucune dépendance** : `three` et `@react-three/fiber` ne sont pas dans `app/package.json` |
+| `three-js` (Mindrally) | Conseils Three.js et React Three Fiber | skill, `.claude/skills/three-js` | Court et générique (suppose Tailwind, TypeScript). `three` est dans `app/package.json` depuis #52 (intro) ; `@react-three/fiber` n'y est pas |
 | `react-three-fiber` (freshtechbro) | R3F, drei, shaders, projet de départ | skill, `.claude/skills/react-three-fiber` | Contient un `starter_r3f/` et deux scripts Python de génération |
 | `ui-ux-pro-max` (nextlevelbuilder) | Typographie, palettes, glassmorphism, accessibilité, base de règles interrogeable | skill, `.claude/skills/ui-ux-pro-max` | Demande Python 3 (testé : `search.py` répond). Tests retirés (387 Ko). Ses sorties sont des suggestions : `DESIGN.md` prime |
 | Playwright MCP | Piloter un vrai navigateur pour vérifier un rendu | `.mcp.json`, `npx @playwright/mcp@latest --browser chrome` | À viser sur `npm run dev` (`?demo=`), pas sur le HTML en `file://`. Premier lancement : Claude demande d'approuver le serveur |
@@ -247,9 +299,17 @@ Après toute modification de `app/src`, Claude lance `npm run build` dans `app/`
 
 **Décision de l'utilisateur, 25/11 (soir)** : Three.js est un **complément** autorisé à modifier le code ; ses conseils, ceux de Spline et des derniers skills (`three-js`, `react-three-fiber`, `ui-ux-pro-max`, Playwright, `impeccable`) comptent comme des évaluations légitimes. Le moteur de la Carte reste impératif dans `legacy.js` (Three.js ne s'y substitue pas sans nouvelle décision). Sur une surface neuve, un prototype isolé avec critère go/no-go (poids dans le HTML unique, images par seconde sur le PC de l'utilisateur, chargement depuis `file://`) précède l'intégration. Ancienne règle (« décision à prendre avant tout code 3D ») levée.
 
-**Idées déposées le 25/11 (évaluées dans `IDEES.md`, plan proposé, rien lancé)** :
+**Idées déposées le 25/11 (évaluées dans `IDEES.md`)**. État au 26/11 : A livré (#51, puis planètes peintes #55), B livré (#52, en attente de validation), C livré (#53, `schema.sql` à rejouer), C3 abandonné, D dormant. Détail d'origine :
 - **Chantier A, planète partout** (plus-value 18/25, S) : le texte collé (fond, cartes console, avatars en planètes, Recoupements) est déjà livré par les PR #43 et #44. Reste : `av()` de `legacy.js` (info-bulle de la Carte, légendes) et les pastilles de moins de 20 px.
 - **Chantier B, intro d'accueil** (plus-value 18/25, M) : séquence façon générique de jeu, galaxie des chaînes en direct puis révélation du nom, avec prototype Three.js isolé et critères go/no-go.
 - **Chantier C, carte des migrations de l'onglet Flux** (19/25, M) : planifié au 8/12, prototype C0 par Opus. Variante tuyaux A→B→C avec planètes (C3, 17/25, L) : prototype d'abord, calcul nocturne à deux sauts avant la purge des brutes. **C3 abandonné le 26/11** : prototype illisible, arcs de C2 conservés ; travail archivé sur la branche locale `archive/c3-trajets-deux-sauts`.
 - **Chantier D, hébergement 24 h/24 et comptes clients** (16/25, L) : planifié après le premier contrat signé. Décisions de l'utilisateur, 25/11 : base commune avec droits sur un plan Supabase payant ; secret Twitch chez l'opérateur, seul maître des données ; collecteur 24 h/24 dimensionné par conseil. Le détail des paliers et des coûts est dans `COUTS-CLIENTS.md` (prix Supabase à vérifier sur la page officielle, serveur non chiffré).
 - **Écran vide du tableau de bord** : « Les données n'arrivent pas » propose de revoir la page d'accueil (événement `to2:landing`, sans toucher au drapeau « déjà vue »). Build et types vérifiés ; rendu visuel non vérifié.
+
+## 17. Ambiance spatiale du 25/11 (soir), PR #43 et #44
+
+L'utilisateur a collé un texte « DESIGN.md univers spatial » et demandé de faire évoluer la Vue d'ensemble.
+- **Pas adopté tel quel** : palette bleutée, police Orbitron, flou sur les cartes, suppression des couleurs d'alerte. Les jetons du `DESIGN.md` du dépôt restent la référence.
+- **Adopté** : ciel étoilé (`.to2-sky`, CSS pur, statique, onglets de `SKY_TABS` dans `App.tsx`, tous sauf la Carte) ; cartes « console » (`shadow-console`, légèrement translucides, sans flou) ; avatars en planètes (remplacés le 26/11 par les planètes peintes de `lib/planet.ts`) ; constellation en tête de « Recoupements » (`recoup.tsx`, 7 chaînes au plus, masquée aux lecteurs d'écran).
+- **Règle modifiée à la demande de l'utilisateur** : « une lueur n'est jamais décorative » est devenue « deux niveaux de lueur » (vive pour l'action, ambiante pour l'ambiance).
+- **Non fait** : anneaux de croissance et lunes de collabs (prototype d'abord, §11) ; boutons « Tout le chevauchement… » sans marge à gauche dans Recoupements (écarté par la critique n°7).

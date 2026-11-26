@@ -29,13 +29,13 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. Le skill `
 4. Recoupements cosmiques : fait (constellation des recoupements).
 5. Densité conservée : oui.
 
-**Ce qui n'est pas planète aujourd'hui** :
+**Ce qui n'était pas planète le 25/11** (livré depuis, PR #51 et #55) :
 - `av()` dans `app/src/legacy/legacy.js:57`, appelée ligne 444 (légende des graphiques), ligne 1459 (info-bulle de la Carte, taille `md`) et ligne 1462 (lignes de l'info-bulle). Rendu en CSS plat (`legacy.css:126-136`).
 - Les pastilles de moins de 20 px de `ChannelAvatar` (légende de `line-chart.tsx`, menu de la Carte) : sans relief ni halo par choix de lisibilité. Ce choix peut rester, avec un relief léger sans halo.
 
 ## Plan en cours
 
-Proposé le 2026-11-25, pas lancé. **Un chantier = une session** (`/clear` entre deux). Rien ne se fusionne ni ne se déploie sans ta demande.
+**État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), en attente de validation à l'écran ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), `schema.sql` à rejouer et à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se fusionne ni ne se déploie sans ta demande.
 
 ### Chantier A · Planète partout (S, 1 session)
 
@@ -207,7 +207,7 @@ Validé le 25/11 avec les modifications de l'utilisateur (durée de 4,0 s, mot �
 **Statut (26/11)** :
 - C0 : prototype isolé livré (démo `?demo=flows-map`), verdict partiel : lisible, pas encore prouvé sur les vraies données.
 - C1 : fonction SQL `flows_by_day` et appel dans l'onglet Flux livrés (PR #53). Testée en transaction annulée : mauvais code → 0 ligne. Reste à relancer `schema.sql` en base et vérifier l'onglet Flux avec le bon code.
-- C2 : en cours (Sonnet high). Carte masquée tant que `byDay` est absent, Sankey inchangé.
+- C2 : livré (PR #53). Carte masquée tant que `byDay` est absent, Sankey inchangé.
 
 **Variante tuyaux (25/11)** : si le prototype C0 réussit en tuyaux, les trajets A→B→C deviennent une étape C3, après C2 : une tâche de nuit (Sonnet high, `schema.sql` rejouable, testée en transaction annulée) qui calcule, à partir des passages bruts de la veille, les trajets à deux sauts par jour et les garde dans une table agrégée. Sans cette table, on ne montre que des paires, jamais un parcours. Les planètes des nœuds réutilisent `ChannelAvatar` (déjà en planète dès 20 px). Décision prise le 25/11 : `DESIGN.md` l. 321 ne réserve plus l'atmosphère à la Carte ; le ciel étoilé la remplace sur toutes les pages. Les tuyaux peuvent donc être dessinés dans Flux, à condition de passer le critère de lisibilité du prototype.
 
@@ -240,7 +240,7 @@ Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'ét
 - Ne pas passer la Carte en Three.js maintenant : ta décision d'aujourd'hui fait de Three.js un complément, pas un remplaçant. La question se reposera si l'intro prouve un gain de rendu.
 - Ne pas afficher de noms de chaînes ou de chiffres inventés dans l'intro : si aucune donnée réelle n'est disponible à la première visite, l'intro montre la galaxie illustrée.
 
-**Première action** : dire « lance le chantier A ». Pour B, valider d'abord les critères go/no-go ci-dessus.
+**Prochaine action** : rejouer `schema.sql`, puis regarder l'intro et la carte des migrations avec les vraies données (`SUIVI.md` §0).
 
 ## Écartées
 
@@ -251,5 +251,6 @@ Ne se lance qu'après un premier contrat signé, sur ce qui est validé à l'ét
 
 | Chantier | Sessions estimées | Sessions réelles | Modèles | Ce que ça a apporté |
 |---|---|---|---|---|
-| A · Planète partout | 1 | | | |
-| B · Intro d'accueil | 3 | | | |
+| A · Planète partout | 1 | non relevé | | Planètes dans l'info-bulle et les légendes (#51), puis peintes (#55) |
+| B · Intro d'accueil | 3 | non relevé | | Intro de 4 s (#52), validation à l'écran en attente |
+| C · Carte des migrations | 2 à 3 | non relevé | | Passages par jour dans Flux (#53), à juger vers le 8/12 |
