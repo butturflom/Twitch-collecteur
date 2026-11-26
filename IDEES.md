@@ -60,8 +60,8 @@ Critère de fin : plus aucune photo de chaîne plate dans l'info-bulle de la Car
 |---|---|---|---|
 | B1. Écrire la séquence (storyboard : durée, mouvement de caméra, apparition du titre, effet du nom, bouton « Passer », rappel `prefers-reduced-motion`). Typographie et lueurs selon `DESIGN.md` | Session | Opus 5.5, high | Storyboard dans `IDEES.md`, accepté par toi avant tout code |
 | B2. Prototype isolé (`?intro`, page à part, mode démo, sans toucher à la vraie page d'accueil), moteur Three.js via les skills `three-js` et `react-three-fiber`. Option : maquette de la scène dans Spline | Session | Sonnet 5.5, high | Prototype et mesures. **GO** (fluidité 60 i/s confirmée sur le PC de l'utilisateur, 25/11) : +141 Ko compressés, `file://` OK |
-| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée. **Fait, en attente de validation** (25/11) : `app/src/components/intro/intro.tsx` ; `?intro` et `intro-proto.tsx` retirés |
-| B4. Contrôle du mouvement | Relecture avec `ui-ux-pro-max` (`data/motion.csv`), une seule fois, sans agent | par défaut | Liste de corrections |
+| B3. Décision go/no-go sur mesures, puis branchement sur `landing.tsx` (galaxie des chaînes en direct si des données existent, sinon l'illustration de `landing-map.tsx`) | Session | Sonnet 5.5, medium | Intro intégrée. **Fait, en attente de validation** (25/11) : `app/src/components/intro/intro.tsx` ; `?intro` et le prototype retirés |
+| B4. Contrôle du mouvement | Relecture avec `ui-ux-pro-max` (`.claude/skills/ui-ux-pro-max/data/motion.csv`), une seule fois, sans agent | par défaut | Liste de corrections |
 
 #### Storyboard (B1, 25/11, validé avec modifications)
 

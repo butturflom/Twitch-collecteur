@@ -50,7 +50,7 @@ Pour les idées « Faire » et « Prototype », fais un plan par chantier. **Un 
 - Modifier du code, corriger un bug, écrire une fonction : **Sonnet 5.5**, effort medium ou high.
 - Décider d'un design, critiquer une page, refactoriser un gros fichier : **Opus 5.5**, effort high.
 - Problème resté sans solution : Opus xhigh. Jamais `max` sans que l'utilisateur le demande.
-- Un sous-agent seulement pour un travail **indépendant et volumineux** (il repart de zéro et relit le contexte). Sinon, fais-le dans la session. Les agents du projet : `orchestrateur` (session) ; `analyste` et `app-developer` ne sont pas utilisés. Précise `model` dans l'appel, avec un prompt autonome (fichiers, contraintes, résultat attendu).
+- Un sous-agent seulement pour un travail **indépendant et volumineux** (il repart de zéro et relit le contexte). Sinon, fais-le dans la session. Le seul agent du projet est `orchestrateur` (session). Précise `model` dans l'appel, avec un prompt autonome (fichiers, contraintes, résultat attendu).
 - Critique de design : `ui-ux-pro-max` en lecture, sans sous-agent. Une par page importante, pas une par retouche.
 - Ne jamais éditer `twitch-overlap.html` (généré). Après toute modification de `app/src`, `npm run build` dans `app/`.
 - Rien ne se fusionne, ne se déploie ni ne s'applique en base sans demande explicite de l'utilisateur.

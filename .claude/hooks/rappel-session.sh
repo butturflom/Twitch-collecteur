@@ -9,4 +9,7 @@ awk '/^## 0\./{f=1; next} /^## 1\./{f=0} f' SUIVI.md 2>/dev/null
 echo "=== État git ==="
 echo "Branche : $(git branch --show-current 2>/dev/null)"
 git status --short 2>/dev/null | head -20
+
+echo "=== Audit (détail : /audit) ==="
+node scripts/audit-projet.mjs --court 2>/dev/null || echo "Audit indisponible (node absent)"
 exit 0
