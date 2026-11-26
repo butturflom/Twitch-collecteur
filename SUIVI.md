@@ -4,6 +4,8 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
+**Ajout de streamer réparé (26/11, tableau de bord 2.0.1, PR #70 fusionnée)** : la recherche des Réglages ne partait jamais et l'API n'avait plus de champs de saisie (panneau incomplet depuis le portage React). **Reste cassé** : retrait d'une chaîne, liste complète, ajout en bloc, changement de mode local / nuage. Évalué dans `IDEES.md` : gérer les chaînes (S), puis suggestions d'après les raids (M), sur demande.
+
 **Où on en est** : PR #62 à #66 (organisation des outils, audit du dépôt, restes d'Impeccable, hiérarchie des documents, orchestrateur et contremaître fusionnés) fusionnées le 26/11. PR #67 (entrées du tableau de bord numérotées en 2.0.0) fusionnée le 26/11. Fusion désormais autorisée en permanence par l'utilisateur. Avant elles, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)

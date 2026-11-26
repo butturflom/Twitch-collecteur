@@ -260,3 +260,11 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Chiffres plus justes** : la fidélité du chat ne s'affiche qu'à partir de 200 viewers actifs ; « Écrivent aussi chez » donne un pourcentage à partir de 30 viewers ; la croissance est la médiane calculée sur les followers (« — » sous 100 followers au départ).
 - **Rapport mensuel des agences** : même seuil de fidélité que le tableau de bord (200 viewers actifs, « — » en dessous). La mention « score fragile » et la colonne CSV « Fidélité fragile » disparaissent.
 - **Textes** : l'onglet Rosters n'affiche plus son titre deux fois et tutoie comme le reste ; « 1 000 » ne se coupe plus sur deux lignes dans Par chaîne.
+
+## Tableau de bord 2.0.1 (26/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à rejouer.
+
+- **Ajouter un streamer** : la recherche des Réglages ne partait jamais et affichait toujours « Recherche API Twitch non configurée ». Elle part maintenant toute seule pendant la frappe. Sans API dans le navigateur, on peut ajouter un pseudo exact ou une adresse `twitch.tv/…` ; les chaînes déjà suivies sont marquées « Suivie ».
+- **API Twitch** : la section a de nouveau les champs Client ID et Client secret, et permet de générer un nouveau jeton quand l'ancien expire.
+- Le bouton « Ajouter un streamer » de la barre latérale ouvre la recherche et y place le curseur.
