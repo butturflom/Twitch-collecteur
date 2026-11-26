@@ -1,11 +1,11 @@
 # Suivi du projet Twitch Overlap
 
-État au **25/11/2026**. Ce fichier est la référence de suivi : la mémoire de Claude y renvoie. À mettre à jour à chaque PR fusionnée ou décision prise.
+État au **26/11/2026**. Ce fichier est la référence de suivi : la mémoire de Claude y renvoie. À mettre à jour à chaque PR fusionnée ou décision prise.
 
 ## 1. État en bref
 
 - **Collecteur (PC)** : en marche, version 1.6.13. Une lecture de `collector_status` le 25/11 indique une API Twitch « ok ».
-- **Base** : 271 Mo sur 500 Mo (palier gratuit). Le collecteur alerte au-delà de 400 Mo.
+- **Base** : 285 Mo sur 500 Mo le 25/11 (§15, palier gratuit). Le collecteur alerte au-delà de 400 Mo.
 - **Rollups** : les crons `daily-overlap-rollup` (03 h 30 UTC) et `daily-hll` (03 h 40 UTC) sont actifs ; leurs derniers passages ont réussi le 25/11. Journées agrégées : 23/11 et 24/11 (1 915 lignes de chevauchement ; esquisses HyperLogLog pour le 24/11 seul).
 - **Historique 30 et 90 jours, viewers uniques, historique du réseau** : en production (PR #11, #12, #13). Les trois fonctions répondent sur la base (testé le 25/11). Sur deux journées, les courbes restent courtes : voir §6.
 - **Raid Recommender** : fait, section « Recommandations de raid » dans Par chaîne.
@@ -37,7 +37,6 @@
 | #37 | `regle-build-auto` | CLAUDE.md : reconstruction automatique du tableau de bord | fusionnée le 25/11 |
 | #38 | `docs-maj-25-11` | Cette mise à jour de la documentation | fusionnée le 25/11 (après #37) |
 | #39 | `carte-menu-lecture-protegee` | Menu de la Carte, classements, lecture protégée par code, effacement, CONFORMITE.md | fusionnée le 25/11 (§15) |
-
 | #40, #41 | `suivi-39-fusionnee`, `carte-sans-pastilles` | Suivi de #39 ; Carte : retrait des pastilles de filtres actifs | fusionnées le 25/11 |
 | #43 | `vue-ensemble-spatiale` | Vue d'ensemble spatiale : ciel étoilé, cartes console, avatars en planètes, constellation des recoupements (choix de l'utilisateur, DESIGN.md mis à jour) | fusionnée le 25/11, sur demande (la règle des lueurs de DESIGN.md est devenue « deux niveaux ») |
 | #44 | `ciel-toutes-pages` | Ciel étoilé étendu à toutes les pages sauf la Carte (`SKY_TABS`) | fusionnée le 25/11, sur demande |
@@ -45,7 +44,7 @@
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
-## 3. Plan V2 (`plan.md.txt`)
+## 3. Plan V2 (archivé : `archives/plan-v2.md.txt`)
 
 | Élément | État | Note |
 |---|---|---|
@@ -60,7 +59,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 | Fonctionnalité 3 : Sticky-Factor | Fait (PR #25), fonction déployée | Score sur 100 dans Par chaîne → Historique, comparé aux quartiles des chaînes suivies : les seuils du plan (70 et 40) colorieraient tout en vert (minimum observé le 24/11 : 72). L'alerte « fuite pendant les pubs » est impossible sans jeton du diffuseur. |
 | §3 : barre latérale | Fait (PR #24) | Observatoire, Analyse et flux, Exploration, Configuration. La Carte est en tête. « Par jeu » est rangé dans Exploration, que le plan ne prévoyait pas. |
 | §4 : landing page | Fait (PR #26) | Posée par-dessus le tableau de bord, une seule fois (drapeau `to2-landing-seen`, `?accueil` la rouvre). Texte du plan mis au tutoiement, sans chiffre ni fonction inventés. |
-| Roadmap « Complet », §4 et §5 | Non commencé | Reporté par l'utilisateur. |
+| `ROADMAP-COMPLET.txt`, §4 et §5 | Non commencé | Reporté par l'utilisateur. |
 
 ## 4. Décisions prises (ne pas reposer)
 
@@ -89,7 +88,7 @@ Plus rien n'attend l'utilisateur.
 - **Historique 30 jours** : à juger quand 7 journées sont agrégées (vers le 30/11). **90 jours** : pas avant environ 90 jours de données ; on ne peut vérifier que la cohérence des totaux.
 - **Phase 3 (Top des chaînes, communautés investies)** : le rendu réel n'a pas été vu, les données de démo sont vides. À regarder dans votre navigateur (#22 est fusionnée).
 - **Alertes de rythme** : vers le 8/12 (14 journées agrégées), vérifier que les alertes sont plausibles et ajuster `lib/rhythm.ts`.
-- **Stockage** : suivre les 271 Mo. Alerte à 400 Mo.
+- **Stockage** : suivre les 285 Mo (relevé du 25/11). Alerte à 400 Mo.
 
 ## 7. Modèles, effort et tokens
 
@@ -117,13 +116,16 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 5. Agents du projet : `analyste`, `app-developer` et `optimizer` en Sonnet, `monitor` en Haiku. Les lancer seulement pour un travail indépendant et volumineux.
 
 **Réglages actuels**
+- Session d'orchestration (`lancer-orchestrateur.bat`, agent `orchestrateur`) : Sonnet 5.5. Passer en Opus 5.5 pour un chantier de design.
 - Défaut : Haiku 5.5 (choisi le 25/11 pour les nouvelles sessions). Bon pour les lectures et les petites retouches. Pour le code de l'application, Sonnet est le minimum conseillé.
 - `.claude/settings.json` refuse la lecture des fichiers générés (`twitch-overlap*.html`), des journaux, des lockfiles, de `config.json` et des `node_modules`.
 - Piste à tester avant d'appliquer : `skillOverrides` (valeur `name-only`) pour alléger la liste des skills chargée à chaque session.
 
 ## 8. Rétention et données
 
-- Valeurs notées le 24/11 (`config.json` non relu le 25/11, lecture refusée) : détail minute 7 j, présence 1 j, événements et relevés 3 j. Les brutes `switches` suivent la présence.
+- Défauts du code (`collecteur.mjs`) : détail minute 14 j, présence 21 j, événements 60 j, relevés 30 j. Valeurs recommandées à 86 chaînes (collecteur 1.6.11) : 2, 1, 2 et 2 j.
+- **Valeurs réellement en place dans `config.json` : inconnues ici** (lecture refusée). Les notes du 24/11 donnaient 7 j de détail et 3 j d'événements et de relevés : ce qui ne correspond ni aux défauts ni à la série de la 1.6.11. **À confirmer par le propriétaire du dossier.**
+- Les brutes `switches` suivent la présence.
 - `cleanup()` ne supprime pas les rollups quotidiens (`daily_*`) : c'est ce qui permet l'historique sur 30 et 90 jours.
 - Paliers : alerte du collecteur au-delà de 400 Mo ; palier gratuit Supabase à 500 Mo.
 
@@ -137,6 +139,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 10. Journal
 
+- **26/11** : documentation nettoyée. `LISEZMOI.md` ne garde que le guide ; l'historique des versions passe dans `CHANGELOG.md`. Les anciens plans (`plan.md.txt`, `PHASE2_ARCHITECTURE_SCALABLE.md`) et l'ancienne copie de la mémoire (`memory/`, liens morts) passent dans `archives/`, sans suppression. La roadmap devient `ROADMAP-COMPLET.txt`. `CLAUDE.md`, `.claude/CLAUDE.md`, `DOCKER.md` et `README.md` (encodé en UTF-16, illisible) sont réécrits ; `app/CLAUDE.md` perd les renvois à des fichiers qui n'existent plus. Ajout de l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`) et du lanceur `lancer-orchestrateur.bat`. Chantier C3 abandonné (§16, `IDEES.md`).
 - **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée. Puis #27 à #36 : direction agences et streamers, comparaison de chaînes, fidélité (voisines, petites chaînes), alertes de rythme (fonction déployée), son univers, essentiel de Par chaîne, filtre de la Carte par jeu. Hook de build local. Puis #37 à #41 (règle de build, documentation, menu de la Carte et lecture protégée, pastilles retirées) et #42 : kit de validation des agences, `scripts/nouveau-client.mjs` et `scripts/rapport-mensuel.mjs`.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
 - **23/11** : Raid Recommender implémenté, build OK.
@@ -146,11 +149,11 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 Le texte décrit un cockpit spatial pour agences, marques et streameurs. La Carte en est déjà la moitié : planètes, taille, liens, système d'une chaîne choisie. Tri fait le 25/11.
 
 **À développer, dans cet ordre** (tout repose sur des données qu'on a déjà) :
-1. **Alertes de rythme** : une chaîne qui stagne ou qui décolle, calculée sur les rollups quotidiens (`daily_streamer_rollup`). À montrer dans la Vue d'ensemble et sur la planète. Il faut d'abord 14 journées agrégées pour que le signal compte (vers le 8/12).
-2. **Comparaison de 2 à 4 chaînes côte à côte** : viewers, messages, fidélité du chat, croissance, recoupement entre elles. N'existe pas encore (les Rosters comparent des groupes, pas des chaînes).
+1. **Alertes de rythme** (fait, §13) : une chaîne qui stagne ou qui décolle, calculée sur les rollups quotidiens (`daily_streamer_rollup`). À montrer dans la Vue d'ensemble et sur la planète. Il faut d'abord 14 journées agrégées pour que le signal compte (vers le 8/12).
+2. **Comparaison de 2 à 4 chaînes côte à côte** (fait, §13) : viewers, messages, fidélité du chat, croissance, recoupement entre elles. N'existe pas encore (les Rosters comparent des groupes, pas des chaînes).
 3. **Trajectoire simple** : la tendance sur 30 jours, dite comme une tendance (pente, écart à la moyenne), pas comme une prédiction. À faire quand l'historique a 30 jours (vers le 23/12).
 4. **Moins de chiffres au premier regard** : 3 à 5 indicateurs en tête de « Par chaîne », le reste replié. À passer par une critique de design.
-5. **Filtres de la Carte par langue et par jeu principal** : les langues sont déjà connues ; la Carte a déjà des groupes.
+5. **Filtres de la Carte par langue et par jeu principal** (le filtre par jeu est fait, §13) : les langues sont déjà connues ; la Carte a déjà des groupes.
 
 **À retenir comme direction, sans l'appliquer tel quel** :
 - « Rendre la donnée désirable » : c'est le rôle de la Carte, qui doit rester lisible avant d'être spectaculaire (principe 2 de `PRODUCT.md`). Les anneaux de croissance et les lunes de collabs ne se rajoutent que si la lecture n'en souffre pas, et après un prototype.

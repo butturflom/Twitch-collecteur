@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Projet en français (docs, interface, commentaires) : écrire dans la même langue. Le guide utilisateur réel est `LISEZMOI.md` (le `README.md` est vide) ; le tableau de bord a son propre guide technique dans `app/LISEZMOI.md`.
+Projet en français (docs, interface, commentaires) : écrire dans la même langue. Le guide utilisateur est `LISEZMOI.md`, l'historique des versions `CHANGELOG.md`, l'état des chantiers `SUIVI.md`. Le tableau de bord a son propre guide technique dans `app/LISEZMOI.md`. La liste complète est dans « Documentation », en fin de fichier.
 
 ## Commandes
 
@@ -27,6 +27,10 @@ docker compose up -d
 
 Pas de tests ni de lint. La seule vérification automatique est le contrôle de types `tsc --noEmit` lancé par `npm run build`. Les scripts racine `diagnostic_phase1.mjs`, `test_charge.mjs` et `calculate_limit.mjs` sont des outils de diagnostic et de charge lancés à la main avec `node`. Ce ne sont pas des suites de tests. `scripts/rapport-mensuel.mjs` (rapport d'un client) recopie les chiffres et le style de `app/src/components/rosters/roster-report.ts` : les garder alignés.
 
+## Lancer Claude Code en orchestrateur
+
+`lancer-orchestrateur.bat`, à la racine, ouvre Claude Code dans ce dossier avec l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`). Il lit `SUIVI.md`, découpe le travail et délègue aux autres agents. Équivalent manuel, depuis la racine : `claude --agent orchestrateur`. Le lanceur n'existe dans le dossier principal qu'après fusion de sa branche dans `main`.
+
 ## Architecture
 
 **Flux de données :** collecteur (PC ou Docker) → RPC Supabase → tableau de bord HTML (une seule page, lit Supabase avec la clé publique).
@@ -37,7 +41,7 @@ Pas de tests ni de lint. La seule vérification automatique est le contrôle de 
 - Chaque lot a un id. L'idempotence est assurée côté SQL via `ingested_batches`. Les lots non envoyés sont persistés dans `en-attente.json` et renvoyés plus tard.
 - Il n'accepte qu'une seule instance, via le verrou `collecteur.pid` (pid:heartbeat). L'arrêt propre se demande en créant `arreter.flag`.
 - La liste des chaînes vient de la table `channels`, resynchronisée toutes les 60 s (max 100). Elle est modifiée depuis le tableau de bord, pas dans config.json.
-- La rétention est réglée dans config (`joursDetailMinute`, `joursPresence`, `joursEvenements`, `joursReleves`) et appliquée par la fonction SQL `cleanup`. Une alerte se déclenche au-delà de 400 Mo (palier gratuit Supabase : 500 Mo).
+- La rétention est réglée dans config (`joursDetailMinute`, `joursPresence`, `joursEvenements`, `joursReleves`) et appliquée par la fonction SQL `cleanup`. Défauts du code : 14, 21, 60 et 30 jours. Valeurs recommandées à 86 chaînes : 2, 1, 2 et 2 (`CHANGELOG.md`, 1.6.11). Les valeurs réelles de `config.json` ne sont pas relues ici. Une alerte se déclenche au-delà de 400 Mo (palier gratuit Supabase : 500 Mo).
 - Le fuseau horaire est Europe/Paris partout. `collecteur.log` tourne à 5 Mo.
 - `collecteur/` contient une **autre copie** du collecteur, utilisée par l'image Docker (`collecteur/Dockerfile`, avec metrics, retry-handler et task-queue). Une modification du collecteur doit être reportée dans les deux copies, ou alors il faut préciser laquelle est visée.
 
@@ -59,10 +63,26 @@ Pas de tests ni de lint. La seule vérification automatique est le contrôle de 
 
 ## Suivi, lecture économe et vérification
 
-- État des chantiers, PR et décisions : `SUIVI.md`, à relire au début de chaque chantier. La section 6 de `plan.md.txt` renvoie à ce fichier.
+- État des chantiers, PR et décisions : `SUIVI.md`, à relire au début de chaque chantier. Le plan V2 d'origine est archivé dans `archives/plan-v2.md.txt` ; `SUIVI.md` §3 en donne l'état.
 - Modèle et effort : `SUIVI.md`, §7. Un chantier = une session (`/clear`).
 - Lectures : `app/src/legacy/legacy.js` fait 2 562 lignes (229 Ko). Le chercher avec `grep -n`, puis le lire par plages (`offset` et `limit`). Ne pas relire un fichier déjà lu dans la session. `.claude/settings.json` refuse la lecture des fichiers générés, des journaux, des lockfiles, de `config.json` et des `node_modules`.
 - Vérifier un rendu : `npm run build` dans `app/`, puis capture Chrome headless (méthode dans `SUIVI.md`, §9), puis lecture du PNG. Le navigateur intégré ne déroule pas les animations.
 - Reconstruction automatique : après toute modification de `app/src` (code, CSS, démo), Claude lance `npm run build` dans `app/` sans qu'on le lui demande, pour que `twitch-overlap.html` (fichier généré) soit à jour ; si le build échoue, il le dit. Un hook git local (`.git/hooks/post-merge`, non versionné) fait de même après un `git pull` ou une fusion qui change `app/`.
 - Idées et planification : `/contremaitre` range les idées dans `IDEES.md`, les évalue (plus-value, coût, verdict) et planifie en déléguant aux modèles les moins chers capables (barème de `SUIVI.md`, §7).
 - Outils 3D et HUD (ajoutés le 25/11, `SUIVI.md` §16) : skills `three-js`, `react-three-fiber`, `ui-ux-pro-max` ; serveurs MCP `playwright` et `spline` (`.mcp.json`). Le moteur de la Carte reste impératif dans `legacy.js` ; depuis le 25/11 (décision de l'utilisateur), Three.js est un complément autorisé à modifier le code, et les évaluations de ces outils comptent comme légitimes. Sur une surface neuve, prototype isolé avec critère go/no-go d'abord. `DESIGN.md` prime sur les suggestions de `ui-ux-pro-max`.
+
+## Documentation
+
+Un fichier, un rôle. Quand un fait change, mets à jour le fichier qui le porte, et un seul.
+
+- `LISEZMOI.md` : guide utilisateur (installer, tableau de bord, mise à jour, conservation).
+- `CHANGELOG.md` : notes de version, de la plus ancienne à la plus récente. Une entrée par version du collecteur ou du tableau de bord ; dire si `schema.sql` doit être rejoué.
+- `SUIVI.md` : état des chantiers, PR, décisions. À mettre à jour à chaque PR fusionnée ou décision prise.
+- `CLAUDE.md` (ce fichier) et `.claude/CLAUDE.md` : repères pour Claude Code.
+- `app/CLAUDE.md` et `app/LISEZMOI.md` : tableau de bord (code, ponts, mode démo).
+- `DOCKER.md` : conteneurs. La copie `collecteur/` est en retard sur la racine ; la racine fait foi.
+- `DESIGN.md` et `PRODUCT.md` (racine) : design et produit, ils font foi. `.impeccable/` contient des copies de l'outil Impeccable, qui divergent : ne pas s'y fier sans comparaison.
+- `IDEES.md` : boîte à idées et plans (`/contremaitre`).
+- `CONFORMITE.md`, `COUTS-CLIENTS.md`, `VALIDATION-AGENCES.md` : vie privée et conditions Twitch, coûts par client, kit de validation des agences.
+- `ROADMAP-COMPLET.txt` : analyses prévues. Les sections 4 et 5 ne sont pas commencées.
+- `archives/` : anciens plans et ancienne copie de la mémoire. Historique seulement, à ne pas mettre à jour.
