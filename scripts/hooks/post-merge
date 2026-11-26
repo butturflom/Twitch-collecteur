@@ -1,0 +1,16 @@
+#!/bin/sh
+# Reconstruit le tableau de bord (npm run build dans app/) quand un pull ou une fusion a changé quelque chose dans app/.
+# Si les dépendances ont changé (app/package.json ou app/package-lock.json), lance d'abord npm install : sans cela, le build
+# échoue (ex. « Cannot find module 'three' », 26/11).
+# Versionné ici. Installation, une fois, depuis la racine du dépôt principal (PowerShell) :
+#   Copy-Item "scripts\hooks\post-merge" ".git\hooks\post-merge" -Force
+# twitch-overlap.html est un fichier généré, ignoré par git.
+CHANGED=$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null)
+if echo "$CHANGED" | grep -q '^app/'; then
+  if echo "$CHANGED" | grep -q '^app/package\(-lock\)\?\.json$'; then
+    echo "Dépendances changées : npm install dans app/..."
+    (cd app && npm install > /dev/null 2>&1) || echo "ATTENTION : npm install a échoué (lance-le dans app/ pour voir l'erreur)"
+  fi
+  echo "app/ a changé : reconstruction du tableau de bord..."
+  if (cd app && npm run build > /dev/null 2>&1); then echo "Tableau de bord reconstruit : twitch-overlap.html"; else echo "ATTENTION : npm run build a échoué (lance-le dans app/ pour voir l'erreur)"; fi
+fi
