@@ -180,67 +180,67 @@ function Badge({ variant = "default", children }: BadgeProps) {
 }
 
 // Channels section
-interface AddSearchItem {
-  login: string
-  img: string
-  name: string
-  live: boolean
-  game: string
-}
-
-interface AddSearch {
-  msg: string
-  items: AddSearchItem[]
-}
-
-function Channels({ d }: { d: SettingsData & { addSearch?: AddSearch | null } }) {
+function Channels({ d }: { d: SettingsData }) {
   const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState("")
+  const input = useRef<HTMLInputElement>(null)
+  const q = search.trim()
+
+  // « Ajouter un streamer » de la barre latérale : ouvre la recherche et y place le curseur.
+  useEffect(() => onFocusAdd(() => {
+    setShowAdd(true)
+    setTimeout(() => { input.current?.scrollIntoView({ block: "center" }); input.current?.focus() }, 50)
+  }), [])
+
+  // La recherche part toute seule, un court instant après la dernière frappe.
+  useEffect(() => {
+    if (!showAdd) return
+    const t = setTimeout(() => void window.runAddSearch?.(q.length >= 2 ? q : ""), 350)
+    return () => clearTimeout(t)
+  }, [q, showAdd, d.apiReady])
+
+  const found = q.length >= 2 ? d.addSearch : null
 
   return (
     <Card icon={<Users />} title="Chaînes suivies" desc={d.chansMsg}>
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          {d.chans.length} chaîne(s) suivie(s) sur la période actuelle.
+          {d.chans.length} chaîne(s) suivie(s){d.chanLimit ? ` sur ${d.chanLimit} au maximum` : ""}.
         </p>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowAdd(!showAdd)}>
-            <Plus className="mr-2 size-4" />
-            {showAdd ? "Annuler" : "Ajouter un streamer"}
+          <Button variant="outline" size="sm" onClick={() => { setShowAdd(!showAdd); setSearch("") }}>
+            {showAdd ? <X className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
+            {showAdd ? "Fermer" : "Ajouter un streamer"}
           </Button>
         </div>
         {showAdd && (
-          <div className="space-y-2">
-            <Field label="Rechercher">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nom de la chaîne Twitch..."
-              />
+          <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); void window.runAddSearch?.(q) }}>
+            <Field
+              label="Rechercher"
+              hint={d.apiReady ? "Nom, pseudo ou adresse twitch.tv." : "Sans API Twitch dans ce navigateur, tape le pseudo exact ou l'adresse twitch.tv. Pour chercher par nom, configure l'API plus bas."}
+            >
+              <Input ref={input} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nom de la chaîne Twitch…" autoComplete="off" spellCheck={false} />
             </Field>
-            {d.addSearch ? (
+            {found && (
               <div className="space-y-1">
-                {d.addSearch.items.map((item: AddSearchItem) => (
-                  <div key={item.login} className="flex items-center justify-between rounded-lg border p-2">
+                {found.msg && <Status text={found.msg} />}
+                {found.items.map((item) => (
+                  <div key={item.login} className="flex items-center gap-3 rounded-lg border border-border p-2">
                     <ChannelAvatar c={item.login} color="#8b7cff" img={item.img} />
-                    <span className="text-sm">{item.name}</span>
-                    <Button size="sm" onClick={() => {
-                      window.addFromSearch?.(item.login, item.img)
-                      setShowAdd(false)
-                      setSearch("")
-                    }}>
-                      Ajouter
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{item.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {item.unchecked ? "Pseudo non vérifié sur Twitch" : [item.login, item.live ? "en direct" : "", item.game].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <Button type="button" size="sm" disabled={item.followed} onClick={() => window.addFromSearch?.(item.login, item.img)}>
+                      {item.followed ? <><Check />Suivie</> : "Ajouter"}
                     </Button>
                   </div>
                 ))}
-                {d.addSearch.items.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Aucune chaîne trouvée.</p>
-                )}
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">Recherche API Twitch non configurée.</p>
             )}
-          </div>
+          </form>
         )}
         {d.chans.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -261,29 +261,34 @@ function Channels({ d }: { d: SettingsData & { addSearch?: AddSearch | null } })
   )
 }
 
-// API section
+// API section : Client ID et secret servent à obtenir un jeton ; le secret n'est pas enregistré.
 function Api({ d }: { d: SettingsData }) {
-  const [showToken, setShowToken] = useState(false)
+  const [id, setId] = useState(d.clientId), [secret, setSecret] = useState("")
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    setBusy(true)
+    try {
+      if (await window.genToken?.(id, secret)) setSecret("")
+    } finally { setBusy(false) }
+  }
 
   return (
     <Card icon={<KeyRound />} title="API Twitch" desc={d.apiMsg}>
-      <div className="space-y-3">
+      <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void go() }}>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium">État :</span>
-          {Badge({ variant: d.apiReady ? "default" : "secondary", children: d.apiReady ? "Connecté" : "Non connecté" })}
+          {Badge({ variant: d.apiReady ? "default" : "secondary", children: d.apiReady ? "Configurée" : "Non configurée" })}
         </div>
-        {!d.apiReady && (
-          <Button variant="outline" size="sm" onClick={() => window.genToken?.(d.clientId, d.token)}>
-            <KeyRound className="mr-2 size-4" />
-            Générer un token
-          </Button>
-        )}
-        {showToken && d.token && (
-          <Field label="Token actuel">
-            <Input value={d.token} onChange={() => {}} readOnly className="font-mono text-xs" />
-          </Field>
-        )}
-      </div>
+        <Field label="Client ID" hint="« twitchClientId » dans config.json, ou sur dev.twitch.tv/console/apps.">
+          <Input value={id} onChange={(e) => setId(e.target.value)} autoComplete="off" spellCheck={false} className="font-mono text-xs" />
+        </Field>
+        <Field label="Client secret" hint="« twitchClientSecret » dans config.json. Il sert une fois à demander un jeton à Twitch et n'est pas enregistré.">
+          <Input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" spellCheck={false} className="font-mono text-xs" />
+        </Field>
+        <Button type="submit" size="sm" disabled={busy || !id.trim() || !secret.trim()}>
+          <KeyRound />{busy ? "Génération…" : d.apiReady ? "Générer un nouveau jeton" : "Générer un jeton"}
+        </Button>
+      </form>
     </Card>
   )
 }

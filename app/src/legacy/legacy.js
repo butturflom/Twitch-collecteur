@@ -2163,7 +2163,7 @@ function removeChan(c){
   saveCfg();if(running&&ws&&ws.readyState===1)ws.send('PART #'+c);smsg.chans=`${c} retirée.`;renderSettings()}
 
 /* ---------- recherche de streamers à ajouter ---------- */
-let addSearch=null;
+let addSearch=null,addSeq=0;
 // Messages d'état des Réglages (affichés par React). chans reste affiché ; sb, api et db ne valent
 // que jusqu'au prochain affichage des Réglages, comme quand ils étaient écrits directement dans la page.
 const smsg={chans:'',sb:'',api:'',db:''};
@@ -2171,7 +2171,7 @@ function setSmsg(k,v){smsg[k]=v;if(tab==='settings')renderSettings()}
 const stripTw=s=>s.trim().replace(/^(https?:\/\/)?(www\.|m\.)?twitch\.tv\//i,'').replace(/^[@#]/,'');
 const loginOf=s=>stripTw(s).toLowerCase().split(/[/?#\s]/)[0];
 async function runAddSearch(text){
-  const raw=String(text||'').trim();if(!raw)return;
+  const seq=++addSeq,raw=String(text||'').trim();if(!raw){addSearch=null;renderSettings();return}
   const q=stripTw(raw).split(/[/?#]/)[0],login=loginOf(raw),valid=/^[a-z0-9_]{2,25}$/.test(login);
   if(!apiReady()){addSearch={items:valid?[{login,name:login,unchecked:true}]:[],msg:valid?'':'Pseudo invalide : seulement des lettres, des chiffres et _. Configure l\'API Twitch plus bas pour chercher par nom.'};renderSettings();return}
   addSearch={items:[],msg:'Recherche…'};renderSettings();
@@ -2179,11 +2179,12 @@ async function runAddSearch(text){
     const [ex,se]=await Promise.all([
       valid?helix('users?login='+encodeURIComponent(login)).catch(()=>({data:[]})):Promise.resolve({data:[]}),
       helix('search/channels?first=12&query='+encodeURIComponent(q))]);
+    if(seq!==addSeq)return;
     const items=se.data.map(s=>({login:s.broadcaster_login.toLowerCase(),name:s.display_name,img:s.thumbnail_url,live:s.is_live,g:s.game_name}));
     const u=ex.data[0];
     if(u){const i=items.findIndex(x=>x.login===u.login);const it=i>=0?items.splice(i,1)[0]:{login:u.login,name:u.display_name,img:u.profile_image_url,g:''};items.unshift(it)}
     addSearch={items,msg:items.length?'':'Aucun streamer trouvé pour « '+q+' ».'};
-  }catch(e){addSearch={items:valid?[{login,name:login,unchecked:true}]:[],msg:'Recherche impossible ('+e.message+').'+(valid?' Tu peux quand même ajouter le pseudo tel quel :':'')}}
+  }catch(e){if(seq!==addSeq)return;addSearch={items:valid?[{login,name:login,unchecked:true}]:[],msg:'Recherche impossible ('+e.message+').'+(valid?' Tu peux quand même ajouter le pseudo tel quel :':'')}}
   renderSettings();
 }
 // chaînes ajoutées en mode « Ce navigateur » mais pas encore suivies par le collecteur

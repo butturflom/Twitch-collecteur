@@ -12,6 +12,7 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 - 2026-11-25 · « Plus tard, l'application sera à télécharger ou consultable sur un site. Après la création d'un contrat, je donne accès à un compte que je prédéfinis avec le client ID et le secret. Le collecteur tourne 24 h/24 en ligne, et la base Supabase reste identique. » → (Hébergement du collecteur et du tableau de bord, comptes par client. Reprend la Client View abandonnée le 24/11 et l'étape 3 du §12.)
 - 2026-11-26 · « J'ai déjà regardé l'intro. Pour le moment, je la laisse et la considère comme prototype. J'ajouterai des idées et des inspirations à suivre pour cette animation. » → (L'intro reste en place, au rang de prototype, en attente d'inspirations. Voir « Inspirations pour l'intro ».)
 - 2026-11-26 · « Pour les planètes, je pense qu'il faut qu'on revoie comment on définit le design d'une planète comme sa forme ou sa texture, et comment l'icône de profil du streamer se colle à la planète. » → (Redéfinir la planète d'une chaîne : forme, texture, et pose de la photo de profil.)
+- 2026-11-26 · « J'aimerais que la recherche de streamers à suivre soit améliorée. » → (Trois pistes, hypothèse faute de précision : gérer la liste suivie, résultats plus parlants, suggestions de chaînes à suivre.)
 
 ### Inspirations pour l'intro
 
@@ -28,6 +29,9 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 | Planète partout (petits formats et avatars de `legacy.js`) | 2 : cohérence visuelle voulue, ne change aucune décision | 5 : prolonge `DESIGN.md` et la règle des deux niveaux de lueur | 5 : `ChannelAvatar` fait déjà la planète dès 20 px et couvre 17 composants | 4 : touche `legacy.js` (3 appels de `av()`) et `legacy.css`, sans toucher au moteur de la Carte | **18** | S (1 session) | **Faire** | Il reste très peu à faire (voir « Ce qui est déjà livré »). |
 | Intro d'accueil, suite (prototype) | 3 : première impression pour la prospection, aucune analyse | 4 : lisible avant spectaculaire à vérifier sur chaque inspiration | 4 : le calque Three.js existe | 4 : isolée dans `components/intro/` | **18** | M | **Planifier** : quand les inspirations sont là | [ton choix] Elle reste prototype mais joue déjà une fois chez tout nouveau visiteur : à décider avant de montrer l'outil à une agence (fin décembre). |
 | Redéfinir les planètes (forme, texture, pose de la photo) | 3 : reconnaître une chaîne d'un coup d'œil, utile devant une agence, aucune analyse nouvelle | 4 : revient sur la décision du 26/11 qui retirait la photo [ton choix] ; `DESIGN.md` (« Avatar-planète ») est à réécrire | 5 : photos déjà récupérées, source unique `lib/planet.ts` | 3 : touche `planetSvg` dans `legacy.js` et la fluidité de la Carte (une centaine de planètes avec images) | **18** | M (2 sessions) | **Prototype d'abord** | Le design n'est pas encore défini : comparer des pistes côte à côte avant de toucher à l'existant. |
+| Gérer les chaînes suivies (liste entière, filtre, retrait avec confirmation, ajout en bloc) | 3 : sans retrait, la limite de 100 chaînes bloque ; aucune analyse nouvelle | 5 : rétablit ce que `app/LISEZMOI.md` décrit déjà | 5 : les actions existent dans `legacy.js` | 4 : le retrait modifie la liste du collecteur, donc confirmation obligatoire | **20** | S (1 session) | **Faire** | Régression du portage React, à traiter en premier. |
+| Suggestions « à suivre » d'après les raids reçus | 4 : montre qui amène déjà des viewers vers le réseau suivi sans être mesuré ; aide à choisir les chaînes pour une agence | 4 : à libeller « a raidé une de tes chaînes », rien de plus | 4 : `raid_events` est déjà rempli, lisible et jamais purgé ; volume réel à compter avant | 4 : lecture seule, pas de `schema.sql` ; ne voit que les raids reçus par les chaînes suivies | **20** | M (1 à 2 sessions) | **Faire** | La piste la plus intéressante. D'abord compter les chaînes candidates dans la base. |
+| Résultats de recherche plus parlants (viewers en direct, langue, en direct d'abord, clavier) | 2 : confort | 5 | 4 : un appel `streams` de plus, seulement avec l'API | 4 : quota Twitch négligeable | **17** | S (même session que la gestion) | **Faire**, en second | Utile seulement si l'API est configurée dans le navigateur. |
 
 ### Ce qui est déjà livré du texte collé (PR #43 et #44)
 
@@ -44,6 +48,15 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 ## Plan en cours
 
 **État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), gardé comme prototype (26/11) ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), fonction `flows_by_day` présente en base (vérifié le 26/11), à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se déploie sans ta demande ; pour les fusions, voir `SUIVI.md` §4.
+
+### Chantiers F et G · Choix des chaînes suivies (proposés le 26/11, pas lancés)
+
+| Chantier | Tâche | Fichiers | Modèle, effort | Vérification | Abandon |
+|---|---|---|---|---|---|
+| F (S, 1 session) | Liste entière avec filtre, retrait avec confirmation, ajout en bloc ; puis résultats plus parlants (viewers, langue, direct d'abord) | `app/src/components/settings/settings.tsx`, `app/src/legacy/legacy.js` (`runAddSearch`) | Sonnet 5.5, medium | `/verifier`, Playwright sur `?demo=settings` | Les résultats enrichis sautent s'ils demandent un appel par chaîne |
+| G (M, 1 à 2 sessions) | Compter les chaînes non suivies présentes dans `raid_events` (lecture seule), puis bloc « Elles ont raidé tes chaînes » avec bouton Ajouter | `legacy.js`, `settings.tsx`, `bridge.ts`, `demo.ts` | Sonnet 5.5, high | `/verifier`, relevé sur la vraie base | Moins de 10 candidates avec au moins 2 raids : on attend plus de données |
+
+Coût estimé : 2 à 3 sessions, sans Opus. Pas fait : recherche côté serveur avec les identifiants du collecteur (demande un déploiement), nombre de followers par résultat (un appel Twitch par chaîne).
 
 ### Chantier A · Planète partout (S, 1 session)
 
