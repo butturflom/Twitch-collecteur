@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -17,8 +17,9 @@
 | Quand les données seront là | tester `scripts/rapport-mensuel.mjs` sur une vraie base (jamais fait : seulement un faux serveur) |
 
 **Ce que seul l'utilisateur peut faire**
-- Carte des migrations : relancer `schema.sql` en entier dans le SQL Editor de Supabase (fonction `flows_by_day`), puis ouvrir l'onglet Flux avec le bon code. **Pas encore confirmé.**
-- Regarder avec les vraies données : l'intro (en attente de validation, `?accueil` la rejoue), les planètes peintes (sur la Carte, les couleurs ont changé), le Sankey, la Vue d'ensemble spatiale, les classements, le filtre de la Carte par jeu. Claude n'a vu que le mode démo.
+- Carte des migrations : ouvrir l'onglet Flux avec le bon code. La fonction `flows_by_day` est en base, identique à `schema.sql`, et un mauvais code renvoie 0 ligne (vérifié le 26/11).
+- Intro : déposer idées et inspirations dans `IDEES.md` (« Inspirations pour l'intro »). Planètes : cadrer le chantier E.
+- Regarder avec les vraies données : le Sankey, la Vue d'ensemble spatiale, les classements, le filtre de la Carte par jeu. Claude n'a vu que le mode démo.
 - Confirmer les durées de rétention de `config.json` (§8).
 - Prendre les rendez-vous avec 3 à 5 agences (`VALIDATION-AGENCES.md`) ; décider d'un projet Supabase pour un premier client (coût, RGPD de `CONFORMITE.md`).
 
@@ -81,13 +82,14 @@
 | #48 à #50 | | Page d'accueil : corrections de la critique | fusionnées le 25/11 |
 | #51 | | Chantier A : planète partout | fusionnée le 25/11 |
 | #52 | | Chantier B : intro d'accueil (Three.js) | fusionnée le 25/11 |
-| #53 | | Chantier C : fonction `flows_by_day` et carte des migrations dans Flux | fusionnée le 26/11 ; `schema.sql` à rejouer |
+| #53 | | Chantier C : fonction `flows_by_day` et carte des migrations dans Flux | fusionnée le 26/11 ; fonction vérifiée en base |
 | #54 | | Chantier C3 abandonné (documentation) | fusionnée le 26/11 |
 | #55 | | Planètes peintes et corrections de justesse | fusionnée le 26/11 |
 | #56, #57 | | Hook post-merge versionné, skill `/verifier` | fusionnées le 26/11 |
 | #58 | | Documentation nettoyée, agent et lanceur orchestrateur | fusionnée le 26/11 |
 | #59 | `docs-26-11` | Documentation à jour ; rapport mensuel : fidélité à partir de 200 viewers actifs | fusionnée le 26/11, sur demande |
 | #60 | `corrections-affichage` | Rosters : un seul titre et tutoiement ; « 1 000 » insécable dans Par chaîne | fusionnée le 26/11, sur demande |
+| #61 | `idees-intro-planetes` | Notes : intro prototype, cadrage des planètes low-poly, règle des deux temps de la Carte | fusionnée le 26/11, sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -118,6 +120,9 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Hash `u` raccourci (≈ −45 Mo)** : déconseillé pour l'instant (271 Mo sur 500).
 - **Téléphone** : hors usage, ordinateur seulement.
 - **Planètes peintes (26/11)** : elles remplacent les photos de profil, y compris au centre des planètes à facettes de la Carte. Les couleurs de la Carte suivent désormais le rang de palette : choix signalé dans la PR #55 comme restant à valider à l'écran.
+- **Intro d'accueil (26/11, décision de l'utilisateur)** : gardée en place, considérée comme un prototype ; il apportera idées et inspirations.
+- **Planètes à redéfinir (26/11, demande de l'utilisateur)** : forme, texture et pose de la photo de profil. La décision « planètes peintes sans photo » est rouverte (chantier E de `IDEES.md`, prototype d'abord). Décidé ensuite : style **low-poly** sans décors, planète Twitch comprise, photo en pin's, taille = viewers en direct ; couleur de la chaîne.
+- **Carte, règle des deux temps (26/11, validée)** : la planète dit le présent (taille = viewers en direct, hors live petite et éteinte) ; les liens et les groupes portent sur tout le détail disponible, date de début en légende. Le sélecteur de période disparaît de la Carte seulement. Pas encore codé (E3).
 - **Critiques** : l'utilisateur accepte qu'elles remettent en cause ses choix passés ; ces choix sont signalés « [ton choix] ».
 
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
@@ -137,7 +142,7 @@ Ce qui attend aujourd'hui l'utilisateur est dans le §0.
 - **Phase 3 (Top des chaînes, communautés investies)** : le rendu réel n'a pas été vu, les données de démo sont vides. À regarder dans votre navigateur (#22 est fusionnée).
 - **Alertes de rythme** : vers le 8/12 (14 journées agrégées), vérifier que les alertes sont plausibles et ajuster `lib/rhythm.ts`.
 - **Stockage** : suivre les 285 Mo (relevé du 25/11). Alerte à 400 Mo.
-- **Carte des migrations** : après avoir rejoué `schema.sql`, vérifier que l'onglet Flux l'affiche avec le bon code et que le Sankey est inchangé. Vers le 8/12, juger sur 14 journées : si elle ne dit rien de plus que le Sankey, la retirer (critère de `IDEES.md`).
+- **Carte des migrations** : vérifier que l'onglet Flux l'affiche avec le bon code et que le Sankey est inchangé. Vers le 8/12, juger sur 14 journées : si elle ne dit rien de plus que le Sankey, la retirer (critère de `IDEES.md`).
 - **Intro d'accueil** : fluidité avec le tableau de bord qui charge dessous, et cas réel avec des chaînes en direct.
 
 ## 7. Modèles, effort et tokens
@@ -300,7 +305,7 @@ Après toute modification de `app/src`, Claude lance `npm run build` dans `app/`
 
 **Décision de l'utilisateur, 25/11 (soir)** : Three.js est un **complément** autorisé à modifier le code ; ses conseils, ceux de Spline et des derniers skills (`three-js`, `react-three-fiber`, `ui-ux-pro-max`, Playwright, `impeccable`) comptent comme des évaluations légitimes. Le moteur de la Carte reste impératif dans `legacy.js` (Three.js ne s'y substitue pas sans nouvelle décision). Sur une surface neuve, un prototype isolé avec critère go/no-go (poids dans le HTML unique, images par seconde sur le PC de l'utilisateur, chargement depuis `file://`) précède l'intégration. Ancienne règle (« décision à prendre avant tout code 3D ») levée.
 
-**Idées déposées le 25/11 (évaluées dans `IDEES.md`)**. État au 26/11 : A livré (#51, puis planètes peintes #55), B livré (#52, en attente de validation), C livré (#53, `schema.sql` à rejouer), C3 abandonné, D dormant. Détail d'origine :
+**Idées déposées le 25/11 (évaluées dans `IDEES.md`)**. État au 26/11 : A livré (#51, puis planètes peintes #55), B livré (#52, gardé comme prototype), C livré (#53, fonction en base), C3 abandonné, D dormant. Détail d'origine :
 - **Chantier A, planète partout** (plus-value 18/25, S) : le texte collé (fond, cartes console, avatars en planètes, Recoupements) est déjà livré par les PR #43 et #44. Reste : `av()` de `legacy.js` (info-bulle de la Carte, légendes) et les pastilles de moins de 20 px.
 - **Chantier B, intro d'accueil** (plus-value 18/25, M) : séquence façon générique de jeu, galaxie des chaînes en direct puis révélation du nom, avec prototype Three.js isolé et critères go/no-go.
 - **Chantier C, carte des migrations de l'onglet Flux** (19/25, M) : planifié au 8/12, prototype C0 par Opus. Variante tuyaux A→B→C avec planètes (C3, 17/25, L) : prototype d'abord, calcul nocturne à deux sauts avant la purge des brutes. **C3 abandonné le 26/11** : prototype illisible, arcs de C2 conservés ; travail archivé sur la branche locale `archive/c3-trajets-deux-sauts`.
