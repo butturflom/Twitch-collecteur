@@ -237,7 +237,7 @@ Relance le collecteur et recharge le tableau de bord. Pas de mise à jour de `sc
 
 Relance le collecteur et recharge le tableau de bord.
 
-## Tableau de bord du 25/11/2026
+## Tableau de bord 2.0.0 (25/11/2026)
 
 Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en entier dans le SQL Editor de Supabase** : il ajoute deux fonctions de lecture, `channel_stickiness` (fidélité du chat) et `channels_rhythm` (alertes de rythme). Rien n'est supprimé.
 
@@ -249,7 +249,7 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Carte** : filtre **Jeu principal** à côté de la langue.
 - **Ambiance spatiale** : un ciel étoilé discret derrière toutes les pages sauf la Carte, des panneaux « console » (légèrement translucides, halo violet très doux), des avatars en petites planètes et, en tête de **Recoupements**, une constellation des paires les plus proches. Aucun chiffre ne change.
 
-## Tableau de bord du 26/11/2026
+## Tableau de bord 2.0.0 (26/11/2026)
 
 Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en entier dans le SQL Editor de Supabase** : il ajoute la fonction de lecture `flows_by_day` (carte des migrations). Rien n'est supprimé. Si tu construis le tableau de bord toi-même, lance `npm install` dans `app/` avant `npm run build` (nouvelle dépendance `three`).
 

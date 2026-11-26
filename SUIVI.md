@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : PR #62 à #65 (organisation des outils, audit du dépôt, restes d'Impeccable, hiérarchie des documents) fusionnées le 26/11 sur demande ; PR #66 (orchestrateur et contremaître fusionnés en un seul agent) ouverte, à fusionner sur demande. Avant elles, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : PR #62 à #66 (organisation des outils, audit du dépôt, restes d'Impeccable, hiérarchie des documents, orchestrateur et contremaître fusionnés) fusionnées le 26/11. PR #67 (entrées du tableau de bord numérotées en 2.0.0) : ouverte, fusion autorisée en permanence par l'utilisateur pour les PR à venir. Avant elles, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -94,7 +94,8 @@
 | #63 | `worktree-audit-projet` | Audit du dépôt (`scripts/audit-projet.mjs`), skill `/audit`, archivage des agents `analyste` et `app-developer` et des skills `web-design-guidelines` et `writing-guidelines`, liens corrigés | fusionnée le 26/11, sur demande |
 | #64 | `worktree-supprime-impeccable-restes` | Suppression des cinq fichiers de configuration Impeccable restants | fusionnée le 26/11, sur demande |
 | #65 | `worktree-hierarchie-docs` | Hiérarchie des sources dans `CLAUDE.md`, copies renvoyées à leur source, pointeurs corrigés | fusionnée le 26/11, sur demande |
-| #66 | `worktree-fusion-orchestrateur-contremaitre` | Orchestrateur et contremaître fusionnés en un seul agent ; skill `contremaitre` archivé | ouverte le 26/11, à fusionner sur demande |
+| #66 | `worktree-fusion-orchestrateur-contremaitre` | Orchestrateur et contremaître fusionnés en un seul agent ; skill `contremaitre` archivé | fusionnée le 26/11, sur demande |
+| #67 | `worktree-changelog-version-tableau` | Entrées du tableau de bord numérotées en 2.0.0 ; règle de numérotation dans `CLAUDE.md` | ouverte le 26/11 |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -130,6 +131,8 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Carte, règle des deux temps (26/11, validée)** : la planète dit le présent (taille = viewers en direct, hors live petite et éteinte) ; les liens et les groupes portent sur tout le détail disponible, date de début en légende. Le sélecteur de période disparaît de la Carte seulement. Pas encore codé (E3).
 - **Outils (26/11, décisions de l'utilisateur)** : Impeccable retiré (rendu jugé trop « AI slop ») ; `ui-ux-pro-max` est le skill de design. Les connecteurs Higgsfield et Spline servent à approfondir la 3D (génération, scènes, flux Blender). Supabase reste en lecture seule sans « oui » explicite. Rappels automatiques au démarrage et à chaque prompt (`.claude/hooks/`), sans lancer de skill. Skills Vercel et agents morts déplacés dans `archives/outils-claude/`.
 - **Orchestrateur et contremaître fusionnés (26/11, demande de l'utilisateur)** : un seul agent, `orchestrateur`, tient le routage, les idées (`IDEES.md`), les plans et la délégation. Le skill `contremaitre` est archivé. Raison : deux outils qui tenaient chacun un suivi se contredisaient.
+- **Numérotation (26/11, décision de l'utilisateur)** : les entrées du tableau de bord portent un numéro, celui de `app/package.json` (2.0.0 depuis le 24/11, non modifié depuis). Les entrées du 25/11 et du 26/11 sont donc sous 2.0.0. Une modification du tableau de bord donne lieu à un nouveau numéro.
+- **Fusions (26/11, autorisation permanente de l'utilisateur)** : Claude peut fusionner les PR pour toutes les fois où c'est nécessaire, sans redemander.
 - **Critiques** : l'utilisateur accepte qu'elles remettent en cause ses choix passés ; ces choix sont signalés « [ton choix] ».
 
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
