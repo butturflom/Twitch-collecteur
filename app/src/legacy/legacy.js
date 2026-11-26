@@ -1988,7 +1988,7 @@ function renderChannel(q){
     K('Viewers actifs uniques',fmt(U.size)),
     K('Messages',fmt(msgs),activeMin?fmt1(msgs/activeMin)+' msg/min en moyenne':'',{trend:tr.trend,trendLabel:tr.label}),
     K('Viewers en moyenne',isFinite(avgV)?fmt(avgV):'—',isFinite(peakV)?'pic : '+fmt(peakV):''),
-    K('Écrivent chaque minute',p?pct(p.perMin):'—',p?fmt1(p.msgK)+' msg/min pour 1 000 viewers':'pendant les lives, API Twitch requise'),
+    K('Écrivent chaque minute',p?pct(p.perMin):'—',p?fmt1(p.msgK)+' msg/min pour 1\u00a0000 viewers':'pendant les lives, API Twitch requise'),
     K('Followers',fol!=null?fmt(fol):'—',fol!=null?(isFinite(avgV)?pct(avgV/fol)+' en moyenne devant le live':''):'relevé par le collecteur 1.2')];
   const modOk=isFinite(modStart(['ban','timeout','clear'])),delOk=isFinite(modStart(['del'])),nb=sum('ban'),nt=sum('timeout');
   const more=[

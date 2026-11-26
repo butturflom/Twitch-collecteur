@@ -24,7 +24,7 @@ const PAGES: Record<TabId, [string, string]> = {
   map: ["Carte", ""],
   flows: ["Flux", "Les viewers actifs qui passent d'une chaîne à l'autre, et les raids reçus."],
   settings: ["Réglages", "Source des données, chaînes suivies, API Twitch et sauvegardes."],
-  rosters: ["Rosters", "Regroupez vos chaînes pour analyser les flux entre groupes et calculer le Net Reach."],
+  rosters: ["Rosters", "Regroupe des chaînes pour mesurer leur audience cumulée sans doublons (Net Reach)."],
 }
 
 /** Onglets qui montrent le ciel étoilé (la Carte a le sien). Pour étendre le décor à d'autres pages, ajouter leur identifiant ici. */

@@ -126,7 +126,7 @@ function channelDemo(c: string): ChannelData {
       { label: "Viewers actifs uniques", value: "6 210" },
       { label: "Messages", value: "98 432", hint: "61,3 msg/min en moyenne", trendLabel: "courbe par heure", trend: [8, 12, 9, 14, 22, 31, 27, 35, 41, 38, 46, 52] },
       { label: "Viewers en moyenne", value: "13 900", hint: "pic : 16 204" },
-      { label: "Écrivent chaque minute", value: "3,1 %", hint: "29,6 msg/min pour 1 000 viewers" },
+      { label: "Écrivent chaque minute", value: "3,1 %", hint: "29,6 msg/min pour 1\u00a0000 viewers" },
       { label: "Followers", value: "1 030 000", hint: "1,3 % en moyenne devant le live" },
     ],
     more: [
@@ -375,7 +375,7 @@ function reachDemo(chans: string[], days: number): PeriodReach {
 }
 
 // Fidélité du chat : la part de viewers actifs partis ailleurs dépend de la chaîne (haut, milieu, bas du classement fictif des chaînes suivies) ;
-// &sticky=bas ou &sticky=haut force le rang, &sticky=petit : petite chaîne (score fragile), &sticky=peu : trop peu de viewers actifs pour mesurer
+// &sticky=bas ou &sticky=haut force le rang, &sticky=petit : petite chaîne (sous 200 viewers actifs, pas de score), &sticky=peu : trop peu de viewers actifs pour mesurer
 function stickyDemo(c: string, n: number, mode: string | null): ChannelSticky {
   const k = Math.max(1, CH.findIndex(([x]) => x === c) + 1)
   const rate = mode === "bas" ? 0.16 : mode === "haut" ? 0.03 : [0.03, 0.07, 0.15, 0.1][(k - 1) % 4]
