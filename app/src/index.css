@@ -325,7 +325,7 @@ body {
 .legacy .radar-hud .act, .legacy .radar-hud .cap { color: var(--c-d4d4d8); }
 
 /* Nœuds : halo violet dessous (.glow) ; planète (.pl : faite comme la planète Twitch, sphère en facettes aux tons de la
-   chaîne et médaillon de sa photo, dessinée en SVG par le moteur). */
+   chaîne, avec posée dessus sa planète peinte, dessinée par le moteur). */
 .legacy .mapn .glow { pointer-events: none; }
 .legacy .mapn .glow { transition: opacity 0.2s; }
 .legacy .mapn { transition: opacity 0.2s ease; }

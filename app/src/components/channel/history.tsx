@@ -17,7 +17,7 @@ const at = (d: string) => Date.parse(d + "T12:00:00") // midi du jour (heure loc
 
 function spec(h: ChannelHistory, series: { name: string; color: string; key: "peak" | "avg" | "chatters" | "msgs" }[], unit: string): LineSpec {
   return {
-    series: series.map((x) => ({ name: x.name, c: "", color: x.color, img: "", pts: h.days.map((d) => [at(d.d), d[x.key]] as [number, number]) })),
+    series: series.map((x) => ({ name: x.name, c: "", color: x.color, pts: h.days.map((d) => [at(d.d), d[x.key]] as [number, number]) })),
     unit, pct: false, yFloor: 0, gaps: [], height: 190,
   }
 }

@@ -240,8 +240,10 @@ body.mapmode .legacy .wrap{max-width:none;padding-bottom:0}
 .legacy .mapn{cursor:pointer;transition:opacity .15s}
 .legacy .mapn .h{fill:transparent}
 .legacy .mapn.sel .h{fill:var(--txt)}
-.legacy .chart .mapn .ini{fill:var(--c-ffffff);font-weight:600;font-family:var(--sans);pointer-events:none}
-.legacy .mapn:hover .f,.legacy .mapn:hover image{filter:brightness(1.18)}
+/* planète peinte de la chaîne, posée sur les facettes (planetSvg) : sans clic, sans liseré ni halo propres (la planète de la carte a le sien) */
+.legacy .mapn .pfo{overflow:visible;pointer-events:none}
+.legacy .mapn .pfo .planet{box-shadow:none}
+.legacy .mapn:hover .pfo{filter:brightness(1.18)}
 .legacy .chart .mapl{fill:var(--txt);font:500 12px var(--sans);paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round;pointer-events:none;transition:opacity .15s}
 .legacy .chart .mapl.strong{font-weight:600;fill:var(--c-ffffff)}
 .legacy .chart .mapel{fill:var(--txt);font:600 11px var(--mono);paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round;pointer-events:none}

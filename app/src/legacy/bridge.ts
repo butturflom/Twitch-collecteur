@@ -15,7 +15,7 @@ export type TabId = "overview" | "channel" | "game" | "chat" | "overlap" | "map"
 export interface Who { c: string; color: string; img: string }
 /** Graphique en courbes (préparé par lineSpec() dans l'ancien code). */
 export interface LineSpec {
-  series: { name: string; c: string; color: string; img: string; pts: [number, number | null][] }[]
+  series: { name: string; c: string; color: string; pts: [number, number | null][] }[]
   unit: string; pct: boolean; yFloor: number; gaps: [number, number][]; height: number
 }
 /** Diagramme en barres. */

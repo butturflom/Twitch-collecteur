@@ -24,7 +24,7 @@ function demo(): OverviewData {
   const now = Date.now()
   const who = (c: string, color: string) => ({ c, color, img: "" })
   const chart = (k: number) =>
-    spec(CH.map(([c, color], i) => ({ name: c, c, color, img: "", pts: series(i, k * (4 - i), now) })), {
+    spec(CH.map(([c, color], i) => ({ name: c, c, color, pts: series(i, k * (4 - i), now) })), {
       unit: k > 50 ? " viewers" : " msg/min",
       gaps: k > 50 ? [] : [[now - 100 * MIN, now - 82 * MIN]], // une période sans écoute, pour la voir
     })
@@ -169,8 +169,8 @@ function channelDemo(c: string): ChannelData {
       { to: who(CH[2][0], CH[2][1]), name: CH[2][0], live: false, score: 64, viewers: 745, share: 0.12 },
       { to: who(CH[3][0], CH[3][1]), name: CH[3][0], live: false, score: 42, viewers: 310, share: 0.05 },
     ] : null,
-    msgChart: spec([{ name: c, c, color, img: "", pts: series(i, 60, now) }], { unit: " msg/min" }),
-    viewerChart: spec([{ name: c, c, color, img: "", pts: series(i, 6000, now) }], { unit: " viewers" }),
+    msgChart: spec([{ name: c, c, color, pts: series(i, 60, now) }], { unit: " msg/min" }),
+    viewerChart: spec([{ name: c, c, color, pts: series(i, 6000, now) }], { unit: " viewers" }),
     hourChart: { items: hours, color, unit: " messages" },
   }
 }
@@ -201,8 +201,8 @@ function chatDemo(sel: string): ChatData {
     words: [["gg", 3120], ["mdr", 2810], ["top", 1504], ["chat", 1320], ["bien", 1102], ["jeu", 980], ["trop", 912], ["encore", 640]].map(([k, v]) => ({ k: k as string, v: v as number })),
     moments: channelDemo(all ? CH[1][0] : sel).moments,
     clips: channelDemo(all ? CH[1][0] : sel).clips,
-    moodChart: spec(MOODS.map(([name, c], k) => ({ name, c: "", color: c, img: "", pts: pctSeries(k, [14, 9, 3, 6][k]) })), { pct: true, yFloor: 10 }),
-    kindChart: spec(KIND_LINES.map(([name, c], k) => ({ name, c: "", color: c, img: "", pts: pctSeries(k, [48, 18, 17][k]) })), { pct: true, yFloor: 10, height: 170 }),
+    moodChart: spec(MOODS.map(([name, c], k) => ({ name, c: "", color: c, pts: pctSeries(k, [14, 9, 3, 6][k]) })), { pct: true, yFloor: 10 }),
+    kindChart: spec(KIND_LINES.map(([name, c], k) => ({ name, c: "", color: c, pts: pctSeries(k, [48, 18, 17][k]) })), { pct: true, yFloor: 10, height: 170 }),
   }
 }
 

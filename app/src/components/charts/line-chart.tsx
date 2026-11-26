@@ -1,7 +1,7 @@
 // Graphique en courbes (messages par minute, viewers, ambiance, types de messages).
-// Reprend le lineChart() de l'ancien code : périodes sans écoute grisées, photos en bout de courbe (4 séries au plus),
+// Reprend le lineChart() de l'ancien code : périodes sans écoute grisées, planètes en bout de courbe (4 séries au plus),
 // réticule et infobulle ; en plus : navigation au clavier (flèches) et vue tableau.
-import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { useMemo, useState, type KeyboardEvent, type PointerEvent } from "react"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { Empty } from "@/components/overview/parts"
 import { fmt, fmt1 } from "@/lib/format"
@@ -16,7 +16,6 @@ const ink = { dim: "#868693", mut: "#9a9aa8", grid: "rgba(255,255,255,.06)", gap
 export function LineChart({ spec, bare, label }: { spec: LineSpec; bare?: boolean; label: string }) {
   const [box, width] = useWidth()
   const W = Math.max(width, 300)
-  const clipBase = useId().replace(/:/g, "")
   const [hover, setHover] = useState<number | null>(null) // index dans xs
   const [byKey, setByKey] = useState(false) // survol venu du clavier : seul cas où l'infobulle est annoncée
   const { series, gaps, height: H } = spec
@@ -111,7 +110,7 @@ export function LineChart({ spec, bare, label }: { spec: LineSpec; bare?: boolea
     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
       {series.length >= 2 && series.map((s) => (
         <span key={s.name} className="inline-flex items-center gap-1.5">
-          {s.c ? <ChannelAvatar c={s.c} color={s.color} img={s.img} size={16} /> : <i className="h-0.5 w-3.5 rounded-full" style={{ background: s.color }} />}
+          {s.c ? <ChannelAvatar c={s.c} color={s.color} size={16} /> : <i className="h-0.5 w-3.5 rounded-full" style={{ background: s.color }} />}
           {s.name}
         </span>
       ))}
@@ -168,19 +167,14 @@ export function LineChart({ spec, bare, label }: { spec: LineSpec; bare?: boolea
                 <text x={W - R + 6} y={e.y + 4} fill={ink.mut}>{nm}</text>
               </g>
             )
-            const cx = W - R + 15, cy = e.y, id = `${clipBase}-${i}`
+            // planète de la chaîne (16 px, comme les légendes : sans initiale ni anneau), posée dans un foreignObject
+            const cx = W - R + 15, cy = e.y
             return (
               <g key={i}>
                 <line x1={e.x} y1={e.yv} x2={cx - 10} y2={cy} stroke={e.s.color} strokeOpacity={0.35} />
-                <circle cx={cx} cy={cy} r={10} fill={e.s.color} />
-                <circle cx={cx} cy={cy} r={8.5} fill={`color-mix(in srgb, ${e.s.color} 35%, #11131a)`} />
-                <text x={cx} y={cy + 3.5} textAnchor="middle" fill="#fff" className="font-sans text-[9px] font-bold">{e.s.c[0]?.toUpperCase()}</text>
-                {e.s.img && (
-                  <>
-                    <clipPath id={id}><circle cx={cx} cy={cy} r={8.5} /></clipPath>
-                    <image href={e.s.img} x={cx - 8.5} y={cy - 8.5} width={17} height={17} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${id})`} />
-                  </>
-                )}
+                <foreignObject x={cx - 8} y={cy - 8} width={16} height={16} className="overflow-visible">
+                  <ChannelAvatar c={e.s.c} color={e.s.color} size={16} />
+                </foreignObject>
                 <text x={cx + 15} y={cy + 4} fill={ink.mut}>{nm}</text>
               </g>
             )

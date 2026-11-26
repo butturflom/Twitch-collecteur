@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { hasRing, planetColor, planetInner } from "@/lib/planet"
 import type { Who } from "@/legacy/bridge"
 
-export function ChannelAvatar({ c, color, size = 20, className }: Who & { size?: number; className?: string }) {
+export function ChannelAvatar({ c, color, size = 20, className }: Omit<Who, "img"> & { img?: string; size?: number; className?: string }) {
   const small = size < 20
   const style = { "--s": `${size}px`, "--c": planetColor(c, color) } as CSSProperties
   return (
