@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : PR #62 à #66 (organisation des outils, audit du dépôt, restes d'Impeccable, hiérarchie des documents, orchestrateur et contremaître fusionnés) fusionnées le 26/11. PR #67 (entrées du tableau de bord numérotées en 2.0.0) : ouverte, fusion autorisée en permanence par l'utilisateur pour les PR à venir. Avant elles, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : PR #62 à #66 (organisation des outils, audit du dépôt, restes d'Impeccable, hiérarchie des documents, orchestrateur et contremaître fusionnés) fusionnées le 26/11. PR #67 (entrées du tableau de bord numérotées en 2.0.0) fusionnée le 26/11. Fusion désormais autorisée en permanence par l'utilisateur. Avant elles, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -95,7 +95,7 @@
 | #64 | `worktree-supprime-impeccable-restes` | Suppression des cinq fichiers de configuration Impeccable restants | fusionnée le 26/11, sur demande |
 | #65 | `worktree-hierarchie-docs` | Hiérarchie des sources dans `CLAUDE.md`, copies renvoyées à leur source, pointeurs corrigés | fusionnée le 26/11, sur demande |
 | #66 | `worktree-fusion-orchestrateur-contremaitre` | Orchestrateur et contremaître fusionnés en un seul agent ; skill `contremaitre` archivé | fusionnée le 26/11, sur demande |
-| #67 | `worktree-changelog-version-tableau` | Entrées du tableau de bord numérotées en 2.0.0 ; règle de numérotation dans `CLAUDE.md` | ouverte le 26/11 |
+| #67 | `worktree-changelog-version-tableau` | Entrées du tableau de bord numérotées en 2.0.0 ; règle de numérotation dans `CLAUDE.md` | fusionnée le 26/11, sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
