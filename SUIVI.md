@@ -29,7 +29,7 @@
 
 **Pièges à ne pas oublier**
 - Après toute modification de `app/src` : `npm run build` dans `app/`. Après un `git pull`, le hook fait le build (et `npm install` si les dépendances changent) : `scripts/hooks/post-merge`, à copier une fois dans `.git/hooks/` (§14).
-- Une PR dont la base est une branche déjà fusionnée se fusionne dans cette branche : viser `main` (§13). Claude ne fusionne que sur demande explicite.
+- Une PR dont la base est une branche déjà fusionnée se fusionne dans cette branche : viser `main` (§13). Fusions : autorisation permanente (§4) ; déployer reste sur demande.
 - Deux copies du collecteur (`collecteur.mjs` fait foi) ; le dossier d'un client en contient une troisième, figée (`scripts/nouveau-client.mjs`).
 - `scripts/rapport-mensuel.mjs` et `roster-report.ts` recopient les mêmes chiffres et le même style : les garder alignés.
 - `DESIGN.md` : règle des « deux niveaux de lueur » (§17). Ne pas la durcir sans l'utilisateur, il l'a voulue.
@@ -96,8 +96,10 @@
 | #65 | `worktree-hierarchie-docs` | Hiérarchie des sources dans `CLAUDE.md`, copies renvoyées à leur source, pointeurs corrigés | fusionnée le 26/11, sur demande |
 | #66 | `worktree-fusion-orchestrateur-contremaitre` | Orchestrateur et contremaître fusionnés en un seul agent ; skill `contremaitre` archivé | fusionnée le 26/11, sur demande |
 | #67 | `worktree-changelog-version-tableau` | Entrées du tableau de bord numérotées en 2.0.0 ; règle de numérotation dans `CLAUDE.md` | fusionnée le 26/11, sur demande |
+| #68 | `suivi-pr67-fusionnee` | Suivi : statut de la PR #67 | fusionnée le 26/11 |
+| #69 | `worktree-regle-fusions` | Règle des fusions : copies alignées sur le §4 | fusionnée le 26/11, sur demande |
 
-Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
+Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. La règle actuelle des fusions est au §4 (autorisation permanente du 26/11).
 
 ## 3. Plan V2 (archivé : `archives/plan-v2.md.txt`)
 
@@ -132,7 +134,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Outils (26/11, décisions de l'utilisateur)** : Impeccable retiré (rendu jugé trop « AI slop ») ; `ui-ux-pro-max` est le skill de design. Les connecteurs Higgsfield et Spline servent à approfondir la 3D (génération, scènes, flux Blender). Supabase reste en lecture seule sans « oui » explicite. Rappels automatiques au démarrage et à chaque prompt (`.claude/hooks/`), sans lancer de skill. Skills Vercel et agents morts déplacés dans `archives/outils-claude/`.
 - **Orchestrateur et contremaître fusionnés (26/11, demande de l'utilisateur)** : un seul agent, `orchestrateur`, tient le routage, les idées (`IDEES.md`), les plans et la délégation. Le skill `contremaitre` est archivé. Raison : deux outils qui tenaient chacun un suivi se contredisaient.
 - **Numérotation (26/11, décision de l'utilisateur)** : les entrées du tableau de bord portent un numéro, celui de `app/package.json` (2.0.0 depuis le 24/11, non modifié depuis). Les entrées du 25/11 et du 26/11 sont donc sous 2.0.0. Une modification du tableau de bord donne lieu à un nouveau numéro.
-- **Fusions (26/11, autorisation permanente de l'utilisateur)** : Claude peut fusionner les PR pour toutes les fois où c'est nécessaire, sans redemander.
+- **Fusions (26/11, autorisation permanente de l'utilisateur)** : Claude peut fusionner les PR pour toutes les fois où c'est nécessaire, sans redemander. Confirmé le même jour. Le reste est inchangé : déploiement, écriture en base et action irréversible sur demande, pas de commit direct sur `main`, pas de `git push --force`.
 - **Critiques** : l'utilisateur accepte qu'elles remettent en cause ses choix passés ; ces choix sont signalés « [ton choix] ».
 
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
