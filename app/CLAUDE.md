@@ -13,7 +13,7 @@ Chargé seulement quand on travaille dans `app/`. Les règles générales du pro
   - pas de classe `av` sur les images ;
   - les clics `data-open` et `data-goto` sont gérés par le legacy ;
   - `LANG_FIX` dans legacy.js force la langue de certaines chaînes.
-- Mode démo : `?demo` ou `?demo=channel|chat|game|overlap|flows|settings|map`, et `&hover=0.4` pour figer un survol. Les données viennent de `src/dev/demo.ts`, qui est exclu du build. C'est le moyen de tester l'interface sans Supabase.
+- Mode démo : `?demo` ou `?demo=channel|chat|game|overlap|flows|settings|map`, `&hover=0.4` pour figer un survol, `?demo=settings&chaines=40` pour une longue liste suivie. Les données viennent de `src/dev/demo.ts`, qui est exclu du build. C'est le moyen de tester l'interface sans Supabase.
 - Page d'accueil (`components/landing/`) : posée PAR-DESSUS le tableau de bord, qui reste monté et `inert` dessous (l'ancien code a besoin de ses éléments dans la page). Drapeau `to2-landing-seen` ; `?accueil` la rouvre.
 - Intro (`components/intro/`) : calque Three.js de 4 s avant la page d'accueil, drapeau `to2-intro-seen`, jamais en démo ni avec les mouvements réduits. Imports ciblés de `three`, pas de `@react-three/fiber`.
 - Planètes des chaînes : une seule source, `src/lib/planet.ts`, pour `ChannelAvatar`, `av()` et la Carte (`planetSvg`) ; anneau via `window.planetRing`.

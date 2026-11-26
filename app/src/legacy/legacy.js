@@ -2152,7 +2152,7 @@ function addChans(list){
     if(tab==='settings')renderSettings();return nw.length}
   let added=0;for(const c of list)if(!cfg.chans.includes(c)){cfg.chans.push(c);added++;if(running&&ws&&ws.readyState===1)setTimeout(()=>{if(running&&ws&&ws.readyState===1&&cfg.chans.includes(c))ws.send('JOIN #'+c)},added*600)}
   saveCfg();buildChanSel();if(running){pollStreams();loadEmotes(list)}if(discover&&tab==='game')render(); /* « suivie » se met à jour dans la recherche */
-  if(added)smsg.chans=`${added} chaîne${added>1?'s':''} ajoutée${added>1?'s':''}.`+(running?'':' Elle sera écoutée au prochain « Démarrer l\'écoute ».');
+  if(added)smsg.chans=`${added} chaîne${added>1?'s':''} ajoutée${added>1?'s':''}.`+(running?'':(added>1?' Elles seront écoutées':' Elle sera écoutée')+' au prochain « Démarrer l\'écoute ».');
   if(tab==='settings')renderSettings();return added}
 function removeChan(c){
   cfg.chans=cfg.chans.filter(x=>x!==c);buildChanSel();
@@ -2161,6 +2161,14 @@ function removeChan(c){
       .catch(e=>{smsg.chans='Échec du retrait : '+e.message;cloudSync().then(renderSettings)});
     renderSettings();return}
   saveCfg();if(running&&ws&&ws.readyState===1)ws.send('PART #'+c);smsg.chans=`${c} retirée.`;renderSettings()}
+
+// Ajout en bloc depuis React : n'ajoute que, ne retire jamais (contrairement à saveChanList, qui remplace la liste).
+function addChanList(text){
+  const tokens=String(text||'').split(/[\s,;]+/).filter(Boolean),invalid=[],ok=[];
+  for(const t of tokens){const l=loginOf(t);if(/^[a-z0-9_]{2,25}$/.test(l))ok.push(l);else invalid.push(t)}
+  const uniq=[...new Set(ok)],list=uniq.filter(c=>!cfg.chans.includes(c)),added=list.length?addChans(list):0;
+  return {added,already:uniq.length-list.length,invalid,over:list.slice(added)};
+}
 
 /* ---------- recherche de streamers à ajouter ---------- */
 let addSearch=null,addSeq=0;
@@ -2180,9 +2188,17 @@ async function runAddSearch(text){
       valid?helix('users?login='+encodeURIComponent(login)).catch(()=>({data:[]})):Promise.resolve({data:[]}),
       helix('search/channels?first=12&query='+encodeURIComponent(q))]);
     if(seq!==addSeq)return;
-    const items=se.data.map(s=>({login:s.broadcaster_login.toLowerCase(),name:s.display_name,img:s.thumbnail_url,live:s.is_live,g:s.game_name}));
+    const items=se.data.map(s=>({login:s.broadcaster_login.toLowerCase(),name:s.display_name,img:s.thumbnail_url,live:s.is_live,g:s.game_name,lang:s.broadcaster_language}));
     const u=ex.data[0];
     if(u){const i=items.findIndex(x=>x.login===u.login);const it=i>=0?items.splice(i,1)[0]:{login:u.login,name:u.display_name,img:u.profile_image_url,g:''};items.unshift(it)}
+    // viewers des chaînes en direct (un seul appel pour toute la liste) ; sans réponse, la liste s'affiche sans ce chiffre
+    const on=items.filter(x=>x.live||(u&&x.login===u.login));
+    if(on.length)try{const st=await helix('streams?first=100&'+on.map(x=>'user_login='+encodeURIComponent(x.login)).join('&'));
+      for(const v of st.data){const x=on.find(y=>y.login===v.user_login.toLowerCase());if(x){x.live=true;x.viewers=v.viewer_count;x.g=v.game_name;x.lang=v.language}}}catch(e){}
+    if(seq!==addSeq)return;
+    // le pseudo exact reste en tête, puis les chaînes en direct par audience, puis les autres dans l'ordre de Twitch
+    const rank=x=>u&&x.login===u.login?Infinity:x.live?(x.viewers||0)+1:0;
+    items.sort((a,b)=>rank(b)-rank(a));
     addSearch={items,msg:items.length?'':'Aucun streamer trouvé pour « '+q+' ».'};
   }catch(e){if(seq!==addSeq)return;addSearch={items:valid?[{login,name:login,unchecked:true}]:[],msg:'Recherche impossible ('+e.message+').'+(valid?' Tu peux quand même ajouter le pseudo tel quel :':'')}}
   renderSettings();
@@ -2326,7 +2342,7 @@ function renderSettings(){
   const d={mode:cfg.mode,modeNote:c?'Les données viennent du collecteur qui tourne sur ton PC et les envoie dans Supabase. La page se met à jour toute seule chaque minute, même ouverte sur un autre appareil.':'La page écoute elle-même les chats tant qu\'elle reste ouverte. Les données restent dans ce navigateur.',
     sbUrl:cfg.sbUrl||'',sbKey:cfg.sbKey||'',sbCode:cfg.sbCode||'',sbMsg:smsg.sb||(!c?'':!isCloud()?'Colle l\'URL et la clé publique du projet Supabase du collecteur.':cloud.err?'Erreur : '+cloud.err:cloud.last?`Connecté · dernière synchro il y a ${ago(cloud.last)}`+(cloud.status&&cloud.status.last_seen?` · collecteur vu il y a ${ago(cloud.status.last_seen)}`+(cloud.status.version?` (v${cloud.status.version})`:''):' · le collecteur n\'a encore rien envoyé')+dbSizeLbl()+(cfg.sbCode?'':' · sans le code, la liste des chaînes est en lecture seule'):'Connexion…'),
     chans:cfg.chans.map(who),chanLimit:isCloud()?MAX_CLOUD_CHANS:null,chansMsg:smsg.chans,
-    addSearch:addSearch?{msg:addSearch.msg||'',items:addSearch.items.map(x=>({login:x.login,name:x.name,img:x.img||'',live:!!x.live,game:x.g||'',unchecked:!!x.unchecked,followed:cfg.chans.includes(x.login)}))}:null,
+    addSearch:addSearch?{msg:addSearch.msg||'',items:addSearch.items.map(x=>({login:x.login,name:x.name,img:x.img||'',live:!!x.live,viewers:x.viewers??null,lang:x.lang||'',game:x.g||'',unchecked:!!x.unchecked,followed:cfg.chans.includes(x.login)}))}:null,
     apiReady:apiReady(),pendingLocal:pendingLocal(),clientId:cfg.clientId||'',token:cfg.token||'',apiMsg:smsg.api||apiStatusLbl(),
     dbNote:c
     ?`Les données sont dans la base Supabase du collecteur ; ce navigateur en garde une copie pour s'afficher vite. ${priv} Dans la base, le détail par minute est gardé ${nJ(+RT.minutes||14)}, les présences ${nJ(+RT.presence||21)} en plus du jour en cours, les relevés de viewers ${nJ(+RT.snaps||30)} et les événements ${nJ(+RT.events||60)} (réglables dans config.json) ; mots et emotes, VOD et clips 30 jours ; réglages des chaînes et périodes d'écoute 60 jours. « Sauvegarde complète » enregistre cette copie ; « Tout effacer » la vide puis la retélécharge depuis la base.`
