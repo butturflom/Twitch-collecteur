@@ -456,6 +456,9 @@ export function installDemo() {
       Object.defineProperty(window, "planetRing", { get: () => ring, set: () => {}, configurable: true })
     }
     if (t === "map") seedMap()
+    // ?demo=settings&chaines=40 : ajoute des chaînes fictives pour voir la liste défiler
+    const n = Number(new URLSearchParams(location.search).get("chaines"))
+    if (t === "settings" && n > 0) window.addChanList?.(Array.from({ length: n }, (_, i) => `chaine_demo_${i + 1}`).join(" "))
     // ?demo=flows-map : onglet Flux, remplacé par le prototype C0 de la carte des migrations (voir App.tsx)
     window.showTab?.(t === "flows-map" ? "flows" : t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
     if (t === "game") window.runDiscover("VALORANT", "fr") // montre aussi les résultats de recherche

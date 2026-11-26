@@ -216,7 +216,7 @@ export interface SettingsData {
   mode: "local" | "cloud"; modeNote: string
   sbUrl: string; sbKey: string; sbCode: string; sbMsg: string
   chans: Who[]; chanLimit: number | null; chansMsg: string
-  addSearch: { msg: string; items: { login: string; name: string; img: string; live: boolean; game: string; unchecked: boolean; followed: boolean }[] } | null
+  addSearch: { msg: string; items: { login: string; name: string; img: string; live: boolean; viewers: number | null; lang: string; game: string; unchecked: boolean; followed: boolean }[] } | null
   apiReady: boolean; pendingLocal: string[]
   clientId: string; token: string; apiMsg: string
   dbNote: string; dbMsg: string
@@ -314,6 +314,8 @@ declare global {
     dropLocal?: () => void
     removeChan?: (c: string) => void
     saveChanList?: (text: string) => void
+    /** ajoute plusieurs chaînes (pseudos ou adresses séparés par des espaces, virgules ou retours à la ligne) ; over : au-delà de la limite */
+    addChanList?: (text: string) => { added: number; already: number; invalid: string[]; over: string[] }
     saveApi?: (clientId: string, token: string) => void
     genToken?: (clientId: string, secret: string) => Promise<boolean>
     exportDb?: () => void

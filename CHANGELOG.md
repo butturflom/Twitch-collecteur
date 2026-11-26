@@ -268,3 +268,11 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à re
 - **Ajouter un streamer** : la recherche des Réglages ne partait jamais et affichait toujours « Recherche API Twitch non configurée ». Elle part maintenant toute seule pendant la frappe. Sans API dans le navigateur, on peut ajouter un pseudo exact ou une adresse `twitch.tv/…` ; les chaînes déjà suivies sont marquées « Suivie ».
 - **API Twitch** : la section a de nouveau les champs Client ID et Client secret, et permet de générer un nouveau jeton quand l'ancien expire.
 - Le bouton « Ajouter un streamer » de la barre latérale ouvre la recherche et y place le curseur.
+
+## Tableau de bord 2.0.2 (26/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à rejouer.
+
+- **Chaînes suivies** : la liste entière s'affiche, avec un filtre. Chaque chaîne peut être retirée, après confirmation ; ses données déjà collectées restent.
+- **Ajouter plusieurs** : colle une liste de pseudos ou d'adresses. Rien n'est retiré ; les pseudos invalides et ceux au-delà de la limite de 100 sont signalés et restent dans le champ.
+- **Résultats de recherche** (avec l'API Twitch) : viewers en direct, langue quand Twitch la donne, chaînes en direct d'abord après le pseudo exact. Les flèches parcourent les résultats.

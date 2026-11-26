@@ -1,7 +1,7 @@
 // Page « Réglages », en React. L'état vient de l'ancien code (événement legacy:settings) ;
 // chaque bouton appelle une action de l'ancien code (window.saveSupabase, window.genToken…), qui renvoie le nouvel état.
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Check, ChevronDown, Cloud, Database, Download, FileDown, HardDrive, KeyRound, Laptop, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react"
+import { Check, ChevronDown, Cloud, Database, Download, FileDown, HardDrive, KeyRound, Laptop, ListPlus, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,7 +41,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function Status({ text }: { text: string }) {
   if (!text) return null
   const bad = /^(Erreur|Échec|C'est la clé secrète|Pseudo invalide|Recherche impossible)/.test(text)
-  const good = /^(Connecté|API connectée|Sauvegarde restaurée)/.test(text) || /(ajoutée?s?|retirée|enregistrées)\b/.test(text)
+  const good = /^(Connecté|API connectée|Sauvegarde restaurée|\d+ ajoutée)/.test(text) || /(ajoutée?s?|retirée|enregistrées)\b/.test(text)
   return (
     <p role="status" className={cn("flex items-start gap-2 text-[12.5px]", bad ? "text-destructive" : good ? "text-signal-green" : "text-muted-foreground")}>
       <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", bad ? "bg-destructive" : good ? "bg-signal-green" : "bg-idle")} />
@@ -180,15 +180,38 @@ function Badge({ variant = "default", children }: BadgeProps) {
 }
 
 // Channels section
+type Found = NonNullable<SettingsData["addSearch"]>["items"][number]
+
+const languages = new Intl.DisplayNames(["fr"], { type: "language" })
+const nf = new Intl.NumberFormat("fr-FR")
+
+/** Ligne sous le nom d'un résultat : pseudo, direct et audience, jeu, langue. */
+function describe(x: Found) {
+  if (x.unchecked) return "Pseudo non vérifié sur Twitch"
+  const live = !x.live ? "" : x.viewers == null ? "en direct" : `en direct, ${nf.format(x.viewers)} viewers`
+  return [x.login, live, x.game, x.lang.length === 2 ? languages.of(x.lang) : ""].filter(Boolean).join(" · ")
+}
+
+/** Flèches haut et bas : passe de la saisie aux boutons « Ajouter » ; Échap revient à la saisie. */
+function arrows(e: KeyboardEvent<HTMLFormElement>, input: HTMLInputElement | null) {
+  if (e.key === "Escape") { e.preventDefault(); input?.focus(); input?.select(); return }
+  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return
+  const stops: (HTMLElement | null)[] = [input, ...e.currentTarget.querySelectorAll<HTMLButtonElement>("[data-result]:not(:disabled)")]
+  const next = stops[stops.indexOf(document.activeElement as HTMLElement) + (e.key === "ArrowDown" ? 1 : -1)]
+  if (next) { e.preventDefault(); next.focus() }
+}
+
 function Channels({ d }: { d: SettingsData }) {
-  const [showAdd, setShowAdd] = useState(false)
+  const [panelOpen, setPanel] = useState<"one" | "many" | null>(null)
   const [search, setSearch] = useState("")
   const input = useRef<HTMLInputElement>(null)
   const q = search.trim()
+  const showAdd = panelOpen === "one"
+  const toggle = (p: "one" | "many") => { setPanel(panelOpen === p ? null : p); setSearch("") }
 
   // « Ajouter un streamer » de la barre latérale : ouvre la recherche et y place le curseur.
   useEffect(() => onFocusAdd(() => {
-    setShowAdd(true)
+    setPanel("one")
     setTimeout(() => { input.current?.scrollIntoView({ block: "center" }); input.current?.focus() }, 50)
   }), [])
 
@@ -207,17 +230,21 @@ function Channels({ d }: { d: SettingsData }) {
         <p className="text-xs text-muted-foreground">
           {d.chans.length} chaîne(s) suivie(s){d.chanLimit ? ` sur ${d.chanLimit} au maximum` : ""}.
         </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setShowAdd(!showAdd); setSearch("") }}>
-            {showAdd ? <X className="mr-2 size-4" /> : <Plus className="mr-2 size-4" />}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" aria-expanded={showAdd} onClick={() => toggle("one")}>
+            {showAdd ? <X /> : <Plus />}
             {showAdd ? "Fermer" : "Ajouter un streamer"}
+          </Button>
+          <Button variant="ghost" size="sm" aria-expanded={panelOpen === "many"} onClick={() => toggle("many")}>
+            {panelOpen === "many" ? <X /> : <ListPlus />}
+            {panelOpen === "many" ? "Fermer" : "Ajouter plusieurs"}
           </Button>
         </div>
         {showAdd && (
-          <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); void window.runAddSearch?.(q) }}>
+          <form className="space-y-2" onKeyDown={(e) => arrows(e, input.current)} onSubmit={(e) => { e.preventDefault(); void window.runAddSearch?.(q) }}>
             <Field
               label="Rechercher"
-              hint={d.apiReady ? "Nom, pseudo ou adresse twitch.tv." : "Sans API Twitch dans ce navigateur, tape le pseudo exact ou l'adresse twitch.tv. Pour chercher par nom, configure l'API plus bas."}
+              hint={d.apiReady ? "Nom, pseudo ou adresse twitch.tv. Flèches pour parcourir les résultats." : "Sans API Twitch dans ce navigateur, tape le pseudo exact ou l'adresse twitch.tv. Pour chercher par nom, configure l'API plus bas."}
             >
               <Input ref={input} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nom de la chaîne Twitch…" autoComplete="off" spellCheck={false} />
             </Field>
@@ -229,11 +256,10 @@ function Channels({ d }: { d: SettingsData }) {
                     <ChannelAvatar c={item.login} color="#8b7cff" img={item.img} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm">{item.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {item.unchecked ? "Pseudo non vérifié sur Twitch" : [item.login, item.live ? "en direct" : "", item.game].filter(Boolean).join(" · ")}
-                      </p>
+                      <p className="truncate text-xs text-muted-foreground">{describe(item)}</p>
                     </div>
-                    <Button type="button" size="sm" disabled={item.followed} onClick={() => window.addFromSearch?.(item.login, item.img)}>
+                    <Button type="button" size="sm" data-result="" disabled={item.followed} aria-label={item.followed ? undefined : `Ajouter ${item.name}`}
+                      onClick={() => { window.addFromSearch?.(item.login, item.img); input.current?.focus() }}>
                       {item.followed ? <><Check />Suivie</> : "Ajouter"}
                     </Button>
                   </div>
@@ -242,22 +268,80 @@ function Channels({ d }: { d: SettingsData }) {
             )}
           </form>
         )}
-        {d.chans.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {d.chans.slice(0, 5).map((chan) => (
-              <span key={chan.c} className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-                {chan.c}
-              </span>
-            ))}
-            {d.chans.length > 5 && (
-              <span className="text-xs text-muted-foreground">
-                +{d.chans.length - 5} autres
-              </span>
-            )}
-          </div>
-        )}
+        {panelOpen === "many" && <BulkAdd limit={d.chanLimit} />}
+        <Followed chans={d.chans} />
       </div>
     </Card>
+  )
+}
+
+/** Ajout en bloc : une liste collée, ajoutée sans rien retirer. */
+function BulkAdd({ limit }: { limit: number | null }) {
+  const [text, setText] = useState("")
+  const [report, setReport] = useState("")
+  const go = () => {
+    const r = window.addChanList?.(text)
+    if (!r) return
+    setReport([
+      r.added ? `${r.added} ajoutée(s)` : "Aucune chaîne ajoutée",
+      r.already ? `${r.already} déjà suivie(s)` : "",
+      r.invalid.length ? `pseudo(s) invalide(s) : ${r.invalid.join(", ")}` : "",
+      r.over.length ? `au-delà de la limite de ${limit} : ${r.over.join(", ")}` : "",
+    ].filter(Boolean).join(" · "))
+    // il ne reste dans le champ que ce qui n'a pas pu être ajouté, pour le corriger
+    setText([...r.invalid, ...r.over].join("\n"))
+  }
+  return (
+    <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); go() }}>
+      <Field label="Liste de chaînes" hint="Pseudos ou adresses twitch.tv, séparés par des espaces, des virgules ou des retours à la ligne. Aucune chaîne déjà suivie n'est retirée.">
+        <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} spellCheck={false} className="font-mono text-xs" />
+      </Field>
+      <Button type="submit" size="sm" disabled={!text.trim()}><Plus />Ajouter la liste</Button>
+      <Status text={report} />
+    </form>
+  )
+}
+
+/** Toutes les chaînes suivies, filtrables ; le retrait demande une confirmation. */
+function Followed({ chans }: { chans: SettingsData["chans"] }) {
+  const [filter, setFilter] = useState("")
+  const [armed, setArmed] = useState("")
+  const list = useRef<HTMLUListElement>(null)
+  const back = useRef("")
+  const f = filter.trim().toLowerCase()
+  const rows = chans.filter((x) => x.c.includes(f)).sort((a, b) => a.c.localeCompare(b.c))
+
+  // après « Garder », le clavier revient sur le bouton de la même ligne
+  useEffect(() => {
+    if (armed || !back.current) return
+    list.current?.querySelector<HTMLButtonElement>(`[data-drop="${back.current}"]`)?.focus()
+    back.current = ""
+  }, [armed])
+  const keep = () => { back.current = armed; setArmed("") }
+
+  if (!chans.length) return <p className="text-xs text-muted-foreground">Aucune chaîne suivie. Ajoute la première avec le bouton ci-dessus.</p>
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrer les chaînes suivies…" aria-label="Filtrer les chaînes suivies" autoComplete="off" spellCheck={false} />
+      <ul ref={list} className="max-h-80 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+        {rows.map((x) => (
+          <li key={x.c} className="flex min-h-11 flex-wrap items-center gap-3 px-3 py-1.5" onKeyDown={(e) => { if (e.key === "Escape" && armed === x.c) keep() }}>
+            <ChannelAvatar c={x.c} color={x.color} img={x.img} />
+            <span className="min-w-0 flex-1 truncate text-sm">{x.c}</span>
+            {armed === x.c ? (
+              <>
+                <span className="text-xs text-muted-foreground">Les données déjà collectées restent.</span>
+                <Button size="sm" variant="destructive" onClick={() => { setArmed(""); window.removeChan?.(x.c) }}>Retirer {x.c}</Button>
+                <Button size="sm" variant="secondary" autoFocus onClick={keep}>Garder</Button>
+              </>
+            ) : (
+              <Button size="icon-sm" variant="ghost" data-drop={x.c} aria-label={`Retirer ${x.c}`} title="Retirer" onClick={() => setArmed(x.c)}><Trash2 /></Button>
+            )}
+          </li>
+        ))}
+        {!rows.length && <li className="px-3 py-3 text-xs text-muted-foreground">Aucune chaîne suivie ne contient « {filter.trim()} ».</li>}
+      </ul>
+    </div>
   )
 }
 
