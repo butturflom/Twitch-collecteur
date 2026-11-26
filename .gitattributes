@@ -1,0 +1,3 @@
+# Les scripts de hooks sont lancés par bash : ils doivent rester en fin de ligne LF, même sous Windows (core.autocrlf).
+.claude/hooks/*.sh text eol=lf
+scripts/hooks/post-merge text eol=lf
