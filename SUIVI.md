@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : PR #62 (organisation des outils), #63 (audit du dépôt et skill `/audit`) fusionnées le 26/11 sur demande ; PR #64 (restes d'Impeccable) ouverte, à fusionner sur demande ; la PR de hiérarchie des documents est ouverte aussi. Avant ces PR, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : PR #62 à #65 (organisation des outils, audit du dépôt, restes d'Impeccable, hiérarchie des documents) fusionnées le 26/11 sur demande ; PR #66 (orchestrateur et contremaître fusionnés en un seul agent) ouverte, à fusionner sur demande. Avant elles, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -92,7 +92,9 @@
 | #61 | `idees-intro-planetes` | Notes : intro prototype, cadrage des planètes low-poly, règle des deux temps de la Carte | fusionnée le 26/11, sur demande |
 | #62 | `organisation-agents` | Organisation des outils : rappels de session (hooks), Impeccable archivé (`ui-ux-pro-max` pour le design), skills Vercel et agents morts archivés, routage de l'orchestrateur, Higgsfield et Spline pour la 3D | fusionnée le 26/11, sur demande |
 | #63 | `worktree-audit-projet` | Audit du dépôt (`scripts/audit-projet.mjs`), skill `/audit`, archivage des agents `analyste` et `app-developer` et des skills `web-design-guidelines` et `writing-guidelines`, liens corrigés | fusionnée le 26/11, sur demande |
-| #64 | `worktree-supprime-impeccable-restes` | Suppression des cinq fichiers de configuration Impeccable restants | ouverte le 26/11, à fusionner sur demande |
+| #64 | `worktree-supprime-impeccable-restes` | Suppression des cinq fichiers de configuration Impeccable restants | fusionnée le 26/11, sur demande |
+| #65 | `worktree-hierarchie-docs` | Hiérarchie des sources dans `CLAUDE.md`, copies renvoyées à leur source, pointeurs corrigés | fusionnée le 26/11, sur demande |
+| #66 | `worktree-fusion-orchestrateur-contremaitre` | Orchestrateur et contremaître fusionnés en un seul agent ; skill `contremaitre` archivé | ouverte le 26/11, à fusionner sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
