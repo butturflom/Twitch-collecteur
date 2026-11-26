@@ -258,3 +258,4 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Planètes peintes** : chaque chaîne est une planète au motif propre à son nom, à la place de sa photo ; un anneau marque les 3 chaînes les plus fortes de la vue. Sur la Carte, les couleurs peuvent différer d'avant.
 - **Flux** : à côté du Sankey, une **carte des migrations** montre les passages de viewers actifs jour par jour (elle n'apparaît que si la base est à jour). Le Sankey occupe toute la largeur.
 - **Chiffres plus justes** : la fidélité du chat ne s'affiche qu'à partir de 200 viewers actifs ; « Écrivent aussi chez » donne un pourcentage à partir de 30 viewers ; la croissance est la médiane calculée sur les followers (« — » sous 100 followers au départ).
+- **Rapport mensuel des agences** : même seuil de fidélité que le tableau de bord (200 viewers actifs, « — » en dessous). La mention « score fragile » et la colonne CSV « Fidélité fragile » disparaissent.

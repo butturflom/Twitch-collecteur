@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : tout est fusionné dans `main` jusqu'à la PR #58. Seule la PR #45 reste ouverte : son contenu est repris dans ce fichier et dans `CHANGELOG.md`, elle peut être fermée. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : tout est fusionné dans `main` jusqu'à la PR #58. La PR #59 (documentation et seuil de fidélité) est ouverte, à fusionner sur demande. La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -22,9 +22,9 @@
 - Confirmer les durées de rétention de `config.json` (§8).
 - Prendre les rendez-vous avec 3 à 5 agences (`VALIDATION-AGENCES.md`) ; décider d'un projet Supabase pour un premier client (coût, RGPD de `CONFORMITE.md`).
 
-**À trancher** : le seuil de la fidélité du chat diffère entre le tableau de bord (200 viewers actifs depuis #55) et `scripts/rapport-mensuel.mjs` (score dès 30, marqué fragile sous 200). La note de la comparaison de chaînes (`compare.tsx`) parle encore d'une fidélité « fragile » sous 200, alors qu'elle n'y est plus affichée. À aligner avant de montrer un rapport à une agence.
+**Fidélité du chat (tranché le 26/11)** : le score n'est donné qu'à partir de 200 viewers actifs partout, tableau de bord, comparaison de chaînes et rapport mensuel (PR #59). Conséquence : les petites chaînes n'ont plus de score (§12 bis, point 1).
 
-**Chantiers possibles ensuite** : aligner la fidélité (ci-dessus) ; trajectoire (après le 23/12) ; critique de design de « Par chaîne » (coûteuse, sur demande) ; étendre les analyses neuves au rapport mensuel. L'hébergement et les comptes clients (chantier D) attendent un premier contrat.
+**Chantiers possibles ensuite** : trajectoire (après le 23/12) ; critique de design de « Par chaîne » (coûteuse, sur demande) ; étendre les analyses neuves au rapport mensuel. L'hébergement et les comptes clients (chantier D) attendent un premier contrat.
 
 **Pièges à ne pas oublier**
 - Après toute modification de `app/src` : `npm run build` dans `app/`. Après un `git pull`, le hook fait le build (et `npm install` si les dépendances changent) : `scripts/hooks/post-merge`, à copier une fois dans `.git/hooks/` (§14).
@@ -76,7 +76,7 @@
 | #43 | `vue-ensemble-spatiale` | Vue d'ensemble spatiale : ciel étoilé, cartes console, avatars en planètes, constellation des recoupements (choix de l'utilisateur, DESIGN.md mis à jour) | fusionnée le 25/11, sur demande (la règle des lueurs de DESIGN.md est devenue « deux niveaux ») |
 | #44 | `ciel-toutes-pages` | Ciel étoilé étendu à toutes les pages sauf la Carte (`SKY_TABS`) | fusionnée le 25/11, sur demande |
 | #42 | `agences-validation-et-clients` | Direction agences : kit de validation, dossier client, rapport mensuel (§12) | fusionnée le 25/11, sur demande |
-| #45 | `suivi-pause-25-11` | Documentation : reprise après la pause | **ouverte**, contenu repris le 26/11, à fermer |
+| #45 | `suivi-pause-25-11` | Documentation : reprise après la pause | fermée sans fusion le 26/11, contenu repris par #59 |
 | #46, #47 | `worktree-skills-3d-hud-contremaitre` (comme les suivantes) | Skills 3D et HUD, `/contremaitre`, `IDEES.md`, coûts clients, écran vide | fusionnées le 25/11 |
 | #48 à #50 | | Page d'accueil : corrections de la critique | fusionnées le 25/11 |
 | #51 | | Chantier A : planète partout | fusionnée le 25/11 |
@@ -86,6 +86,7 @@
 | #55 | | Planètes peintes et corrections de justesse | fusionnée le 26/11 |
 | #56, #57 | | Hook post-merge versionné, skill `/verifier` | fusionnées le 26/11 |
 | #58 | | Documentation nettoyée, agent et lanceur orchestrateur | fusionnée le 26/11 |
+| #59 | `docs-26-11` | Documentation à jour ; rapport mensuel : fidélité à partir de 200 viewers actifs | **ouverte** |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -189,6 +190,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 - **26/11** : documentation nettoyée. `LISEZMOI.md` ne garde que le guide ; l'historique des versions passe dans `CHANGELOG.md`. Les anciens plans (`plan.md.txt`, `PHASE2_ARCHITECTURE_SCALABLE.md`) et l'ancienne copie de la mémoire (`memory/`, liens morts) passent dans `archives/`, sans suppression. La roadmap devient `ROADMAP-COMPLET.txt`. `CLAUDE.md`, `.claude/CLAUDE.md`, `DOCKER.md` et `README.md` (encodé en UTF-16, illisible) sont réécrits ; `app/CLAUDE.md` perd les renvois à des fichiers qui n'existent plus. Ajout de l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`) et du lanceur `lancer-orchestrateur.bat`. Chantier C3 abandonné (§16, `IDEES.md`).
 - **26/11 (nuit)** : #53 (carte des migrations), #54 (C3 abandonné), #55 (planètes peintes, justesse), #56 et #57 (hook, `/verifier`), #58 (documentation).
+- **26/11 (journée)** : documentation remise à jour, #45 fermée, rapport mensuel aligné sur le seuil de 200 viewers actifs pour la fidélité (#59). Build vérifié ; le rapport n'a pas été relancé sur des données.
 - **25/11 (soir)** : #43 (Vue d'ensemble spatiale, constellation) et #44 (ciel sur toutes les pages sauf la Carte) fusionnées sur demande ; règle des lueurs de `DESIGN.md` modifiée. Puis #46 à #52 : skills 3D, `/contremaitre`, page d'accueil, planète partout, intro animée.
 - **25/11** : PR #11 à #14 fusionnées (historique 30 et 90 jours, viewers uniques, historique du réseau, accessibilité) ; PR #16 à #19 fusionnées (Carte, Vue d'ensemble, critique n°6). Critiques n°7 : Carte 28/40, Vue d'ensemble 27/40. PR #20, #21, #22 et #24 fusionnées à 11 h 31 UTC sur demande de l'utilisateur, puis #23 (ce suivi). Sticky-Factor : fonction déployée, PR #25 fusionnée. Landing page : PR #26 fusionnée. Puis #27 à #36 : direction agences et streamers, comparaison de chaînes, fidélité (voisines, petites chaînes), alertes de rythme (fonction déployée), son univers, essentiel de Par chaîne, filtre de la Carte par jeu. Hook de build local. Puis #37 à #41 (règle de build, documentation, menu de la Carte et lecture protégée, pastilles retirées) et #42 : kit de validation des agences, `scripts/nouveau-client.mjs` et `scripts/rapport-mensuel.mjs`.
 - **24/11** : collecteur 1.6.13 (doublons, PR #3), tableau de bord de nouveau affiché (PR #4), Docker (PR #5), stockage et rollups (PR #6), onglet Flux (PR #7), Net Reach (PR #8), notes de plan (PR #9), export (PR #10).
