@@ -21,6 +21,9 @@ npm run preview
 node scripts/nouveau-client.mjs "Agence" chaine1 chaine2
 node scripts/rapport-mensuel.mjs clients/<agence> [jours]
 
+# Audit du dépôt : liens, réglages, worktrees, branches (lecture seule ; skill /audit)
+node scripts/audit-projet.mjs
+
 # Docker (app sur le port 9500 via app/server.js + collecteur, config.json monté en lecture seule)
 docker compose up -d
 ```
@@ -29,7 +32,7 @@ Pas de tests ni de lint. La seule vérification automatique est le contrôle de 
 
 ## Lancer Claude Code en orchestrateur
 
-`lancer-orchestrateur.bat`, à la racine, ouvre Claude Code dans ce dossier avec l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`). Il lit `SUIVI.md`, découpe le travail et délègue aux autres agents. Équivalent manuel, depuis la racine : `claude --agent orchestrateur`. Le lanceur n'existe dans le dossier principal qu'après fusion de sa branche dans `main`.
+`lancer-orchestrateur.bat`, à la racine, ouvre Claude Code dans ce dossier avec l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`). Il lit `SUIVI.md`, découpe le travail et délègue aux autres agents. Équivalent manuel, depuis la racine : `claude --agent orchestrateur`.
 
 ## Architecture
 

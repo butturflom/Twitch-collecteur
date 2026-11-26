@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : PR #62 (organisation des outils, §2) ouverte le 26/11, à fusionner sur demande. Avant elle, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : PR #62 (organisation des outils, §2) fusionnée le 26/11 sur demande ; PR suivante : audit du dépôt et skill `/audit`, à fusionner sur demande. Avant ces PR, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -90,7 +90,7 @@
 | #59 | `docs-26-11` | Documentation à jour ; rapport mensuel : fidélité à partir de 200 viewers actifs | fusionnée le 26/11, sur demande |
 | #60 | `corrections-affichage` | Rosters : un seul titre et tutoiement ; « 1 000 » insécable dans Par chaîne | fusionnée le 26/11, sur demande |
 | #61 | `idees-intro-planetes` | Notes : intro prototype, cadrage des planètes low-poly, règle des deux temps de la Carte | fusionnée le 26/11, sur demande |
-| #62 | `organisation-agents` | Organisation des outils : rappels de session (hooks), Impeccable archivé (`ui-ux-pro-max` pour le design), skills Vercel et agents morts archivés, routage de l'orchestrateur, Higgsfield et Spline pour la 3D | ouverte le 26/11, à fusionner sur demande |
+| #62 | `organisation-agents` | Organisation des outils : rappels de session (hooks), Impeccable archivé (`ui-ux-pro-max` pour le design), skills Vercel et agents morts archivés, routage de l'orchestrateur, Higgsfield et Spline pour la 3D | fusionnée le 26/11, sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -170,7 +170,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 2. Changer de modèle (`/model`) au moment où la tâche change, pas au milieu d'une réflexion.
 3. `/compact` quand une longue lecture a rempli la session et que le chantier continue.
 4. `/cost` pour le coût d'une session, `/context` pour voir ce qui remplit la fenêtre.
-5. Agents du projet : `orchestrateur` en session ; `analyste` et `app-developer` ne sont pas utilisés. Un sous-agent seulement pour un travail indépendant et volumineux.
+5. Agent du projet : `orchestrateur` en session (les gabarits inutilisés sont dans `archives/outils-claude/`). Un sous-agent seulement pour un travail indépendant et volumineux.
 
 **Réglages actuels**
 - Session d'orchestration (`lancer-orchestrateur.bat`, agent `orchestrateur`) : Sonnet 5.5. Passer en Opus 5.5 pour un chantier de design.
@@ -196,7 +196,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 ## 10. Journal
 
-- **26/11** : documentation nettoyée. `LISEZMOI.md` ne garde que le guide ; l'historique des versions passe dans `CHANGELOG.md`. Les anciens plans (`plan.md.txt`, `PHASE2_ARCHITECTURE_SCALABLE.md`) et l'ancienne copie de la mémoire (`memory/`, liens morts) passent dans `archives/`, sans suppression. La roadmap devient `ROADMAP-COMPLET.txt`. `CLAUDE.md`, `.claude/CLAUDE.md`, `DOCKER.md` et `README.md` (encodé en UTF-16, illisible) sont réécrits ; `app/CLAUDE.md` perd les renvois à des fichiers qui n'existent plus. Ajout de l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`) et du lanceur `lancer-orchestrateur.bat`. Chantier C3 abandonné (§16, `IDEES.md`).
+- **26/11** : documentation nettoyée. `LISEZMOI.md` ne garde que le guide ; l'historique des versions passe dans `CHANGELOG.md`. Les anciens plans (`archives/plan-v2.md.txt`, `archives/phase2-architecture.md`) et l'ancienne copie de la mémoire (`memory/`, liens morts) passent dans `archives/`, sans suppression. La roadmap devient `ROADMAP-COMPLET.txt`. `CLAUDE.md`, `.claude/CLAUDE.md`, `DOCKER.md` et `README.md` (encodé en UTF-16, illisible) sont réécrits ; `app/CLAUDE.md` perd les renvois à des fichiers qui n'existent plus. Ajout de l'agent `orchestrateur` (`.claude/agents/orchestrateur.md`) et du lanceur `lancer-orchestrateur.bat`. Chantier C3 abandonné (§16, `IDEES.md`).
 - **26/11 (nuit)** : #53 (carte des migrations), #54 (C3 abandonné), #55 (planètes peintes, justesse), #56 et #57 (hook, `/verifier`), #58 (documentation).
 - **26/11 (journée)** : documentation remise à jour, #45 fermée, rapport mensuel aligné sur le seuil de 200 viewers actifs pour la fidélité (#59). Build vérifié ; le rapport n'a pas été relancé sur des données.
 - **25/11 (soir)** : #43 (Vue d'ensemble spatiale, constellation) et #44 (ciel sur toutes les pages sauf la Carte) fusionnées sur demande ; règle des lueurs de `DESIGN.md` modifiée. Puis #46 à #52 : skills 3D, `/contremaitre`, page d'accueil, planète partout, intro animée.

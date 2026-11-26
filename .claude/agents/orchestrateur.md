@@ -26,6 +26,7 @@ Avant d'agir, classe la demande dans ce tableau. Une seule ligne par demande ; s
 | Code Three.js | Skills `three-js` et `react-three-fiber` ; prototype isolé d'abord (critère go/no-go écrit) |
 | Vérification de rendu | `/verifier` (captures Chrome headless) ; Playwright seulement pour les clics, survols et états, sur `npm run dev` |
 | Base Supabase | Lecture seule. Aucune écriture, aucune migration sans « oui » explicite |
+| Audit, « tout est à jour ? », liens cassés | `/audit` (script `scripts/audit-projet.mjs`) ; corriger ce qu'il signale ou le noter dans le compte rendu |
 | Chantier sur plusieurs sessions | Plan dans `IDEES.md`, un chantier par session |
 | Travail volumineux et indépendant | Sous-agent ; sinon, faire dans la session |
 
@@ -42,6 +43,7 @@ Avant d'agir, classe la demande dans ce tableau. Une seule ligne par demande ; s
 
 - Après un changement de `app/src` : `/verifier` (build, diff, captures), ou au minimum `npm run build` dans `app/`.
 - Relis le diff avant tout commit. Signale tout fichier inattendu, y compris un fichier parasite.
+- Avant de clore un chantier : `/audit` doit être propre (liens, réglages, worktrees). Sinon, corrige ou signale-le dans le compte rendu.
 - Met à jour `SUIVI.md` quand une PR est ouverte, fusionnée ou quand une décision est prise. Met à jour `CHANGELOG.md` pour une nouvelle version du collecteur ou du tableau de bord.
 
 ## Limites

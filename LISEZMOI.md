@@ -110,7 +110,7 @@ Les champs `sel` et `codeTableau` sont créés automatiquement. **Ne modifie jam
 Pour servir une agence à la main : une base Supabase par client, son collecteur, et un rapport livré chaque mois.
 
 - `node scripts/nouveau-client.mjs "Agence" chaine1 chaine2 …` prépare `clients/<agence>/` (config avec sel et code propres au client, roster, copie du collecteur, schéma, `INSTALLATION.md`). Il ne crée rien chez Supabase ni chez Twitch. Le dossier `clients/` n'est pas versionné : il contient des clés.
-- `node scripts/rapport-mensuel.mjs clients/<agence> [jours]` écrit `rapport.pdf`, `rapport.html` et `rapport.csv`. Le PDF vient de Chrome ou d'Edge en mode sans fenêtre ; `--sans-pdf` saute cette étape.
+- `node scripts/rapport-mensuel.mjs clients/<agence> [jours]` écrit `rapport.pdf`, `rapport.html` et `rapport.csv` dans `clients/<agence>/rapports/<AAAA-MM-JJ>/`. Le PDF vient de Chrome ou d'Edge en mode sans fenêtre ; `--sans-pdf` saute cette étape.
 - Avant de montrer un rapport, laisse tourner le collecteur au moins 7 jours. Le rapport signale lui-même une couverture trop courte.
 
 Démarche et limites : [VALIDATION-AGENCES.md](VALIDATION-AGENCES.md), [COUTS-CLIENTS.md](COUTS-CLIENTS.md), [CONFORMITE.md](CONFORMITE.md).
