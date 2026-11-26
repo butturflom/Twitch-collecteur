@@ -10,6 +10,7 @@ import { panel, Pending } from "@/components/overview/parts"
 import { cn } from "@/lib/utils"
 import { onFocusAdd, useSettingsData, type SettingsData } from "@/legacy/bridge"
 import { ExportReportButton } from "@/components/export/export-report"
+import { RaidSuggestions } from "@/components/settings/raid-suggestions"
 
 /** Carte de réglages : icône, titre, description, puis le contenu. */
 function Card({ icon, title, desc, children }: { icon: ReactNode; title: string; desc?: ReactNode; children: ReactNode }) {
@@ -112,6 +113,7 @@ export function Settings() {
     <div className="animate-in fade-in-0 slide-in-from-bottom-1 grid max-w-[920px] gap-4 duration-300">
       <Source d={d} />
       <Channels d={d} />
+      <RaidSuggestions d={d} />
       <Api d={d} />
       <Data d={d} />
       <Card icon={<FileDown />} title="Rapports" desc="Exporter les données affichées dans un rapport PDF ou CSV.">
@@ -228,7 +230,7 @@ function Channels({ d }: { d: SettingsData }) {
     <Card icon={<Users />} title="Chaînes suivies" desc={d.chansMsg}>
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          {d.chans.length} chaîne(s) suivie(s){d.chanLimit ? ` sur ${d.chanLimit} au maximum` : ""}.
+          {d.chans.length} chaîne(s) suivie(s){d.chanLimit ? ` sur ${d.chanLimit} au maximum` : ""}.{d.chanLimit && d.chans.length >= d.chanLimit ? " Retire-en une avant d'en ajouter." : ""}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" aria-expanded={showAdd} onClick={() => toggle("one")}>

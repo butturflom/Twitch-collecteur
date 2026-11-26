@@ -49,7 +49,7 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 
 **État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), gardé comme prototype (26/11) ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), fonction `flows_by_day` présente en base (vérifié le 26/11), à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se déploie sans ta demande ; pour les fusions, voir `SUIVI.md` §4.
 
-### Chantiers F et G · Choix des chaînes suivies (F livré le 26/11, PR #71 ; G pas lancé)
+### Chantiers F et G · Choix des chaînes suivies (F livré le 26/11, PR #71 ; G livré le 26/11, PR #72)
 
 | Chantier | Tâche | Fichiers | Modèle, effort | Vérification | Abandon |
 |---|---|---|---|---|---|
@@ -308,4 +308,5 @@ Critère de réussite : on reconnaît la chaîne sans lire son nom à 40 px, et 
 | A · Planète partout | 1 | non relevé | | Planètes dans l'info-bulle et les légendes (#51), puis peintes (#55) |
 | B · Intro d'accueil | 3 | non relevé | | Intro de 4 s (#52), gardée comme prototype (26/11) |
 | F · Gérer les chaînes suivies | 1 | 1 (avec la réparation 2.0.1) | Sonnet 5.5 | Liste entière, retrait, ajout en bloc, résultats avec viewers et langue (#71) |
+| G · Suggestions d'après les raids | 1 à 2 | 1 | Sonnet 5.5 | 96 chaînes proposées sur la base (26/11, 4 jours de raids) ; à juger : combien sont réellement ajoutées. Doublons de raids découverts au passage |
 | C · Carte des migrations | 2 à 3 | non relevé | | Passages par jour dans Flux (#53), à juger vers le 8/12 |

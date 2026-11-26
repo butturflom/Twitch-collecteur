@@ -91,7 +91,7 @@ Pas de tests ni de lint. La seule vérification automatique est le contrôle de 
 Un fichier, un rôle. Quand un fait change, mets à jour le fichier qui le porte, et un seul.
 
 - `LISEZMOI.md` : guide utilisateur (installer, tableau de bord, mise à jour, conservation).
-- `CHANGELOG.md` : notes de version, de la plus ancienne à la plus récente. Une entrée par version du collecteur (`VERSION` dans `collecteur.mjs`, 1.6.13) ou du tableau de bord (`version` dans `app/package.json`, 2.0.2 depuis le 26/11). Toute entrée porte son numéro ; une entrée datée sans numéro n'est pas acceptée. Une modification du tableau de bord donne lieu à un nouveau numéro dans `app/package.json` et à une entrée numérotée. Dire si `schema.sql` doit être rejoué.
+- `CHANGELOG.md` : notes de version, de la plus ancienne à la plus récente. Une entrée par version du collecteur (`VERSION` dans `collecteur.mjs`, 1.6.13) ou du tableau de bord (`version` dans `app/package.json`, 2.0.3 depuis le 26/11). Toute entrée porte son numéro ; une entrée datée sans numéro n'est pas acceptée. Une modification du tableau de bord donne lieu à un nouveau numéro dans `app/package.json` et à une entrée numérotée. Dire si `schema.sql` doit être rejoué.
 - `SUIVI.md` : état des chantiers, PR, décisions. À mettre à jour à chaque PR fusionnée ou décision prise.
 - `CLAUDE.md` (ce fichier) et `.claude/CLAUDE.md` : repères pour Claude Code.
 - `app/CLAUDE.md` et `app/LISEZMOI.md` : tableau de bord (code, ponts, mode démo).
