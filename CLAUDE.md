@@ -69,7 +69,7 @@ Pas de tests ni de lint. La seule vérification automatique est le contrôle de 
 - Vérifier un rendu : `npm run build` dans `app/`, puis capture Chrome headless (méthode dans `SUIVI.md`, §9), puis lecture du PNG. Le navigateur intégré ne déroule pas les animations.
 - Reconstruction automatique : après toute modification de `app/src` (code, CSS, démo), Claude lance `npm run build` dans `app/` sans qu'on le lui demande, pour que `twitch-overlap.html` (fichier généré) soit à jour ; si le build échoue, il le dit. Un hook git local (`.git/hooks/post-merge`, non versionné) fait de même après un `git pull` ou une fusion qui change `app/`.
 - Idées et planification : `/contremaitre` range les idées dans `IDEES.md`, les évalue (plus-value, coût, verdict) et planifie en déléguant aux modèles les moins chers capables (barème de `SUIVI.md`, §7).
-- Outils 3D et HUD (ajoutés le 25/11, `SUIVI.md` §16) : skills `three-js`, `react-three-fiber`, `ui-ux-pro-max` ; serveurs MCP `playwright` et `spline` (`.mcp.json`). Le moteur de la Carte reste impératif dans `legacy.js` ; depuis le 25/11 (décision de l'utilisateur), Three.js est un complément autorisé à modifier le code, et les évaluations de ces outils comptent comme légitimes. Sur une surface neuve, prototype isolé avec critère go/no-go d'abord. `DESIGN.md` prime sur les suggestions de `ui-ux-pro-max`.
+- Outils 3D et design (`SUIVI.md` §16) : skills `three-js`, `react-three-fiber`, `ui-ux-pro-max` (seul skill de critique de design depuis le 26/11 : Impeccable est archivé) ; connecteur Higgsfield (génération et scènes 3D, flux Blender) ; serveurs MCP `playwright` et `spline` (`.mcp.json`). Le moteur de la Carte reste impératif dans `legacy.js` ; depuis le 25/11 (décision de l'utilisateur), Three.js est un complément autorisé à modifier le code, et les évaluations de ces outils comptent comme légitimes. Sur une surface neuve, prototype isolé avec critère go/no-go d'abord. `DESIGN.md` prime sur les suggestions de `ui-ux-pro-max`.
 
 ## Documentation
 
@@ -81,7 +81,7 @@ Un fichier, un rôle. Quand un fait change, mets à jour le fichier qui le porte
 - `CLAUDE.md` (ce fichier) et `.claude/CLAUDE.md` : repères pour Claude Code.
 - `app/CLAUDE.md` et `app/LISEZMOI.md` : tableau de bord (code, ponts, mode démo).
 - `DOCKER.md` : conteneurs. La copie `collecteur/` est en retard sur la racine ; la racine fait foi.
-- `DESIGN.md` et `PRODUCT.md` (racine) : design et produit, ils font foi. `.impeccable/` contient des copies de l'outil Impeccable, qui divergent : ne pas s'y fier sans comparaison.
+- `DESIGN.md` et `PRODUCT.md` (racine) : design et produit, ils font foi. `.impeccable/` garde les anciens rapports de l'outil Impeccable (retiré le 26/11) : historique seulement, ne pas s'y fier sans comparaison.
 - `IDEES.md` : boîte à idées et plans (`/contremaitre`).
 - `CONFORMITE.md`, `COUTS-CLIENTS.md`, `VALIDATION-AGENCES.md` : vie privée et conditions Twitch, coûts par client, kit de validation des agences.
 - `ROADMAP-COMPLET.txt` : analyses prévues. Les sections 4 et 5 ne sont pas commencées.

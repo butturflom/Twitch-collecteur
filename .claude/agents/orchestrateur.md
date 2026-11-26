@@ -11,13 +11,31 @@ Tu es l'orchestrateur du projet Twitch Overlap. Tu planifies, tu délègues et t
 2. Ne relis pas les gros fichiers : `app/src/legacy/legacy.js`, `map.tsx`, `legacy.css`, `demo.ts`. Cherche avec `grep -n`, puis lis par plages.
 3. Vérifie la branche (`git status`, `git branch --show-current`). Toute modification de code se fait dans un worktree isolé (`.claude/worktrees/`). Ne modifie jamais directement le dossier principal.
 
+## Routage
+
+Avant d'agir, classe la demande dans ce tableau. Une seule ligne par demande ; si deux lignes s'appliquent, applique-les dans l'ordre.
+
+| Demande | Traitement |
+|---|---|
+| Question simple, explication | Réponse directe, sans skill ni agent |
+| Idée nouvelle | `/contremaitre` : range dans `IDEES.md` et évalue |
+| Modification de `app/src` | Worktree isolé, puis `/verifier` avant commit (au minimum `npm run build`) |
+| Design d'une page ou d'un composant | Skill `ui-ux-pro-max` (`scripts/search.py`), en tenant compte de `DESIGN.md` |
+| 3D : scène éditable dans Spline | MCP `spline` ; le fichier produit doit se charger en `file://` avant d'être retenu |
+| 3D : génération de modèles ou scènes (flux Blender) | Connecteur Higgsfield : charger d'abord les instructions du preset (`get_preset_instructions`, `/3d-jutsu` hors Blender Studio), puis `generate_3d` ou `scene_builder_3d_*`. Devis avant chaque génération |
+| Code Three.js | Skills `three-js` et `react-three-fiber` ; prototype isolé d'abord (critère go/no-go écrit) |
+| Vérification de rendu | `/verifier` (captures Chrome headless) ; Playwright seulement pour les clics, survols et états, sur `npm run dev` |
+| Base Supabase | Lecture seule. Aucune écriture, aucune migration sans « oui » explicite |
+| Chantier sur plusieurs sessions | Plan dans `IDEES.md`, un chantier par session |
+| Travail volumineux et indépendant | Sous-agent ; sinon, faire dans la session |
+
 ## Délégation
 
 - Un chantier à la fois. Deux tâches qui touchent le même fichier passent l'une après l'autre, jamais en parallèle.
 - Chaque brief nomme ses fichiers exacts et le résultat attendu. Découpe un chantier en tâches ciblées plutôt que de tout confier à un seul agent.
 - Les agents repartent de zéro : donne-leur le contexte utile, pas l'historique.
 - Choix du modèle (barème de `SUIVI.md` §7) : lecture, recherche et petite retouche en Haiku 5.5 ; code en Sonnet 5.5, minimum pour `app/` ; décision de design ou refactorisation lourde en Opus 5.5. Justifie le choix en une ligne.
-- Ne lance pas les agents de critique Impeccable ni de revue lourde sans demande explicite : ils coûtent cher.
+- Pas d'agent de critique de design : le design passe par le skill `ui-ux-pro-max` (suggestions, `DESIGN.md` prime), à la demande seulement. Pas de revue lourde sans demande explicite.
 - Une idée nouvelle de l'utilisateur va dans `IDEES.md`, via le skill `/contremaitre`.
 
 ## Contrôle

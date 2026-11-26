@@ -4,7 +4,7 @@
 
 ## 0. Pour reprendre (mis à jour le 26/11)
 
-**Où on en est** : tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
+**Où on en est** : PR #62 (organisation des outils, §2) ouverte le 26/11, à fusionner sur demande. Avant elle, tout est fusionné dans `main` jusqu'à la PR #59 (documentation et seuil de fidélité, fusionnée le 26/11 sur demande). La PR #60 (petits défauts d'affichage) est fusionnée le 26/11, sur demande. La PR #61 (notes de cadrage, sans code) est fusionnée le 26/11, sur demande. **Pause ensuite** ; à la reprise : chantier E, prototype des planètes, à lancer seulement sur « lance le prototype ». La #45 est fermée sans fusion, son contenu est repris ici et dans `CHANGELOG.md`. La direction agences est préparée sans rien engager (§12). L'utilisateur veut **1 à 2 mois d'amélioration des analyses**, le temps d'accumuler des données, puis la vraie prospection (fin décembre à janvier).
 
 **Calendrier des données** (les rollups ne gagnent qu'une journée par nuit)
 
@@ -90,6 +90,7 @@
 | #59 | `docs-26-11` | Documentation à jour ; rapport mensuel : fidélité à partir de 200 viewers actifs | fusionnée le 26/11, sur demande |
 | #60 | `corrections-affichage` | Rosters : un seul titre et tutoiement ; « 1 000 » insécable dans Par chaîne | fusionnée le 26/11, sur demande |
 | #61 | `idees-intro-planetes` | Notes : intro prototype, cadrage des planètes low-poly, règle des deux temps de la Carte | fusionnée le 26/11, sur demande |
+| #62 | `organisation-agents` | Organisation des outils : rappels de session (hooks), Impeccable archivé (`ui-ux-pro-max` pour le design), skills Vercel et agents morts archivés, routage de l'orchestrateur, Higgsfield et Spline pour la 3D | ouverte le 26/11, à fusionner sur demande |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. Claude ne fusionne que sur demande explicite.
 
@@ -115,7 +116,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Carte, critique n°7 (25/11)** : 28/40, rien à changer. Reste en « Explorer seulement ».
 - **Vue d'ensemble, critique n°7** : 27/40. Seul le bug Phase 3 (P1) est traité (PR #22). Non retenus : boutons des Recoupements, grille de chaînes et tri de Participation, pulse du bouton Analyses, état de chargement de Phase 3.
 - **Plan V2, à ne pas appliquer tel quel** : sel quotidien (il casserait les viewers sur plusieurs jours), purge à 48 h dans le rollup, raids via Helix ou EventSub, Client View, alerte pendant les pubs, spec Dockerfile (obsolète).
-- **Atmosphère hors Carte (25/11, décision de l'utilisateur)** : `DESIGN.md` ne réserve plus l'atmosphère à la Carte. Le ciel étoilé la porte sur toutes les pages ; les nouvelles surfaces (intro, Flux) peuvent la reprendre si la lisibilité suit. Les outils 3D et de design (Three.js, Spline, `ui-ux-pro-max`, Playwright, `impeccable`) servent à améliorer les analyses futures, avec la même valeur d'évaluation que les autres avis.
+- **Atmosphère hors Carte (25/11, décision de l'utilisateur)** : `DESIGN.md` ne réserve plus l'atmosphère à la Carte. Le ciel étoilé la porte sur toutes les pages ; les nouvelles surfaces (intro, Flux) peuvent la reprendre si la lisibilité suit. Les outils 3D et de design (Three.js, Spline, Higgsfield, `ui-ux-pro-max`, Playwright) servent à améliorer les analyses futures, avec la même valeur d'évaluation que les autres avis.
 - **Viewers uniques** : esquisses HyperLogLog (erreur d'environ 2,3 %). Pas d'exclusifs ni de paires en estimation.
 - **Hash `u` raccourci (≈ −45 Mo)** : déconseillé pour l'instant (271 Mo sur 500).
 - **Téléphone** : hors usage, ordinateur seulement.
@@ -123,6 +124,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Intro d'accueil (26/11, décision de l'utilisateur)** : gardée en place, considérée comme un prototype ; il apportera idées et inspirations.
 - **Planètes à redéfinir (26/11, demande de l'utilisateur)** : forme, texture et pose de la photo de profil. La décision « planètes peintes sans photo » est rouverte (chantier E de `IDEES.md`, prototype d'abord). Décidé ensuite : style **low-poly** sans décors, planète Twitch comprise, photo en pin's, taille = viewers en direct ; couleur de la chaîne.
 - **Carte, règle des deux temps (26/11, validée)** : la planète dit le présent (taille = viewers en direct, hors live petite et éteinte) ; les liens et les groupes portent sur tout le détail disponible, date de début en légende. Le sélecteur de période disparaît de la Carte seulement. Pas encore codé (E3).
+- **Outils (26/11, décisions de l'utilisateur)** : Impeccable retiré (rendu jugé trop « AI slop ») ; `ui-ux-pro-max` est le skill de design. Les connecteurs Higgsfield et Spline servent à approfondir la 3D (génération, scènes, flux Blender). Supabase reste en lecture seule sans « oui » explicite. Rappels automatiques au démarrage et à chaque prompt (`.claude/hooks/`), sans lancer de skill. Skills Vercel et agents morts déplacés dans `archives/outils-claude/`.
 - **Critiques** : l'utilisateur accepte qu'elles remettent en cause ses choix passés ; ces choix sont signalés « [ton choix] ».
 
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
@@ -158,7 +160,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 
 **Ce qui coûte le plus cher ici**
 - L'effort `max` : beaucoup de réflexion à chaque réponse.
-- Les critiques Impeccable : deux sous-agents, plus les lectures de fichiers, à chaque lancement.
+- Les relectures de design en sous-agent : à la demande seulement (`ui-ux-pro-max` se lit comme un outil, sans agent).
 - Les sous-agents en général : chacun repart de zéro et relit le contexte.
 - Les gros fichiers : `legacy.js` (2 562 lignes, 229 Ko), `map.tsx` (38 Ko), `legacy.css` (31 Ko), `demo.ts` (30 Ko).
 - `/fast` : peut faire basculer la session sur Opus si le modèle courant ne le prend pas en charge.
@@ -168,7 +170,7 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 2. Changer de modèle (`/model`) au moment où la tâche change, pas au milieu d'une réflexion.
 3. `/compact` quand une longue lecture a rempli la session et que le chantier continue.
 4. `/cost` pour le coût d'une session, `/context` pour voir ce qui remplit la fenêtre.
-5. Agents du projet : `analyste`, `app-developer` et `optimizer` en Sonnet, `monitor` en Haiku. Les lancer seulement pour un travail indépendant et volumineux.
+5. Agents du projet : `orchestrateur` en session ; `analyste` et `app-developer` ne sont pas utilisés. Un sous-agent seulement pour un travail indépendant et volumineux.
 
 **Réglages actuels**
 - Session d'orchestration (`lancer-orchestrateur.bat`, agent `orchestrateur`) : Sonnet 5.5. Passer en Opus 5.5 pour un chantier de design.
@@ -302,8 +304,9 @@ Après toute modification de `app/src`, Claude lance `npm run build` dans `app/`
 | Playwright MCP | Piloter un vrai navigateur pour vérifier un rendu | `.mcp.json`, `npx @playwright/mcp@latest --browser chrome` | À viser sur `npm run dev` (`?demo=`), pas sur le HTML en `file://`. Premier lancement : Claude demande d'approuver le serveur |
 | Spline MCP | Sculpter une scène 3D dans Spline | `.mcp.json`, serveur hébergé `https://mcp.spline.design/mcp` | Compte Spline requis, authentification par `/mcp` → spline → Authenticate. Produit un fichier Spline, pas du code ; à tester pour le chargement depuis `file://` avant de s'y fier |
 | `/contremaitre` | Boîte à idées (`IDEES.md`), évaluation de la plus-value, plan et délégation par modèle | skill du projet | Plus-value /25, coût S, M, L, verdict faire, planifier, prototype ou écarter |
+| Connecteur Higgsfield | Génération et scènes 3D (`generate_3d`, `scene_builder_3d_*`), flux Blender | connecteur claude.ai (rien dans le dépôt) | Charger les instructions du preset (`get_preset_instructions` ; `/3d-jutsu` hors Blender Studio) avant le premier appel. Devis avant chaque génération (crédits) |
 
-**Décision de l'utilisateur, 25/11 (soir)** : Three.js est un **complément** autorisé à modifier le code ; ses conseils, ceux de Spline et des derniers skills (`three-js`, `react-three-fiber`, `ui-ux-pro-max`, Playwright, `impeccable`) comptent comme des évaluations légitimes. Le moteur de la Carte reste impératif dans `legacy.js` (Three.js ne s'y substitue pas sans nouvelle décision). Sur une surface neuve, un prototype isolé avec critère go/no-go (poids dans le HTML unique, images par seconde sur le PC de l'utilisateur, chargement depuis `file://`) précède l'intégration. Ancienne règle (« décision à prendre avant tout code 3D ») levée.
+**Décision de l'utilisateur, 25/11 (soir)** : Three.js est un **complément** autorisé à modifier le code ; ses conseils, ceux de Spline et des derniers skills (`three-js`, `react-three-fiber`, `ui-ux-pro-max`, Playwright, Higgsfield) comptent comme des évaluations légitimes. Le moteur de la Carte reste impératif dans `legacy.js` (Three.js ne s'y substitue pas sans nouvelle décision). Sur une surface neuve, un prototype isolé avec critère go/no-go (poids dans le HTML unique, images par seconde sur le PC de l'utilisateur, chargement depuis `file://`) précède l'intégration. Ancienne règle (« décision à prendre avant tout code 3D ») levée.
 
 **Idées déposées le 25/11 (évaluées dans `IDEES.md`)**. État au 26/11 : A livré (#51, puis planètes peintes #55), B livré (#52, gardé comme prototype), C livré (#53, fonction en base), C3 abandonné, D dormant. Détail d'origine :
 - **Chantier A, planète partout** (plus-value 18/25, S) : le texte collé (fond, cartes console, avatars en planètes, Recoupements) est déjà livré par les PR #43 et #44. Reste : `av()` de `legacy.js` (info-bulle de la Carte, légendes) et les pastilles de moins de 20 px.

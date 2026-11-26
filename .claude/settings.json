@@ -11,5 +11,30 @@
       "Read(./app/node_modules/**)",
       "Read(./app/dist/**)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/rappel-session.sh\"",
+            "timeout": 10,
+            "statusMessage": "Rappel : où en est le projet"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/rappel-prompt.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

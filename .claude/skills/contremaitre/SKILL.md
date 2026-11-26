@@ -50,18 +50,18 @@ Pour les idées « Faire » et « Prototype », fais un plan par chantier. **Un 
 - Modifier du code, corriger un bug, écrire une fonction : **Sonnet 5.5**, effort medium ou high.
 - Décider d'un design, critiquer une page, refactoriser un gros fichier : **Opus 5.5**, effort high.
 - Problème resté sans solution : Opus xhigh. Jamais `max` sans que l'utilisateur le demande.
-- Un sous-agent seulement pour un travail **indépendant et volumineux** (il repart de zéro et relit le contexte). Sinon, fais-le dans la session. Les agents du projet : `analyste`, `app-developer`, `optimizer` (Sonnet), `monitor` (Haiku). Précise `model` dans l'appel, avec un prompt autonome (fichiers, contraintes, résultat attendu).
-- Critiques de design Impeccable : coûteuses (deux sous-agents). Une par page importante, pas une par retouche.
+- Un sous-agent seulement pour un travail **indépendant et volumineux** (il repart de zéro et relit le contexte). Sinon, fais-le dans la session. Les agents du projet : `orchestrateur` (session) ; `analyste` et `app-developer` ne sont pas utilisés. Précise `model` dans l'appel, avec un prompt autonome (fichiers, contraintes, résultat attendu).
+- Critique de design : `ui-ux-pro-max` en lecture, sans sous-agent. Une par page importante, pas une par retouche.
 - Ne jamais éditer `twitch-overlap.html` (généré). Après toute modification de `app/src`, `npm run build` dans `app/`.
 - Rien ne se fusionne, ne se déploie ni ne s'applique en base sans demande explicite de l'utilisateur.
 
 **Outils disponibles pour la partie 3D et HUD** (à choisir selon la tâche, pas tous à la fois) :
-- **Décision de l'utilisateur (25/11)** : Three.js est un **complément** et il est **autorisé à modifier le code** (ajout de la dépendance, nouveaux composants, surfaces neuves comme l'intro de la page d'accueil). Les conseils de `three-js`, `react-three-fiber`, Spline, `ui-ux-pro-max`, Playwright et `impeccable` comptent comme des **évaluations légitimes** : s'en servir pour donner un verdict, sans les remettre en doute par principe. Les mesures (poids, fluidité, `file://`) restent les critères de réussite d'un prototype, pas une défiance envers l'outil.
+- **Décision de l'utilisateur (25/11)** : Three.js est un **complément** et il est **autorisé à modifier le code** (ajout de la dépendance, nouveaux composants, surfaces neuves comme l'intro de la page d'accueil). Les conseils de `three-js`, `react-three-fiber`, Spline, `ui-ux-pro-max`, Playwright et Higgsfield comptent comme des **évaluations légitimes** : s'en servir pour donner un verdict, sans les remettre en doute par principe. Les mesures (poids, fluidité, `file://`) restent les critères de réussite d'un prototype, pas une défiance envers l'outil.
 - `three-js` et `react-three-fiber` (skills) : moteur 3D, shaders. Le moteur de la Carte reste **impératif dans `legacy.js`, volontairement** : Three.js s'ajoute à côté et ne le remplace pas sans nouvelle décision de l'utilisateur. Sur une surface neuve : prototype isolé d'abord (page à part, mode démo) avec critère go/no-go écrit (poids, images par seconde, `file://`), puis intégration. Three.js doit tenir dans le fichier HTML unique.
 - Spline MCP : sculpter une scène dans l'éditeur Spline, qui produit un fichier Spline modifiable, pas du code. Il sert aux maquettes ; il n'entre dans la version livrée que si la scène exportée se charge depuis un `file://` sans service externe, ce qui se démontre au prototype.
 - `ui-ux-pro-max` (skill) : typographie, palettes, glassmorphism, règles d'accessibilité (script `search.py`). Ses sorties sont des suggestions : `DESIGN.md` et la règle des deux niveaux de lueur priment. Le contraste 4,5:1 et `prefers-reduced-motion` ne se négocient pas.
-- Playwright MCP : vérifier un rendu en vrai navigateur. Sur `npm run dev` (`http://localhost:5173/?demo=<onglet>`), pas sur le HTML en `file://`. Remplace avantageusement la capture Chrome headless de `SUIVI.md` §9 pour les clics et les états.
-- `impeccable` : critiques et finitions de design.
+- Playwright MCP : vérifier un rendu en vrai navigateur. Sur `npm run dev` (`http://localhost:5173/?demo=<onglet>`), pas sur le HTML en `file://`. Pour un rendu standard, `/verifier` (captures Chrome headless) ; Playwright sert aux clics, survols et états.
+- Higgsfield (connecteur) : génération et scènes 3D, avec le flux Blender. Charger les instructions du preset avant tout appel, et demander le devis avant chaque génération.
 
 ## 4. Restituer
 
