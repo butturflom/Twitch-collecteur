@@ -1,6 +1,6 @@
 # Boîte à idées
 
-Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. Le skill `/contremaitre` les range, les évalue (plus-value sur 25, coût S, M ou L, verdict) et en tire un plan. Barème et règles : `.claude/skills/contremaitre/SKILL.md`. Décisions déjà prises : `SUIVI.md` §4, §5 et §11.
+Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestrateur les range, les évalue (plus-value sur 25, coût S, M ou L, verdict) et en tire un plan. Méthode et règles : `.claude/agents/orchestrateur.md`, section « Idées et plans » (fusion du skill `contremaitre` le 26/11). Décisions déjà prises : `SUIVI.md` §4, §5 et §11.
 
 ## En vrac
 
