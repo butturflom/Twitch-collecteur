@@ -247,4 +247,14 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Vue d'ensemble** : bloc **Rythme des chaînes** (celles qui décollent ou ralentissent). Il faut 14 journées agrégées : il le dit tant qu'elles manquent.
 - **Rosters** : **Comparer des chaînes**, 2 à 4 côte à côte, avec l'audience nette du groupe et les viewers en commun.
 - **Carte** : filtre **Jeu principal** à côté de la langue.
+- **Ambiance spatiale** : un ciel étoilé discret derrière toutes les pages sauf la Carte, des panneaux « console » (légèrement translucides, halo violet très doux), des avatars en petites planètes et, en tête de **Recoupements**, une constellation des paires les plus proches. Aucun chiffre ne change.
 
+## Tableau de bord du 26/11/2026
+
+Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en entier dans le SQL Editor de Supabase** : il ajoute la fonction de lecture `flows_by_day` (carte des migrations). Rien n'est supprimé. Si tu construis le tableau de bord toi-même, lance `npm install` dans `app/` avant `npm run build` (nouvelle dépendance `three`).
+
+- **Intro animée** de 4 secondes avant la page d'accueil, une seule fois par navigateur. « Passer l'intro », Échap ou un clic la passent ; elle ne joue pas si les mouvements réduits sont activés. `?accueil` la rejoue.
+- **Page d'accueil** : « viewers actifs » est défini (ceux qui écrivent dans le chat), le bouton principal s'appelle « Ouvrir le tableau de bord », meilleur affichage étroit et clavier. L'écran « Les données n'arrivent pas » propose de la revoir.
+- **Planètes peintes** : chaque chaîne est une planète au motif propre à son nom, à la place de sa photo ; un anneau marque les 3 chaînes les plus fortes de la vue. Sur la Carte, les couleurs peuvent différer d'avant.
+- **Flux** : à côté du Sankey, une **carte des migrations** montre les passages de viewers actifs jour par jour (elle n'apparaît que si la base est à jour). Le Sankey occupe toute la largeur.
+- **Chiffres plus justes** : la fidélité du chat ne s'affiche qu'à partir de 200 viewers actifs ; « Écrivent aussi chez » donne un pourcentage à partir de 30 viewers ; la croissance est la médiane calculée sur les followers (« — » sous 100 followers au départ).
