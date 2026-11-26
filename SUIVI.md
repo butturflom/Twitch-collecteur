@@ -96,6 +96,8 @@
 | #65 | `worktree-hierarchie-docs` | Hiérarchie des sources dans `CLAUDE.md`, copies renvoyées à leur source, pointeurs corrigés | fusionnée le 26/11, sur demande |
 | #66 | `worktree-fusion-orchestrateur-contremaitre` | Orchestrateur et contremaître fusionnés en un seul agent ; skill `contremaitre` archivé | fusionnée le 26/11, sur demande |
 | #67 | `worktree-changelog-version-tableau` | Entrées du tableau de bord numérotées en 2.0.0 ; règle de numérotation dans `CLAUDE.md` | fusionnée le 26/11, sur demande |
+| #68 | `suivi-pr67-fusionnee` | Suivi : statut de la PR #67 | fusionnée le 26/11 |
+| #69 | `worktree-regle-fusions` | Règle des fusions : copies alignées sur le §4 | ouverte |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. La règle actuelle des fusions est au §4 (autorisation permanente du 26/11).
 
