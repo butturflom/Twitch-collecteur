@@ -2549,6 +2549,34 @@ async function networkHistory(days){
     return {days:h.days||[],top:(h.top||[]).map(x=>({...who(x.c),msgs:x.msgs,avg:x.avg}))}}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.networkHistory = networkHistory
+// Chaînes non suivies qui ont raidé des chaînes suivies, sur 30 jours (table raid_events). Une même paire à moins d'une minute
+// d'écart compte pour un seul raid : la table contient des doublons (23 au 25/11). Retenues : au moins 2 raids ou 20 viewers envoyés.
+// null : pas de base Supabase ou base sans la table. La réponse de la base est gardée 10 minutes.
+let raidCache={key:'',at:0,rows:null};
+async function raidRows(){
+  const key=sbBase()+'|'+(cfg.sbCode||'');
+  if(raidCache.key===key&&Date.now()-raidCache.at<600000)return raidCache.rows;
+  const since=Date.now()-30*86400000,rows=[];
+  for(let page=0;page<20;page++){
+    const r=await sbReq('raid_events?select=ts,from_channel,to_channel,viewers&ts=gte.'+since+'&order=ts.asc,id.asc&limit=1000&offset='+rows.length);
+    if(!r||!r.length)break;rows.push(...r)}
+  raidCache={key,at:Date.now(),rows};return rows}
+async function raidSuggestions(){
+  if(!isCloud())return null;
+  let rows;try{rows=await raidRows()}catch(e){if(/PGRST205|PGRST202|42P01|404/.test(e.message))return null;throw e}
+  const followed=new Set(cfg.chans),lastPair=new Map(),by=new Map();
+  for(const r of rows){
+    const c=String(r.from_channel||'').toLowerCase(),to=String(r.to_channel||'').toLowerCase(),pair=c+'|'+to,prev=lastPair.get(pair);
+    lastPair.set(pair,r.ts);
+    if(prev!=null&&r.ts-prev<60000)continue;
+    if(!/^[a-z0-9_]{2,25}$/.test(c)||followed.has(c)||!followed.has(to))continue;
+    const x=by.get(c)||{c,raids:0,viewers:0,to:new Set(),last:0};
+    x.raids++;x.viewers+=r.viewers||0;x.to.add(to);x.last=Math.max(x.last,r.ts);by.set(c,x)}
+  const items=[...by.values()].filter(x=>x.raids>=2||x.viewers>=20).sort((a,b)=>b.viewers-a.viewers||b.raids-a.raids||a.c.localeCompare(b.c))
+    .slice(0,100).map(x=>({...x,to:[...x.to]}));
+  return {since:rows.length?rows[0].ts:0,items};
+}
+window.raidSuggestions = raidSuggestions
 window.showTab = showTab
 window.openAddStreamer = openAddStreamer
 window.renderFlows = renderFlows

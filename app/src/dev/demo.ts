@@ -445,6 +445,13 @@ export function installDemo() {
     }
     window.channelSticky = async (c, days) => (histo() === "non" ? null : stickyDemo(c, histo() === "1" ? 1 : days, sticky()))
     window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(histo() === "1" ? 1 : days))
+    window.raidSuggestions = async () => {
+      const m = new URLSearchParams(location.search).get("raids")
+      if (m === "non") return null
+      const h = 3600e3, now = Date.now()
+      const mk = (i: number, raids: number, viewers: number, to: string[]) => ({ c: "voisine_demo_" + i, raids, viewers, to, last: now - i * 20 * h })
+      return { since: now - 4 * 24 * h, items: m === "vide" ? [] : [mk(1, 3, 5400, ["etoiles", "xari", "gotaga", "kamet0"]), mk(2, 1, 1250, ["etoiles"]), ...Array.from({ length: 12 }, (_, i) => mk(i + 3, 2, 300 - i * 20, ["gotaga"]))] }
+    }
     window.renderRosters = () => window.dispatchEvent(new CustomEvent("legacy:rosters", { detail: rostersDemo() }))
     // pilule d'état : collecteur en ligne ; ?demo&etat=erreur : synchro et API en échec (problèmes affichés avant l'état)
     window.statusOf = () => statusDemo(new URLSearchParams(location.search).get("etat") === "erreur")

@@ -222,6 +222,12 @@ export interface SettingsData {
   dbNote: string; dbMsg: string
 }
 
+/** Chaînes non suivies qui ont raidé des chaînes suivies (raidSuggestions dans legacy.js). since : plus ancien raid lu (ms). */
+export interface RaidSuggestions {
+  since: number
+  items: { c: string; raids: number; viewers: number; to: string[]; last: number }[]
+}
+
 /** Commandes du moteur de la Carte (dessin image par image, dans legacy.js). */
 export interface MapApi {
   zoomIn: () => void; zoomOut: () => void; fit: () => void; recenter: () => void
@@ -299,6 +305,7 @@ declare global {
     channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
     channelSticky?: (c: string, days: number) => Promise<ChannelSticky | null>
     channelsRhythm?: (days: number) => Promise<RhythmRow[] | null>
+    raidSuggestions?: () => Promise<RaidSuggestions | null>
     showTab?: (t: TabId) => void
     openAddStreamer?: () => void
     runDiscover?: (q: string, lang: string) => void

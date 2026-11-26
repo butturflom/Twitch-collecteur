@@ -276,3 +276,11 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à re
 - **Chaînes suivies** : la liste entière s'affiche, avec un filtre. Chaque chaîne peut être retirée, après confirmation ; ses données déjà collectées restent.
 - **Ajouter plusieurs** : colle une liste de pseudos ou d'adresses. Rien n'est retiré ; les pseudos invalides et ceux au-delà de la limite de 100 sont signalés et restent dans le champ.
 - **Résultats de recherche** (avec l'API Twitch) : viewers en direct, langue quand Twitch la donne, chaînes en direct d'abord après le pseudo exact. Les flèches parcourent les résultats.
+
+## Tableau de bord 2.0.3 (26/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à rejouer.
+
+- **Réglages, « Elles ont raidé tes chaînes »** : les chaînes non suivies qui ont envoyé des raids aux chaînes suivies sur 30 jours, classées par viewers envoyés, avec le nombre de raids, les chaînes visées et un bouton « Ajouter ». Il faut au moins 2 raids ou 20 viewers. Demande la base Supabase du collecteur.
+- Un même raid enregistré deux fois à moins d'une minute n'est compté qu'une fois dans ce bloc.
+- À 100 chaînes, la page le dit et rappelle d'en retirer une avant d'ajouter.
