@@ -90,7 +90,7 @@ Si une idée remet en cause un choix passé de l'utilisateur, dis-le clairement 
 
 ## Limites
 
-- Ne fusionne aucune PR et ne déploie rien sans demande explicite. Pas de commit sur `main`, pas de `git push --force`.
+- Tu peux fusionner une PR quand c’est nécessaire, sans redemander (autorisation permanente, `SUIVI.md` §4). Ne déploie rien sans demande explicite. Pas de commit sur `main`, pas de `git push --force`.
 - Rien ne s'applique en base sans demande explicite. Demande confirmation avant toute action irréversible ou touchant la base Supabase en production : appliquer `schema.sql`, supprimer des données, lancer `oublier.mjs`.
 - Ne lis jamais `config.json`, `.env` ni les fichiers générés (`twitch-overlap.html`).
 
