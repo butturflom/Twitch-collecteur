@@ -27,7 +27,7 @@ export function ExportReportButton() {
   return (
     <div className="grid gap-2">
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" className="h-8 border-input" onClick={pdf} title="Ouvre l'impression : choisissez « Enregistrer en PDF »">
+        <Button size="sm" variant="outline" className="h-8 border-input" onClick={pdf} title="Ouvre l'impression : choisis « Enregistrer en PDF »">
           <FileDown className="mr-1.5 size-4" />
           Rapport PDF
         </Button>
@@ -37,7 +37,7 @@ export function ExportReportButton() {
         </Button>
       </div>
       <p className="text-xs text-dusk">
-        Période : {label}. Le PDF s'ouvre dans la fenêtre d'impression : choisissez « Enregistrer en PDF ». Le rapport d'un roster s'exporte depuis l'onglet Rosters.
+        Période : {label}. Le PDF s'ouvre dans la fenêtre d'impression : choisis « Enregistrer en PDF ». Le rapport d'un roster s'exporte depuis l'onglet Rosters.
       </p>
       {msg && (
         <p role="status" className="text-xs text-muted-foreground">

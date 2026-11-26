@@ -180,7 +180,7 @@ function NetReachCard({ roster, r, status }: { roster: Roster; r: Reach | null; 
   const [showBreakdown, setShowBreakdown] = useState(false)
 
   if (!roster.channels.length) {
-    return <p className="text-xs text-muted-foreground">Ajoutez des chaînes pour calculer la portée cumulée.</p>
+    return <p className="text-xs text-muted-foreground">Ajoute des chaînes pour calculer la portée cumulée.</p>
   }
   if (!r) return <p className="text-xs text-muted-foreground">{status}</p>
 
@@ -368,8 +368,8 @@ export function Rosters() {
   if (loading && !rosters.length) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Rosters</h3>
+        <div className="flex items-center justify-end">
+          <h2 className="sr-only">Tes rosters</h2>
           <Button variant="ghost" size="sm">
             <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
             Actualiser
@@ -383,8 +383,7 @@ export function Rosters() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold">Rosters</h3>
-          <p className="text-sm text-muted-foreground">Regroupez des chaînes pour mesurer leur audience cumulée sans doublons (Net Reach).</p>
+          <h2 className="sr-only">Tes rosters</h2>
           <p className="mt-1 text-xs text-dusk">
             Viewers actifs (au moins un message) · {period?.range || "période en cours"} · rosters gardés dans ce navigateur.
           </p>
@@ -404,7 +403,7 @@ export function Rosters() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Nouveau roster</DialogTitle>
-                <DialogDescription>Donnez un nom et une description à votre nouveau groupe de chaînes.</DialogDescription>
+                <DialogDescription>Donne un nom et une description à ton nouveau groupe de chaînes.</DialogDescription>
               </DialogHeader>
               <RosterForm onSubmit={handleCreate} onCancel={() => setShowCreateDialog(false)} />
             </DialogContent>
@@ -434,7 +433,7 @@ export function Rosters() {
             <Users className="h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-semibold">Aucun roster</h3>
             <p className="mt-2 text-center text-muted-foreground max-w-md">
-              Créez votre premier roster pour regrouper des chaînes et calculer la portée cumulée entre elles.
+              Crée ton premier roster pour regrouper des chaînes et calculer la portée cumulée entre elles.
             </p>
           </CardContent>
         </Card>
@@ -463,7 +462,7 @@ export function Rosters() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Chaînes de « {picking?.name} »</DialogTitle>
-            <DialogDescription>Cliquez sur une chaîne suivie pour l'ajouter au roster ou l'en retirer.</DialogDescription>
+            <DialogDescription>Clique sur une chaîne suivie pour l'ajouter au roster ou l'en retirer.</DialogDescription>
           </DialogHeader>
           {picking && (
             <ChannelPicker
@@ -480,7 +479,7 @@ export function Rosters() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifier le roster</DialogTitle>
-            <DialogDescription>Modifiez les informations de ce groupe de chaînes.</DialogDescription>
+            <DialogDescription>Modifie les informations de ce groupe de chaînes.</DialogDescription>
           </DialogHeader>
           {editingRoster && (
             <RosterForm
@@ -556,7 +555,7 @@ function RosterCard({ roster, byChan, ready, period, win, onEdit, onDelete, onPi
           size="sm"
           disabled={!canExport}
           onClick={() => r && void printRosterReport(roster, r, when)}
-          title="Ouvre l'impression : choisissez « Enregistrer en PDF »"
+          title="Ouvre l'impression : choisis « Enregistrer en PDF »"
         >
           <FileDown className="h-4 w-4 mr-1.5" />
           PDF

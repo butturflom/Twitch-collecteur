@@ -259,3 +259,4 @@ Rien à changer côté collecteur (version 1.6.13). **Rejoue `schema.sql` en ent
 - **Flux** : à côté du Sankey, une **carte des migrations** montre les passages de viewers actifs jour par jour (elle n'apparaît que si la base est à jour). Le Sankey occupe toute la largeur.
 - **Chiffres plus justes** : la fidélité du chat ne s'affiche qu'à partir de 200 viewers actifs ; « Écrivent aussi chez » donne un pourcentage à partir de 30 viewers ; la croissance est la médiane calculée sur les followers (« — » sous 100 followers au départ).
 - **Rapport mensuel des agences** : même seuil de fidélité que le tableau de bord (200 viewers actifs, « — » en dessous). La mention « score fragile » et la colonne CSV « Fidélité fragile » disparaissent.
+- **Textes** : l'onglet Rosters n'affiche plus son titre deux fois et tutoie comme le reste ; « 1 000 » ne se coupe plus sur deux lignes dans Par chaîne.
