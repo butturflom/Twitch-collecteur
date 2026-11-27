@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 import { filtersHtml, loadLegacy, sectionsHtml, usePeriodInfo, type TabId } from "@/legacy/bridge"
 
 const PAGES: Record<TabId, [string, string]> = {
-  overview: ["Vue d'ensemble", "L'activité de toutes les chaînes suivies sur la période choisie."],
+  overview: ["Vue d'ensemble", "L'activité de tes chaînes suivies, le direct, puis le détail."],
   channel: ["Par chaîne", "Le détail d'une chaîne : audience, chat, jeux et chaînes voisines."],
   game: ["Par jeu", "Les catégories streamées, leur audience et l'effet d'un changement de jeu."],
   chat: ["Chat", "Ambiance, types de messages, emotes et mots du chat."],

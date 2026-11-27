@@ -1,9 +1,9 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { ClipTabData, ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { PeriodInfo, ClipTabData,ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
-declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderClip?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData } }
+declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderClip?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData; periodInfo?: () => PeriodInfo } }
 
 const CH: [string, string][] = [["etoiles", "#4d8dff"], ["xari", "#ff7a45"], ["gotaga", "#2fbf71"], ["kamet0", "#f5b83d"]]
 const MIN = 60000
@@ -35,6 +35,61 @@ function tickerDemo(): OverviewData["raids"] {
   return { older: m === "anciens", rows: m === "anciens" ? rows : rows.slice(0, m == null ? 5 : Number(m)) }
 }
 
+// Direct fictif : [chaîne, couleur, jeu, viewers, viewers il y a 30 min (null : en live depuis moins de 30 min), msg/min, actifs sur 10 min]
+const LIVE: [string, string, string, number, number | null, number, number][] = [
+  ["etoiles", "#4d8dff", "Teamfight Tactics", 14520, 13100, 412, 1240], ["mirabelle_tv", "#ff7aa8", "League of Legends", 6900, 5600, 188, 610],
+  ["xari", "#ff7a45", "Just Chatting", 6230, 4800, 288, 900], ["zorvan", "#3fb6a8", "VALORANT", 4100, 4350, 96, 410],
+  ["lunaestra", "#e9b44c", "Just Chatting", 3800, 2300, 141, 520], ["orionlive", "#4f8df5", "Balatro", 2600, 2550, 54, 190],
+  ["velvetfox", "#b26cf0", "Minecraft", 1900, 2200, 47, 110], ["sablier", "#c07a52", "League of Legends", 1700, null, 61, 170],
+  ["nopalgames", "#5fbf5a", "Balatro", 1300, 980, 33, 90], ["tidou", "#53c3e0", "Just Chatting", 900, 610, 29, 80],
+  ["aurore_gg", "#f08a5d", "Elden Ring", 450, 460, 12, 40],
+]
+const FOLLOWED = LIVE.length + 3
+
+// « En ce moment ». &direct=vide : aucune chaîne en live ; =calme : personne ne monte ; =debut : moins de 30 min de relevés ;
+// =vieux : relevé trop vieux ; =arret : collecteur hors ligne ; =local : écoute à l'arrêt ; =noapi ; =chargement
+function liveDemo(): OverviewData["now"] {
+  const m = new URLSearchParams(location.search).get("direct")
+  const now = Date.now()
+  const who = (c: string, color: string) => ({ c, color, img: "" })
+  const base: OverviewData["now"] = { state: "ok", mode: "cloud", at: now - 40000, seen: now - 20000, followed: FOLLOWED, live: 0, games: [], rising: [], eligible: 0, young: 0, history: true }
+  if (m === "vide") return base
+  if (m === "vieux") return { ...base, state: "stale", at: now - 47 * MIN }
+  if (m === "arret") return { ...base, state: "off", at: now - 3 * 3600e3, seen: now - 3 * 3600e3 }
+  if (m === "local") return { ...base, state: "off", mode: "local", at: null, seen: null }
+  if (m === "noapi") return { ...base, state: "noapi", at: null }
+  if (m === "chargement") return { ...base, state: "loading", at: null }
+  const games = [...new Set(LIVE.map((x) => x[2]))].map((g) => {
+    const l = LIVE.filter((x) => x[2] === g).sort((a, b) => b[3] - a[3])
+    return { g, chans: l.slice(0, 4).map((x) => who(x[0], x[1])), n: l.length, viewers: l.reduce((s, x) => s + x[3], 0), wrote: l.reduce((s, x) => s + x[6], 0) }
+  }).sort((a, b) => b.viewers - a.viewers)
+  const old = LIVE.filter((x) => x[4] != null)
+  const rising = old.filter((x) => x[3] > x[4]!).map(([c, color, game, v, v30, mpm]) => ({ ...who(c, color), game, v, v30: v30!, gain: v - v30!, rate: v / v30! - 1, mpm, raidAt: c === "mirabelle_tv" ? now - 18 * MIN : null })).sort((a, b) => b.rate - a.rate)
+  const d = { ...base, live: LIVE.length, games, rising, eligible: old.length, young: LIVE.length - old.length }
+  if (m === "calme") return { ...d, rising: [] }
+  if (m === "debut") return { ...d, rising: [], eligible: 0, history: false }
+  return d
+}
+
+// Activité de la période choisie et journée en cours. &activite=partiel : relevés détaillés plus courts que la période (voir avec
+// « 7 jours ») ; =sansapi : pas de viewers ; =vide : aucun relevé
+function activityDemo(): Pick<OverviewData, "activity" | "today"> {
+  const m = new URLSearchParams(location.search).get("activite")
+  const key = document.querySelector<HTMLButtonElement>("#period button.on")?.dataset.p ?? "today"
+  const now = Date.now(), midnight = new Date().setHours(0, 0, 0, 0)
+  const asked = key === "today" ? 1 : key === "7d" ? 7 : key === "30d" ? 30 : null
+  const from = m === "partiel" ? (key === "today" ? midnight + 14 * 3600e3 : midnight - 86400000) : midnight - ((asked ?? 5) - 1) * 86400000
+  const direct = new URLSearchParams(location.search).get("direct")
+  const activity: OverviewData["activity"] = {
+    from, to: now, partial: m === "partiel" && key !== "all", asked, peak: key === "today" ? 48300 : 66400, peakAt: Math.max(midnight, now - 26 * MIN),
+    lived: 13, followed: FOLLOWED, filtered: false, liveNow: direct === "arret" || direct === "vieux" ? null : direct === "vide" ? 0 : LIVE.length, gapMs: m === "partiel" ? 95 * MIN : 0,
+  }
+  const today: OverviewData["today"] = { d: dayStr(0), at: now, peak: 48300, peakAt: Math.max(midnight, now - 26 * MIN), actives: 18432, msgs: 246118, chans: 13 }
+  if (m === "sansapi") return { activity: { ...activity, peak: null, peakAt: null, lived: null, liveNow: null }, today: { ...today, peak: null, peakAt: null } }
+  if (m === "vide") return { activity: { ...activity, from: null, to: null, peak: null, peakAt: null, lived: null, liveNow: null }, today: { ...today, peak: null, peakAt: null, actives: null, msgs: null, chans: null } }
+  return { activity, today }
+}
+
 function demo(): OverviewData {
   const now = Date.now()
   const who = (c: string, color: string) => ({ c, color, img: "" })
@@ -44,11 +99,13 @@ function demo(): OverviewData {
       gaps: k > 50 ? [] : [[now - 100 * MIN, now - 82 * MIN]], // une période sans écoute, pour la voir
     })
   return {
+    ...activityDemo(),
+    now: liveDemo(),
     kpis: [
       { label: "Viewers actifs uniques", value: "18 432", hint: "ont écrit au moins un message" },
-      { label: "Messages", value: "246 118", hint: "au total", trendLabel: "courbe par heure", trend: [12, 18, 15, 22, 30, 41, 38, 52, 47, 61, 58, 72] },
       { label: "Actifs dans 2 chats ou plus", value: "3 271", hint: "17,7 % du total" },
-      { label: "Abonnements et subs offerts", value: "1 284" },
+      { label: "Messages", value: "246 118", hint: "au total", trendLabel: "courbe par heure", trend: [12, 18, 15, 22, 30, 41, 38, 52, 47, 61, 58, 72] },
+      { label: "Abonnements et subs offerts", value: "1 284", hint: "annoncés dans le chat" },
     ],
     // ?demo&recoup=vide : bloc Recoupements sans données (état vide)
     recoup: new URLSearchParams(location.search).get("recoup") === "vide"
@@ -76,7 +133,9 @@ function demo(): OverviewData {
       { ...who("xari", "#ff7a45"), langs: ["fr"], live: true, game: "Just Chatting", title: "On parle de tout", viewers: 6230, uniq: 4120, peak: 8300, msgs: 71204, recent: 288.2, wrote: 0.383 },
       { ...who("gotaga", "#2fbf71"), langs: ["fr"], live: false, game: "", title: "", viewers: null, uniq: 5870, peak: 12100, msgs: 52310, recent: 0, wrote: null },
       { ...who("kamet0", "#f5b83d"), langs: ["fr", "en"], live: false, game: "", title: "", viewers: null, uniq: 2232, peak: 3100, msgs: 24172, recent: null, wrote: null },
-    ],
+      // les autres chaînes du direct fictif, pour que les cartes et « En ce moment » disent la même chose
+      ...LIVE.filter(([c]) => c !== "etoiles" && c !== "xari").map(([c, color, game, viewers, , mpm, w]) => ({ ...who(c, color), langs: ["fr"], live: true, game, title: "", viewers, uniq: w * 3, peak: Math.round(viewers * 1.12), msgs: mpm * 90, recent: mpm, wrote: 0.18 })),
+    ].sort((a, b) => Number(b.live) - Number(a.live) || (b.viewers ?? 0) - (a.viewers ?? 0)),
     hasApi: true,
     part: [
       { ...who("xari", "#ff7a45"), limited: "", avgV: 6100, perMin: 0.072, msgK: 47.2, uniq: 0.67, react: 0.41, inter: 0.22 },
@@ -438,14 +497,25 @@ function stickyDemo(c: string, n: number, mode: string | null): ChannelSticky {
   return { days, actives: days.reduce((s, d) => s + d.actives, 0), leavers: days.reduce((s, d) => s + d.leavers, 0), net: { n: 12, q1: 89.1, med: 93, q3: 96.3 } }
 }
 
-// Historique du réseau : n jours agrégés fictifs (creux en semaine, pics le week-end), pour voir « Historique du réseau » de la Vue d'ensemble
-function networkDemo(n: number): NetworkHistory {
-  const days = Array.from({ length: n }, (_, i) => {
-    const t = new Date(Date.now() - (n - i) * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.3 : 1
-    return { d: t.toLocaleDateString("sv-SE"), msgs: Math.round((2_100_000 + i * 14_000) * wk), avg: Math.round((520_000 + i * 2_600) * wk), chans: 78 + (i % 6) }
-  })
+// « Jour par jour » de la Vue d'ensemble : les journées passées fictives de network_history. Par défaut, peu de jours (4), le pic
+// connu seulement pour les 2 derniers. &histo=plein : toute la durée ; =1 : une journée ; =ancien : schema.sql pas rejoué (les clés
+// actives, peak, peakAt sont absentes) ; =trou : une journée sans agrégat au milieu ; =non : pas de base
+function historyDays(days: number) {
+  const m = new URLSearchParams(location.search).get("histo")
+  return m === "plein" ? days - 1 : m === "1" ? 1 : Math.min(days - 1, m === "trou" ? 5 : 4)
+}
+function networkDemo(days: number): NetworkHistory {
+  const m = new URLSearchParams(location.search).get("histo")
+  const n = historyDays(days)
+  const list = Array.from({ length: n }, (_, i) => {
+    const back = n - i, t = new Date(Date.now() - back * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.2 : 1
+    const k = wk * (0.93 + 0.07 * Math.sin(i * 1.7))
+    const row = { d: dayStr(back), msgs: Math.round(402_000 * k), avg: Math.round(52_000 * k), chans: 11 + (i % 3) }
+    const full = m === "plein" || back <= 2
+    return m === "ancien" ? row : { ...row, actives: Math.round(24_100 * k), peak: full ? Math.round(61_200 * k) : null, peakAt: full ? t.setHours(21, 14) : null }
+  }).filter((_, i) => !(m === "trou" && i === 2))
   const who = (c: string, color: string, msgs: number, avg: number) => ({ c, color, img: "", msgs, avg })
-  return { days, top: [who("etoiles", "#4d8dff", 98432 * n, 14520), who("xari", "#ff7a45", 71204 * n, 6230), who("gotaga", "#2fbf71", 52310 * n, 5870), who("kamet0", "#f5b83d", 24172 * n, 2232)] }
+  return { days: list, top: [who("etoiles", "#4d8dff", 98432 * n, 14520), who("xari", "#ff7a45", 71204 * n, 6230), who("gotaga", "#2fbf71", 52310 * n, 5870), who("kamet0", "#f5b83d", 24172 * n, 2232)] }
 }
 
 export function installDemo() {
@@ -478,7 +548,12 @@ export function installDemo() {
     // &histo=non : base pas à jour ; &histo=1 : une seule journée agrégée
     const histo = () => new URLSearchParams(location.search).get("histo")
     window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
-    window.periodReach = async (chans, days) => (histo() === "non" ? null : reachDemo(chans, days))
+    window.periodReach = async (chans, days) => {
+      if (histo() === "non") return null
+      if (chans[0] !== "*") return reachDemo(chans, days)
+      const n = historyDays(days) // réseau entier : cohérent avec les journées de « Jour par jour »
+      return { from: dayStr(n), to: dayStr(1), days: n, net: Math.round(24_100 * (1 + Math.sqrt(n))), chans: [] }
+    }
     // &sticky=bas|haut : chaîne en bas ou en haut du classement de fidélité ; &sticky=peu : trop peu de viewers actifs (&histo=non couvre aussi la fidélité)
     const sticky = () => new URLSearchParams(location.search).get("sticky")
     // &rythme=vide : pas encore 14 journées ; &rythme=calme : aucune chaîne ne sort de son rythme ; &histo=non : base pas à jour
@@ -490,7 +565,16 @@ export function installDemo() {
       return m === "calme" ? [mk(0, 4000, 4100, 300), mk(1, 5200, 5000, 400)] : [mk(0, 4000, 5600, 350), mk(1, 5200, 3900, 420), mk(2, 6100, 6200, 500), mk(3, 90, 130, 60)]
     }
     window.channelSticky = async (c, days) => (histo() === "non" ? null : stickyDemo(c, histo() === "1" ? 1 : days, sticky()))
-    window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(histo() === "1" ? 1 : days))
+    window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(days))
+    // la ligne de période sous le titre vient de la base locale, vide en démo (« Pas encore de relevé ») : plage fictive
+    const realPeriod = window.periodInfo!
+    window.periodInfo = () => {
+      const p = realPeriod()
+      if (audParam() === "vide") return p
+      const days = p.key === "today" ? 1 : p.key === "7d" ? 7 : p.key === "30d" ? 30 : 5
+      const dm = (back: number) => new Date(Date.now() - back * 86400000).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+      return { ...p, range: days === 1 ? `Aujourd'hui, ${dm(0)}` : `Du ${dm(days - 1)} au ${dm(0)} (${days} jours)` }
+    }
     window.raidSuggestions = async () => {
       const m = new URLSearchParams(location.search).get("raids")
       if (m === "non") return null

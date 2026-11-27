@@ -85,7 +85,60 @@ export interface RaidTickerData {
   rows: { t: number; from: (Who & { name: string }) | null; to: Who; n: number; ago: string }[]
 }
 
+/** Activité de la période (activityData dans legacy.js) : les chiffres « nombre annoncé » et ce que couvrent les relevés. */
+export interface ActivityData {
+  /** début et fin réellement couverts (ms) ; null sans aucun relevé */
+  from: number | null; to: number | null
+  /** les relevés détaillés commencent après le début de la période demandée : les chiffres ne la couvrent pas toute */
+  partial: boolean
+  /** jours demandés (null : « Tout ») */
+  asked: number | null
+  /** pic de viewers simultanés, toutes chaînes ensemble, et son heure (ms) */
+  peak: number | null; peakAt: number | null
+  /** chaînes passées en live sur la période (null : aucun relevé de l'API) */
+  lived: number | null
+  followed: number; filtered: boolean
+  /** chaînes en live en ce moment (null : direct inconnu) */
+  liveNow: number | null
+  /** temps où le collecteur n'a rien écouté sur la période (0 sous 15 min) */
+  gapMs: number
+}
+/** Journée en cours pour « Jour par jour » : toutes les chaînes, sans période ni filtre Langue. */
+export interface TodayData { d: string; at: number; peak: number | null; peakAt: number | null; actives: number | null; msgs: number | null; chans: number | null }
+export interface LiveGame {
+  g: string
+  /** les 4 chaînes les plus regardées sur ce jeu ; n : toutes */
+  chans: Who[]; n: number
+  viewers: number
+  /** viewers actifs distincts ayant écrit sur ces chaînes dans les 10 dernières minutes */
+  wrote: number
+}
+export interface RisingRow extends Who {
+  game: string; v: number; v30: number; gain: number; rate: number
+  /** messages par minute sur les 5 dernières minutes */
+  mpm: number
+  /** heure du dernier raid reçu pendant les 30 min comparées */
+  raidAt: number | null
+}
+/** « En ce moment » (liveNowData dans legacy.js) : le direct, jamais la période. */
+export interface LiveNowData {
+  state: "ok" | "noapi" | "off" | "stale" | "loading"
+  mode: "local" | "cloud"
+  /** dernier relevé de l'API (ms) ; seen : dernier signal du collecteur */
+  at: number | null; seen: number | null
+  followed: number; live: number
+  games: LiveGame[]
+  rising: RisingRow[]
+  /** chaînes qui remplissent les critères du classement ; young : en live depuis moins de 30 min */
+  eligible: number; young: number
+  /** des relevés remontent à 30 min */
+  history: boolean
+}
+
 export interface OverviewData {
+  activity: ActivityData
+  today: TodayData
+  now: LiveNowData
   kpis: Kpi[]
   channels: ChannelInfo[]
   recoup: RecoupData
@@ -316,7 +369,8 @@ export interface RhythmRow extends Who { nr: number; nb: number; recent: number;
 export interface PeriodReach { from: string | null; to: string | null; days: number; net: number; chans: { c: string; n: number }[] }
 
 /** Historique du réseau entier lu dans les rollups quotidiens (Vue d'ensemble). */
-export interface NetworkDay { d: string; msgs: number; avg: number; chans: number }
+/** actives, peak, peakAt : absents (undefined) tant que schema.sql n'a pas été rejoué ; null : pas de calcul pour cette journée. */
+export interface NetworkDay { d: string; msgs: number; avg: number; chans: number; actives?: number | null; peak?: number | null; peakAt?: number | null }
 export interface NetworkTop extends Who { msgs: number; avg: number }
 export interface NetworkHistory { days: NetworkDay[]; top: NetworkTop[] }
 

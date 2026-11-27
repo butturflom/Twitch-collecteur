@@ -1899,16 +1899,88 @@ function raidTickerData(q){
   return {older,rows:list.map(r=>({t:r.t,from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0,ago:ago(r.t)}))};
 }
 
+// Vue d'ensemble : activité de la période, journée en cours (« Jour par jour ») et direct (« En ce moment »).
+// Pic de viewers simultanés : les relevés d'un même passage du collecteur portent la même heure t. On additionne les viewers de
+// chaque passage (une chaîne comptée une fois, même relevée en double après une resynchronisation), puis on garde le plus grand
+// total ; à égalité, le plus ancien. Même règle que la fonction SQL build_daily_network_peak.
+function networkPeak(snaps){
+  const by=new Map();for(const s of snaps){if(!s.live)continue;let m=by.get(s.t);if(!m)by.set(s.t,m=new Map());m.set(s.c,s.v)}
+  let peak=null,peakAt=null;
+  for(const [t,m] of by){let v=0;for(const x of m.values())v+=x;if(peak==null||v>peak||(v===peak&&t<peakAt)){peak=v;peakAt=t}}
+  return {peak,peakAt};
+}
+// Activité de la période : les chiffres « nombre annoncé » et ce que les relevés couvrent vraiment. partial : la période demandée
+// commence plus de 30 min avant le début commun des relevés détaillés (rétention courte) : les chiffres ne la couvrent pas toute.
+const PARTIAL_MIN=30*MIN,GAP_SHOWN=15*MIN;
+function activityData(q){
+  const S=new Set(shown()),lived=new Set();for(const s of q.snaps)if(s.live&&S.has(s.c))lived.add(s.c);
+  const {peak,peakAt}=networkPeak(q.snaps),now=Date.now();
+  const last=Math.max(maxOf(q.snaps,s=>s.t),maxOf(q.mins,m=>m.t)),hasData=isFinite(last);
+  const gap=hasData?listenGaps([...S],q.t0).reduce((s,[a,b])=>s+b-a,0):0;
+  return {from:hasData&&q.t0?q.t0:null,to:hasData?(liveData()?now:last):null,
+    partial:hasData&&period!=='all'&&q.t0-periodStart()>PARTIAL_MIN,asked:period==='today'?1:period==='7d'?7:period==='30d'?30:null,
+    peak,peakAt,lived:q.snaps.length?lived.size:null,followed:S.size,filtered:(cfg.lang||'*')!=='*',
+    liveNow:hasApi()&&liveData()?[...S].filter(c=>info[c]&&info[c].live).length:null,gapMs:gap>GAP_SHOWN?gap:0};
+}
+// Journée en cours, pour « Jour par jour » : ni la période ni le filtre Langue, comme les journées passées (fonction SQL
+// network_history). Viewers actifs exacts (empreintes distinctes), messages, chaînes avec des messages, pic simultané.
+function todayData(){
+  const now=Date.now(),d=dayKey(now),t0=parisMidnight(now),users=new Set(),chans=new Set();let msgs=0;
+  for(const p of Object.values(DB.presence))if(p.d===d)users.add(p.u);
+  const add=m=>{if(m.t>=t0){msgs+=m.m;chans.add(m.c)}};
+  Object.values(DB.minutes).forEach(add);for(const c in curMin){const cm=curMin[c];if(cm)add(minuteRec(c,cm))}
+  const {peak,peakAt}=networkPeak(DB.snaps.filter(s=>s.t>=t0)),none=!users.size&&!chans.size;
+  return {d,at:now,peak,peakAt,actives:none?null:users.size,msgs:none?null:msgs,chans:none?null:chans.size};
+}
+// « En ce moment » : le direct, jamais la période. state : ok, noapi (pas d'API Twitch), off (collecteur hors ligne ou écoute
+// arrêtée), stale (relevé de l'API trop vieux ou en erreur), loading (premier chargement). Un vieux relevé n'est pas le direct.
+const LIVE_STALE=6*MIN,RISE_SPAN=30*MIN,RISE_TOL=4*MIN,RISE_MIN=100,WRITE_SPAN=10*MIN,MPM_SPAN=5*MIN;
+function liveNowData(){
+  const now=Date.now(),list=shown(),cl=cfg.mode==='cloud',st=cloud.status,seen=cl&&st&&st.last_seen?+st.last_seen:null;
+  let last=null;for(const s of DB.snaps)if(s.live&&(last==null||s.t>last))last=s.t;
+  const base={state:'ok',mode:cfg.mode,at:last,seen,followed:list.length,live:0,games:[],rising:[],eligible:0,young:0,history:false};
+  const waiting=isCloud()&&!st&&cloud.syncing;
+  if(!hasApi())return {...base,state:waiting?'loading':'noapi'};
+  if(!liveData())return {...base,state:waiting?'loading':'off'};
+  const api=cl?st&&st.api:apiState;
+  if(!cl&&!api)return {...base,state:'loading'}; // « Ce navigateur » : l'écoute vient de démarrer, Twitch n'a pas encore répondu
+  const live=list.filter(c=>info[c]&&info[c].live);
+  if((api&&api!=='ok')||(live.length&&(last==null||now-last>LIVE_STALE)))return {...base,state:'stale'};
+  const at=live.length?last:seen||now; // heure du dernier passage de l'API (sans chaîne en live : dernier signal du collecteur)
+  // jeux : viewers en direct cumulés des chaînes suivies ; « écrivent » : empreintes distinctes, dernier message dans les 10 min
+  const G=new Map(),gameOf=new Map();
+  for(const c of live){const g=info[c].g||UNKNOWN;gameOf.set(c,g);let o=G.get(g);if(!o)G.set(g,o={g,chans:[],viewers:0,users:new Set()});o.chans.push(c);o.viewers+=info[c].v||0}
+  for(const p of Object.values(DB.presence)){if(p.l<now-WRITE_SPAN)continue;const g=gameOf.get(p.c);if(g!=null)G.get(g).users.add(p.u)}
+  const games=[...G.values()].sort((a,b)=>b.viewers-a.viewers||b.chans.length-a.chans.length||a.g.localeCompare(b.g))
+    .map(o=>({g:o.g===UNKNOWN?'Jeu non précisé':o.g,chans:o.chans.sort((a,b)=>(info[b].v||0)-(info[a].v||0)).slice(0,4).map(who),n:o.chans.length,viewers:o.viewers,wrote:o.users.size}));
+  // streamers montants : viewers du dernier passage contre le relevé le plus proche d'il y a 30 min (à 4 min près), du même live
+  const ref=at-RISE_SPAN,before=new Map();let history=false;
+  for(const s of DB.snaps){if(s.t<=ref+RISE_TOL)history=true;if(!s.live||Math.abs(s.t-ref)>RISE_TOL)continue;const o=before.get(s.c);if(!o||Math.abs(s.t-ref)<Math.abs(o.t-ref))before.set(s.c,s)}
+  const recent=new Map(),addM=m=>{if(m.t>=now-MPM_SPAN)recent.set(m.c,(recent.get(m.c)||0)+m.m)};
+  Object.values(DB.minutes).forEach(addM);for(const c in curMin){const cm=curMin[c];if(cm)addM(minuteRec(c,cm))}
+  let young=0,eligible=0;const rising=[];
+  for(const c of live){const I=info[c];
+    if(I.since&&at-I.since<RISE_SPAN){young++;continue}
+    const p=before.get(c);if(!I.since||!p||p.t<I.since||p.v<RISE_MIN)continue;
+    eligible++;const gain=I.v-p.v;if(!(gain>0))continue;
+    let raidAt=null;for(const e of DB.events)if(e.type==='raid'&&e.c===c&&e.t>=ref&&e.t<=now&&(raidAt==null||e.t>raidAt))raidAt=e.t;
+    rising.push({...who(c),game:I.g&&I.g!==UNKNOWN?I.g:'',v:I.v,v30:p.v,gain,rate:gain/p.v,mpm:(recent.get(c)||0)/(MPM_SPAN/MIN),raidAt})}
+  rising.sort((a,b)=>b.rate-a.rate||b.gain-a.gain);
+  return {...base,at,live:live.length,games,rising,eligible,young,history};
+}
+
 // Vue d'ensemble : l'ancien code calcule, React affiche (événement « legacy:overview », voir app/src/legacy/bridge.ts).
 function renderOverview(q){
   const users=usersBy(q.pres,p=>p.c),allU=new Set(q.pres.map(p=>p.u)),now=Date.now();
   const msgs=q.mins.reduce((s,m)=>s+m.m,0);const {multi,flows}=flowsOf(q.pres,q.sw);
   const subs=q.events.filter(e=>e.type==='sub'||e.type==='gift').reduce((s,e)=>s+e.n,0);
   const tr=msgTrend(q.mins);
-  const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'toutes chaînes, ont écrit au moins un message'},
-    {label:'Messages',value:fmt(msgs),trend:tr.trend,trendLabel:tr.label,hint:'au total'},
+  // chiffres « dans le chat » du bloc d'activité (ceux « sur Twitch » viennent de activityData) ; le temps d'écoute ignore la
+  // période : il est dans le détail de la pilule d'état (statusOf)
+  const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'ont écrit au moins un message'},
     {label:'Actifs dans 2 chats ou plus',value:fmt(multi),hint:allU.size?pct(multi/allU.size)+' du total':''},
-    {label:'Abonnements et subs offerts',value:fmt(subs)}]; // le temps d'écoute ignore la période : il est dans le détail de la pilule d'état (statusOf)
+    {label:'Messages',value:fmt(msgs),trend:tr.trend,trendLabel:tr.label,hint:'au total'},
+    {label:'Abonnements et subs offerts',value:fmt(subs),hint:'annoncés dans le chat'}];
   // viewers qui ont écrit depuis le début du live en cours (et pas sur toute la période choisie, qui peut faire 30 jours) :
   // on les compare à la moyenne des viewers depuis le début du live, et pas aux viewers du moment : sur un long live
   // (marathon de 24 h), l'audience tourne et chute en fin de live, et le rapport dépassait 100 %.
@@ -1934,7 +2006,7 @@ function renderOverview(q){
   // « avec ou sans pub » demande les deux côtés : une journée ne les donne presque jamais, on garde alors tout le détail
   let brand=brandData(q),brandWide=false;
   if(period==='today'&&brand&&!brand.length){brand=brandData(Q(true));brandWide=brand.length>0}
-  window.dispatchEvent(new CustomEvent('legacy:overview',{detail:{kpis,channels,recoup:recoupData(q,users,flows),hasApi:hasApi(),chartOf,part,followers:followersData(q),brand,brandWide,raids:raidTickerData(q),mod:modData(q),msgChart,viewerChart,topStreamers,investedCommunities}}));
+  window.dispatchEvent(new CustomEvent('legacy:overview',{detail:{kpis,channels,recoup:recoupData(q,users,flows),hasApi:hasApi(),chartOf,part,followers:followersData(q),brand,brandWide,raids:raidTickerData(q),mod:modData(q),msgChart,viewerChart,topStreamers,investedCommunities,activity:activityData(q),today:todayData(),now:liveNowData()}}));
 }
 
 // Onglet « Par chaîne » : l'ancien code calcule, React affiche (événement « legacy:channel », voir app/src/legacy/bridge.ts).
