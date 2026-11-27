@@ -108,7 +108,7 @@ export function Channel() {
         {!d.switches ? <Empty>{API_NOTE} pour repérer les changements de jeu.</Empty> : d.switches.length ? <Switches rows={d.switches} /> : <Empty>Aucun changement de jeu repéré sur cette période.</Empty>}
       </Section>
 
-      <Section className="mt-9" title="Recommandations de raid" note="Chaînes cibles basées sur le chevauchement de viewers actifs et la réciprocité des flux.">
+      <Section className="mt-9" title="Recommandations de raid" note="Classées par les personnes passées de cette chaîne vers la cible, avec un bonus quand elles reviennent. La barre est relative : la première a toujours la plus longue. Les passages qui suivent un raid sont comptés.">
         {!d.raids ? (
           <Empty>Pas assez de données pour recommander des raids pour l'instant.</Empty>
         ) : d.raids.length ? (
@@ -122,7 +122,7 @@ export function Channel() {
                 right: (
                   <span className="inline-flex items-center gap-3">
                     {r.live && <Badge variant="outline" className="border-signal-green text-signal-green">LIVE</Badge>}
-                    {fmt(r.viewers)} viewers · {fmt1(r.share)}%
+                    {fmt(r.organicAB)} passés · {fmt(r.viewers)} en commun ({fmt1(r.share)}%)
                   </span>
                 ),
                 label: (

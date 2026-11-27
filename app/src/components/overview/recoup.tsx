@@ -2,7 +2,7 @@
 // Une phrase à retenir, puis trois colonnes séparées par des filets : paires les plus proches, trajets les plus
 // fréquents, dernier raid. Le détail reste dans les onglets Chevauchement et Flux (liens en pied de colonne).
 import type { ReactNode } from "react"
-import { ArrowRight, ArrowLeftRight, ExternalLink } from "lucide-react"
+import { ArrowRight, ExternalLink } from "lucide-react"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { ChannelCell, Empty, Section, panel } from "./parts"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import { useOverviewData, usePeriodInfo, type RecoupData, type Who } from "@/leg
 
 // Actions rapides visibles au-dessus des colonnes : liens vers les vues détaillées et extension de période
 function RecoupActions({ d }: { d: RecoupData }) {
-  const period = usePeriodInfo()
   const hasRaid = d.raid != null
 
   return (
@@ -58,7 +57,7 @@ function Headline({ d }: { d: RecoupData }) {
     <p className="max-w-[68ch] text-[17px] leading-snug text-muted-foreground sm:text-lg">
       {p && (
         <>
-          <Name c={p.a.c} /> et <Name c={p.b.c} /> ont <Num>{pct(p.j)}</Num> de viewers actifs en commun sur la période (<Num>{fmt(p.n)}</Num> {people(p.n)}).
+          <Num>{pct(p.share)}</Num> des viewers actifs de <Name c={p.a.c} /> écrivent aussi chez <Name c={p.b.c} /> (<Num>{fmt(p.n)}</Num> {people(p.n)}).
         </>
       )}
       {p && f && " "}
@@ -118,19 +117,19 @@ function Constellation({ pairs }: { pairs: RecoupData["pairs"] }) {
     used.push(p)
   }
   if (used.length < 2) return null
-  const maxJ = Math.max(...used.map((p) => p.j), 0) || 1
+  const maxS = Math.max(...used.map((p) => p.share), 0) || 1
   const pos = new Map(nodes.map((w, i) => {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / nodes.length
     return [w.c, { x: CX + RX * Math.cos(a), y: CY + RY * Math.sin(a) }]
   }))
-  const edges = [...used].sort((x, y) => x.j - y.j) // le plus fort en dernier : dessiné au-dessus
+  const edges = [...used].sort((x, y) => x.share - y.share) // le plus fort en dernier : dessiné au-dessus
   return (
     <div aria-hidden className="relative hidden h-[168px] w-[300px] shrink-0 md:block">
       <svg viewBox={`0 0 ${CW} ${CH}`} className="absolute inset-0 size-full">
         <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="none" stroke="rgba(255,255,255,.08)" strokeDasharray="2 5" />
         <ellipse cx={CX} cy={CY} rx={RX * 0.55} ry={RY * 0.55} fill="none" stroke="rgba(255,255,255,.04)" strokeDasharray="2 5" />
         {edges.map((p) => {
-          const a = pos.get(p.a.c)!, b = pos.get(p.b.c)!, r = p.j / maxJ
+          const a = pos.get(p.a.c)!, b = pos.get(p.b.c)!, r = p.share / maxS
           return <line key={p.a.c + p.b.c} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={`rgba(${ACCENT},${(0.22 + 0.7 * r).toFixed(2)})`} strokeWidth={(1 + 2.5 * r).toFixed(1)} strokeLinecap="round" />
         })}
       </svg>
@@ -158,21 +157,17 @@ const Outside = ({ who }: { who: Who & { name: string } }) => (
 )
 
 export function Recoup({ d }: { d: RecoupData }) {
-  const period = usePeriodInfo()
   const empty = d.channels < 2 || (!d.pairs.length && !d.flows.length && !d.raid)
-  const maxJ = Math.max(...d.pairs.map((p) => p.j), 0) || 1
+  const maxShare = Math.max(...d.pairs.map((p) => p.share), 0) || 1
   const maxN = Math.max(...d.flows.map((f) => f.n), 0) || 1
-
-  // Calculer le nombre d'heures de données pour la période
-  const hasApi = period?.hours !== undefined && period.hours > 0
 
   return (
     <Section
       title="Recoupements"
       note={!empty && (
         <>
-          Paires classées par la part de viewers actifs qu'elles ont en commun (communs ÷ viewers des deux chaînes réunies), à partir de {d.pairMin} en commun
-          {d.channels > d.pairMax && <>, parmi les {d.pairMax} chaînes qui ont le plus de viewers actifs</>}. Un trajet = quelqu'un qui écrit chez A, puis chez B moins de 3 h
+          Pourcentage : part des viewers actifs de la première chaîne (la plus petite des deux) qui écrivent aussi chez la seconde. Paires classées par ressemblance (communs ÷ viewers des deux réunies), à partir de {d.pairMin} en commun
+          {d.channels > d.pairMax && <>, parmi les {d.pairMax} chaînes qui ont le plus de viewers actifs</>}. Un trajet = des personnes qui écrivent chez A, puis chez B moins de 3 h
           après ; la durée affichée est le délai médian entre les deux.
         </>
       )}
@@ -194,24 +189,19 @@ export function Recoup({ d }: { d: RecoupData }) {
           <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-b border-border px-5 pt-5 pb-4">
             <div className="min-w-0 flex-1 basis-80">
               <Headline d={d} />
-              {hasApi && period && (
-                <p className="mt-2 text-xs text-dusk">
-                  {period.range} - {period.hours}h de données
-                </p>
-              )}
             </div>
             <Constellation pairs={d.pairs} />
           </div>
           <div className="grid lg:grid-cols-3 [&>*+*]:border-border max-lg:[&>*+*]:border-t lg:[&>*+*]:border-l">
-            <Column title="Paires les plus proches" sub="Part de viewers actifs en commun">
+            <Column title="Paires les plus proches" sub="Part de la première aussi vue chez la seconde">
               {d.pairs.length ? (
                 <ol>
                   {d.pairs.map((p) => (
                     <Row
                       key={p.a.c + p.b.c}
-                      r={p.j / maxJ}
-                      who={<><ChannelCell who={p.a} /><ArrowLeftRight role="img" aria-label="et" className="size-3 shrink-0 text-dusk" /><ChannelCell who={p.b} /></>}
-                      right={<>{pct(p.j)} <span className="text-dusk">· {fmt(p.n)} {people(p.n)}</span></>}
+                      r={p.share / maxShare}
+                      who={<><ChannelCell who={p.a} /><ArrowRight role="img" aria-label="aussi chez" className="size-3 shrink-0 text-dusk" /><ChannelCell who={p.b} /></>}
+                      right={<>{pct(p.share)} <span className="text-dusk">· {fmt(p.n)} {people(p.n)}</span></>}
                     />
                   ))}
                 </ol>

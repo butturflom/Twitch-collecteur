@@ -90,7 +90,6 @@ function flowsToSankeyNodesAndLinks(flows: FlowRoute[], allChannels: string[]): 
 
 export function Flows() {
   const d = useFlowsData()
-  const [flowType, setFlowType] = useState<"all" | "organic" | "raid">("all")
   const hasTriggeredRef = useRef(false)
 
   // Forcer le recalcul des flux si les données sont pas encore arrivées (une seule fois)
@@ -104,12 +103,7 @@ export function Flows() {
   // Tous les hooks AVANT le retour anticipé : React exige le même nombre de hooks à chaque rendu. Placés après
   // `if (!d) return`, ils n'existaient pas au premier rendu (données absentes) puis apparaissaient à l'arrivée des
   // données : React levait « Rendered more hooks than during the previous render » et l'onglet plantait.
-  const displayFlows = useMemo<FlowRoute[]>(() => {
-    if (!d) return []
-    if (flowType === "organic") return d.flowsOrganic
-    if (flowType === "raid") return d.flowsRaid
-    return d.flows
-  }, [flowType, d])
+  const displayFlows = useMemo<FlowRoute[]>(() => d?.flows ?? [], [d])
 
   // Pour le Sankey : nœuds et liens des flux affichés
   const { nodes, links } = useMemo(() => {
@@ -138,63 +132,14 @@ export function Flows() {
 
   if (!d) return <Pending />
 
-  // Totaux par type (déjà calculés par le backend)
-  const totalOrganic = d.totalOrganic ?? 0
-  const totalRaid = d.totalRaid ?? 0
-
   return (
     <div className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Flux de viewers</h2>
-        <div className="flex items-center gap-1 rounded-lg bg-card p-1 shadow-sm">
-          <button
-            type="button"
-            aria-pressed={flowType === "all"}
-            onClick={() => setFlowType("all")}
-            className={cn(
-              "px-3 py-1 text-xs font-medium rounded-md transition-colors",
-              flowType === "all"
-                ? "bg-accent text-foreground shadow"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Tous
-          </button>
-          <button
-            type="button"
-            aria-pressed={flowType === "organic"}
-            onClick={() => setFlowType("organic")}
-            className={cn(
-              "px-3 py-1 text-xs font-medium rounded-md transition-colors",
-              flowType === "organic"
-                ? "bg-accent text-foreground shadow"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Organique
-          </button>
-          <button
-            type="button"
-            aria-pressed={flowType === "raid"}
-            onClick={() => setFlowType("raid")}
-            className={cn(
-              "px-3 py-1 text-xs font-medium rounded-md transition-colors",
-              flowType === "raid"
-                ? "bg-accent text-foreground shadow"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Raids
-          </button>
-        </div>
-      </div>
+      <h2 className="mb-4 text-base font-semibold">Flux de viewers</h2>
 
       <Kpis
         items={[
-          { label: "Migrations", value: fmt(d.total), hint: d.routes ? `sur ${fmt(d.routes)} trajets différents` : "" },
-          { label: "Sans raid", value: fmt(totalOrganic), hint: "Migrations sur un trajet sans raid" },
-          { label: "Trajets raidés", value: fmt(totalRaid), hint: "Migrations sur un trajet qui a connu un raid" },
-          { label: "Délai médian", value: flowType === "raid" ? (d.gapRaid || "—") : (d.gapOrganic || "—"), hint: "entre le dernier message chez A et le premier chez B" },
+          { label: "Migrations", value: fmt(d.total), hint: d.routes ? `personnes comptées une fois par trajet, sur ${fmt(d.routes)} trajets` : "" },
+          { label: "Délai médian", value: d.medianGap || "—", hint: "entre le dernier message chez A et le premier chez B" },
           { label: "Raids reçus", value: fmt(d.raidCount) },
           { label: "Viewers apportés", value: fmt(d.raidViewers) },
         ]}
@@ -208,13 +153,13 @@ export function Flows() {
               <SankeyDiagram nodes={nodes} links={links} height={180} />
             </div>
           ) : (
-            <Empty>Aucun flux à afficher pour ce type.</Empty>
+            <Empty>Aucun flux à afficher.</Empty>
           )}
         </Section>
         {hasMap && (
           <Section
             title="Carte des migrations"
-            note={<>Une flèche = des viewers actifs qui écrivent chez A, puis chez B moins de 3 h après, <b>le même jour</b>. À droite, vers une chaîne placée plus bas ; à gauche, vers une chaîne placée plus haut. Épaisseur : même échelle pour toutes les journées. Les 12 plus gros trajets du jour ; tous types confondus.</>}
+            note={<>Une flèche = des viewers actifs qui écrivent chez A, puis chez B moins de 3 h après, <b>le même jour</b>. À droite, vers une chaîne placée plus bas ; à gauche, vers une chaîne placée plus haut. Épaisseur : même échelle pour toutes les journées. Les 12 plus gros trajets du jour. « raid » : un raid a eu lieu sur ce trajet ce jour-là.</>}
           >
             <div className={cn(panel, "p-4")}>
               <FlowsMap days={mapDays} order={mapOrder_} onlyActive />
@@ -224,14 +169,14 @@ export function Flows() {
       </div>
       {!hasMap && lateMap && <p className="mt-2 px-0.5 text-xs text-dusk">Carte des migrations : données par jour indisponibles.</p>}
 
-      <Section className="mt-4" title="Migrations de viewers actifs" note="Une migration = quelqu'un qui écrit chez A, puis chez B moins de 3 h après son dernier message chez A.">
+      <Section className="mt-4" title="Migrations de viewers actifs" note="Une migration = quelqu'un qui écrit chez A, puis chez B moins de 3 h après son dernier message chez A. « raid » : un raid a eu lieu sur ce trajet ; on ne sait pas quels passages en viennent.">
         {displayFlows.length ? (
           <div className={cn(panel, "px-4 py-2")}>
             <MeterList
               wide
               rows={displayFlows.map((f) => ({
                 key: f.a.c + ">" + f.b.c, v: f.n,
-                right: <>{fmt(f.n)} pers. · délai médian {f.gap}</>,
+                right: <>{fmt(f.n)} pers.{f.gap && <> · délai médian {f.gap}</>}{f.raid && <span className="text-primary-soft"> · raid</span>}</>,
                 label: (
                   <span className="inline-flex min-w-0 items-center gap-1.5">
                     <ChannelAvatar {...f.a} /><span className="truncate">{f.a.c}</span>
@@ -243,7 +188,7 @@ export function Flows() {
             />
           </div>
         ) : (
-          <Empty>Aucune migration {flowType === "organic" ? "organique" : flowType === "raid" ? "de raid" : "repérée"} pour l'instant.</Empty>
+          <Empty>Aucune migration repérée pour l'instant.</Empty>
         )}
       </Section>
 

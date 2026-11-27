@@ -14,22 +14,21 @@ import { fmt } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { FlowsData, Who } from "@/legacy/bridge"
 
-/** Un passage de A vers B pendant une journée. `organic` : combien de ces viewers sont venus sans raid (null si on ne sait pas). */
-export interface DayRoute { a: Who; b: Who; n: number; organic: number | null }
+/** Un passage de A vers B pendant une journée. `raid` : un raid a eu lieu sur ce trajet ce jour-là (on ne sait pas quels passages en viennent). */
+export interface DayRoute { a: Who; b: Who; n: number; raid: boolean }
 /** Une journée agrégée (`d` au format AAAA-MM-JJ, fuseau Europe/Paris). */
 export interface FlowDay { d: string; routes: DayRoute[] }
 
 /**
  * Passe des lignes `byDay` (une par jour et par paire) aux journées de la carte, triées par date.
- * `n` = viewers distincts de la paire ce jour-là ; la part organique du SQL (organic / passages) est reportée sur ces viewers.
+ * `n` = viewers distincts de la paire ce jour-là ; du SQL, on ne retient qu'un signe : le trajet a eu un raid.
  */
 export function daysFromByDay(rows: NonNullable<FlowsData["byDay"]>): FlowDay[] {
   const by = new Map<string, DayRoute[]>()
   for (const r of rows) {
     if (!(r.viewers > 0) || r.a.c === r.b.c) continue
-    const org = r.passages > 0 ? Math.min(r.viewers, Math.round((r.viewers * r.organic) / r.passages)) : null
     const list = by.get(r.d)
-    const route = { a: r.a, b: r.b, n: r.viewers, organic: org }
+    const route = { a: r.a, b: r.b, n: r.viewers, raid: r.raid > 0 }
     if (list) list.push(route)
     else by.set(r.d, [route])
   }
@@ -61,19 +60,9 @@ const longDay = (d: string) => dayOf(d).toLocaleDateString("fr-FR", { weekday: "
 const shortDay = (d: string) => dayOf(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
 const weekday = (d: string) => dayOf(d).toLocaleDateString("fr-FR", { weekday: "short" })
 const dayNum = (d: string) => String(dayOf(d).getDate())
-const pct = (part: number, n: number) => Math.round((100 * part) / Math.max(1, n))
-const organicText = (r: DayRoute) => (r.organic == null ? "organique inconnue" : `${pct(r.organic, r.n)} % organique`)
 const reduceMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches
 
-function totals(day: FlowDay) {
-  let n = 0, org = 0, raid = 0, unk = 0
-  for (const r of day.routes) {
-    n += r.n
-    if (r.organic == null) unk += r.n
-    else { org += r.organic; raid += r.n - r.organic }
-  }
-  return { n, org, raid, unk }
-}
+const totalOf = (day: FlowDay) => day.routes.reduce((s, r) => s + r.n, 0)
 
 /** `onlyActive` : ne pose que les chaînes qui ont un arc ce jour-là (l'ordre reste celui de `order`) ; sinon, une colonne trop haute quand
  *  beaucoup de chaînes apparaissent sur la fenêtre. */
@@ -96,8 +85,8 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
   }, [playing, idx, last])
 
   const maxN = useMemo(() => Math.max(1, ...days.flatMap((d) => d.routes.map((r) => r.n))), [days])
-  const dayTotals = useMemo(() => days.map(totals), [days])
-  const maxT = Math.max(1, ...dayTotals.map((t) => t.n))
+  const dayTotals = useMemo(() => days.map(totalOf), [days])
+  const maxT = Math.max(1, ...dayTotals)
 
   const day = days[Math.min(idx, last)]
   const routes = useMemo(() => (day ? day.routes.filter((r) => r.n > 0).sort((x, y) => y.n - x.n) : []), [day])
@@ -136,7 +125,6 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
 
   const t = dayTotals[Math.min(idx, last)]
   const top = routes[0]
-  const known = t.n - t.unk
 
   // mise à jour fonctionnelle : des touches répétées avant le rendu suivant avancent bien d'une journée chacune
   const move = (to: (i: number) => number) => { setPlaying(false); setIdx((i) => Math.max(0, Math.min(last, to(i)))) }
@@ -210,7 +198,7 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
                       {/* point au sommet de l'arc : rattache l'étiquette à son arc quand des arcs s'emboîtent */}
                       <circle cx={px} cy={ay} r={3.5} fill={r.a.color} strokeWidth={2} />
                       <text x={ax} y={ay - 2} fontFamily="var(--font-mono)" fontSize={12} fontWeight={600} fill="var(--foreground)" style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(r.n)}</text>
-                      <text x={ax} y={ay + 11} fontFamily="var(--font-sans)" fontSize={10.5} fill="var(--muted-foreground)">{organicText(r)}</text>
+                      {r.raid && <text x={ax} y={ay + 11} fontFamily="var(--font-sans)" fontSize={10.5} fill="var(--muted-foreground)">raid</text>}
                     </g>
                   </g>
                 )
@@ -227,10 +215,9 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
       </div>
 
       <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
-        {t.n ? (
+        {t ? (
           <>
-            <span className="font-mono tabular-nums text-foreground">{fmt(t.n)}</span> viewers sur ces trajets entre chaînes suivies ce jour-là
-            {known > 0 && <>, dont <span className="font-mono tabular-nums text-foreground">{pct(t.org, known)}&nbsp;%</span> organiques{t.unk ? " (parmi ceux dont le type est connu)" : ""}</>}
+            <span className="font-mono tabular-nums text-foreground">{fmt(t)}</span> viewers sur ces trajets entre chaînes suivies ce jour-là
             {top && <>. Le plus gros : {top.a.c} → {top.b.c} (<span className="font-mono tabular-nums text-foreground">{fmt(top.n)}</span>)</>}.
             {hidden > 0 && <> {hidden} trajets plus petits ne sont pas dessinés.</>}
           </>
@@ -239,7 +226,7 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
         )}
       </p>
 
-      {/* Curseur de date : une colonne par journée (total des passages, part organique en violet, raids en bleu). */}
+      {/* Curseur de date : une colonne par journée (total des passages). */}
       <div
         role="slider"
         tabIndex={0}
@@ -256,14 +243,11 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
       >
         {days.map((dd, i) => {
           const tt = dayTotals[i]
-          const h = (v: number) => `${(v / maxT) * 100}%`
           return (
             <div key={dd.d} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-[8px] border pt-1.5 pb-1 transition-colors", dense ? "px-0" : "px-0.5", i === idx ? "border-primary/60 bg-white/[0.06]" : "border-transparent hover:bg-white/[0.03]")}>
-              {!dense && <span className="font-mono text-[10.5px] text-foreground tabular-nums">{fmt(tt.n)}</span>}
+              {!dense && <span className="font-mono text-[10.5px] text-foreground tabular-nums">{fmt(tt)}</span>}
               <span className="flex h-12 w-full max-w-5 flex-col-reverse overflow-hidden rounded-[3px] bg-white/[0.04]">
-                <span className="bg-primary" style={{ height: h(tt.org) }} />
-                <span className="bg-chart-2" style={{ height: h(tt.raid) }} />
-                <span className="bg-white/25" style={{ height: h(tt.unk) }} />
+                <span className="bg-primary" style={{ height: `${(tt / maxT) * 100}%` }} />
               </span>
               {!dense && <span className="text-center text-[10.5px] leading-tight text-dusk">{weekday(dd.d)}<br /><span className="text-muted-foreground">{dayNum(dd.d)}</span></span>}
             </div>
@@ -272,12 +256,6 @@ export function FlowsMap({ days, order, maxArcs = 12, onlyActive = false }: { da
       </div>
       {/* Au-delà de 16 journées, les colonnes sont trop étroites pour leurs chiffres : on garde les deux bornes et le jour choisi (en tête). */}
       {dense && <p className="mt-1 flex justify-between px-0.5 text-[10.5px] text-dusk"><span>{shortDay(days[0].d)}</span><span>{shortDay(days[last].d)}</span></p>}
-      <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-dusk">
-        <span>Viewers par jour :</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-[2px] bg-primary" />organiques</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-[2px] bg-chart-2" />raids</span>
-        <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-[2px] bg-white/25" />type inconnu</span>
-      </p>
     </div>
   )
 }
