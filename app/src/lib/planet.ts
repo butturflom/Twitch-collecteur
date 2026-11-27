@@ -1,4 +1,4 @@
-// Planète d'une chaîne (choix du 27/11 : piste « terrasses », composition « B2 adouci ») : sa photo de profil collée sur une
+// Planète d'une chaîne (choix du 27/11 : piste « terrasses », composition B2) : sa photo de profil collée sur une
 // planète à facettes dont la forme est tirée de son nom (toujours la même), avec sa couleur sur le bord. Sans photo (inconnue
 // ou refusée) : la planète aux deux tons de sa couleur, avec son initiale. Les formes neutres viennent de Blender
 // (scripts/planetes/planetes.py) et sont intégrées au fichier HTML.
@@ -27,11 +27,11 @@ const image = (nom: string) => FICHIERS[`../assets/planetes/${nom}.png`]
 const FORMES = ["c1", "c2", "c3", "c4", "c5"]
 const RES = 160 // côté des images (repris de planetes.py)
 const HALF = 1.2 // demi-largeur de l'image, en rayons de planète (repris de planetes.py)
-// « B2 adouci » : dose de relief posée sur la photo, et reflets retenus. REFLET_B2 : éclaircissement maximal de la facette la plus
-// éclairée (.08 = +8 % au plus) ; au-dessus de GENOU_B2 le gain est resserré, et il s'efface à mesure que la couleur approche du blanc.
+// B2 : dose de relief posée sur la photo. Les facettes les plus éclairées (au-delà de REFLET_SEUIL) prennent en plus un reflet
+// ajouté, qui les détache jusque sur les photos claires. La version aux reflets adoucis lissait trop le relief (retirée le 27/11).
 const DOSE = 0.82
-const REFLET_B2 = 0.08
-const GENOU_B2 = 0.82
+const REFLET_SEUIL = 0.82
+const REFLET_FORCE = 280
 
 const hash = (s: string) => {
   let h = 2166136261
@@ -161,7 +161,7 @@ function rampe(h: number, s: number, l: number): Uint8ClampedArray {
 }
 
 // ---------------------------------------------------------------- composition
-/** Photo enroulée sur la forme (passe UV), relief dosé, reflets retenus. */
+/** Photo enroulée sur la forme (passe UV), relief dosé, reflet sur les facettes les plus éclairées. */
 function coller(f: Forme, ph: Uint8ClampedArray, o: Uint8ClampedArray) {
   const { px, uv, lo, hi } = f, kL = 1 / (hi - lo), N = RES - 1
   for (let i = 0; i < px.length; i += 4) {
@@ -170,11 +170,11 @@ function coller(f: Forme, ph: Uint8ClampedArray, o: Uint8ClampedArray) {
     const fx = borne((uv[i] / 255) * N, N), fy = borne((1 - uv[i + 1] / 255) * N, N)
     const x0 = fx | 0, y0 = fy | 0, x1 = Math.min(N, x0 + 1), y1 = Math.min(N, y0 + 1), tx = fx - x0, ty = fy - y0
     const p00 = (y0 * RES + x0) * 4, p10 = (y0 * RES + x1) * 4, p01 = (y1 * RES + x0) * 4, p11 = (y1 * RES + x1) * 4
-    let mul = 1 - DOSE + DOSE * (0.3 + borne((px[i] - lo) * kL))
-    if (mul > GENOU_B2) mul = GENOU_B2 + ((mul - GENOU_B2) * (1 + REFLET_B2 - GENOU_B2)) / (1 + 0.3 * DOSE - GENOU_B2)
+    const lum = borne((px[i] - lo) * kL), mul = 1 - DOSE + DOSE * (0.3 + lum)
+    const reflet = Math.max(0, lum - REFLET_SEUIL) * REFLET_FORCE * DOSE
     for (let j = 0; j < 3; j++) {
       const v = (ph[p00 + j] * (1 - tx) + ph[p10 + j] * tx) * (1 - ty) + (ph[p01 + j] * (1 - tx) + ph[p11 + j] * tx) * ty
-      o[i + j] = mul > 1 ? (v * mul) / (1 + ((mul - 1) / 255) * v) : v * mul
+      o[i + j] = v * mul + reflet // o est borné à 255 (Uint8ClampedArray)
     }
     o[i + 3] = a
   }
