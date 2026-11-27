@@ -402,8 +402,19 @@ async function stop(){
 /* ---------- requêtes sur les données ---------- */
 function periodStart(){const d0=parisMidnight(Date.now()),back=n=>parisMidnight(d0-n*DAY+12*HOUR); // +12 h : juste même avec un changement d'heure
   return period==='today'?d0:period==='7d'?back(6):period==='30d'?back(29):0}
+// Les tables n'ont pas la même durée de conservation : sans borne, « Tout » couvrait par exemple deux jours de viewers actifs et six
+// jours de messages sous un même titre. Début commun = le plus tardif des premiers relevés (présences, minutes, viewers).
+function commonStart(){
+  let d='',m=Infinity,s=Infinity;
+  for(const p of Object.values(DB.presence))if(!d||p.d<d)d=p.d;
+  for(const x of Object.values(DB.minutes))if(x.t<m)m=x.t;
+  for(const x of DB.snaps)if(x.t<s)s=x.t;
+  const starts=[d?parisMidnight(Date.parse(d+'T12:00:00Z')):NaN,m,s].filter(isFinite);
+  return starts.length?Math.max(...starts):0;
+}
+const dataStart=()=>Math.max(periodStart(),commonStart());
 function Q(){ // instantané filtré de la période
-  const t0=periodStart(),d0=t0?dayKey(t0):'';
+  const t0=dataStart(),d0=t0?dayKey(t0):'';
   const pres=Object.values(DB.presence).filter(p=>p.d>=d0);
   const mins=Object.values(DB.minutes).filter(m=>m.t>=t0);
   for(const c in curMin){const cm=curMin[c];if(cm&&cm.mt>=t0)mins.push(minuteRec(c,cm))}
@@ -415,23 +426,32 @@ function Q(){ // instantané filtré de la période
   return {t0,pres,mins,snaps,events,clips,sw};
 }
 function usersBy(pres,keyFn){const M=new Map();for(const p of pres){const k=keyFn(p);if(k==null)continue;let s=M.get(k);if(!s)M.set(k,s=new Set());s.add(p.u)}return M}
-// paires de chaînes classées par indice de Jaccard (communs ÷ réunion) ; au-delà de max chaînes, on garde les plus actives
-// (100 chaînes = 4 950 paires : borné pour la Vue d'ensemble, recalculée souvent)
+// Paires de chaînes classées par ressemblance (communs ÷ réunion), pour que les petites coïncidences ne passent pas devant. Le chiffre
+// montré est « share » : part des viewers actifs de a (la plus petite des deux) vus chez b. Au-delà de max chaînes, on garde les plus
+// actives (100 chaînes = 4 950 paires : borné pour la Vue d'ensemble, recalculée souvent).
 function pairsOf(by,keys,max=Infinity){
   const ks=keys.length>max?[...keys].sort((a,b)=>by.get(b).size-by.get(a).size).slice(0,max):keys,out=[];
-  for(let i=0;i<ks.length;i++)for(let j=i+1;j<ks.length;j++){const A=by.get(ks[i]),B=by.get(ks[j]),n=sharedCount(A,B),u=A.size+B.size-n;out.push({a:who(ks[i]),b:who(ks[j]),n,j:u?n/u:0})}
+  for(let i=0;i<ks.length;i++)for(let j=i+1;j<ks.length;j++){let a=ks[i],b=ks[j];if(by.get(a).size>by.get(b).size)[a,b]=[b,a];
+    const A=by.get(a),B=by.get(b),n=sharedCount(A,B),u=A.size+B.size-n;out.push({a:who(a),b:who(b),n,share:A.size?n/A.size:0,j:u?n/u:0})}
   return out.sort((x,y)=>y.j-x.j)}
 function sharedCount(A,B){let n=0;const [s,l]=A.size<B.size?[A,B]:[B,A];for(const u of s)if(l.has(u))n++;return n}
-function flowsOf(pres){
+// Migrations. Source unique : la table « switches » du collecteur (chaque changement de chat, message par message). n = personnes
+// distinctes passées de a vers b. Le délai médian vient de l'estimation (premier et dernier message de la journée), seule à avoir des
+// heures. Sans « switches » (mode navigateur, ancien collecteur) : l'estimation seule.
+function flowsOf(pres,sw){
   const by=new Map();for(const p of pres){let a=by.get(p.u);if(!a)by.set(p.u,a=[]);a.push(p)}
-  const F=new Map();let multi=0;
-  for(const arr of by.values()){if(arr.length<2)continue;
+  const est=new Map();let multi=0;
+  const route=(M,a,b)=>{const k=a+'>'+b;let o=M.get(k);if(!o)M.set(k,o={a,b,users:new Set(),gaps:[]});return o};
+  for(const [u,arr] of by){if(arr.length<2)continue;
     const chans=new Set(arr.map(p=>p.c));if(chans.size>1)multi++;
     arr.sort((a,b)=>a.f-b.f);
     for(let i=1;i<arr.length;i++){const a=arr[i-1],b=arr[i];if(a.c===b.c)continue;
       const gap=b.f-a.l;if(gap<-10*MIN||gap>3*HOUR)continue;
-      const k=a.c+'>'+b.c;let o=F.get(k);if(!o)F.set(k,o={a:a.c,b:b.c,n:0,gaps:[]});o.n++;o.gaps.push(Math.max(gap,0))}}
-  return {flows:[...F.values()].sort((x,y)=>y.n-x.n),multi};
+      const o=route(est,a.c,b.c);o.users.add(u);o.gaps.push(Math.max(gap,0))}}
+  let F=est;
+  if(sw&&sw.length){F=new Map();for(const s of sw){const o=route(F,s.a,s.b);o.users.add(s.u)}
+    for(const [k,o] of F){const e=est.get(k);if(e)o.gaps=e.gaps}}
+  return {flows:[...F.values()].map(o=>({a:o.a,b:o.b,n:o.users.size,gaps:o.gaps})).sort((x,y)=>y.n-x.n),multi};
 }
 function bucket(pts,maxN){ // moyenne par paquets, coupe les trous
   if(pts.length<=maxN)return pts;const x0=pts[0][0],x1=pts[pts.length-1][0],w=(x1-x0)/maxN||1;const out=[];let cur=null;
@@ -563,6 +583,10 @@ function participation(q,c){
   return {avgV,liveMin,perMin:su/liveMin/avgV,msgK:sm/liveMin/avgV*1000,uniq:uniq/avgV};
 }
 
+// La participation d'une chaîne sert à trois blocs de la Vue d'ensemble : calculée une fois par instantané q.
+const partCache=new WeakMap();
+function participationOnce(q,c){let M=partCache.get(q);if(!M)partCache.set(q,M=new Map());if(!M.has(c))M.set(c,participation(q,c));return M.get(c)}
+
 /* ---------- followers, pub, réglages du chat et clips (collecteur 1.2) ---------- */
 const metaList=c=>(DB.meta&&DB.meta[c])||[];
 const metaLast=c=>{const a=metaList(c);return a.length?a[a.length-1]:null};
@@ -613,7 +637,7 @@ const who=c=>({c,color:colorOf(c),img:avUrl(c)});
 function chatLimitLbl(c,t0){const x=metaList(c).filter(x=>x.t>=t0&&limited(x.cs)).pop();return x?chatModeLbl(x.cs):''}
 function followersData(q){
   return shown().map(c=>{const L=metaLast(c);if(!L||L.fol==null)return null;
-    const a=metaList(c).filter(x=>x.fol!=null),f0=a[0],span=L.t-f0.t,p=participation(q,c);
+    const a=metaList(c).filter(x=>x.fol!=null),f0=a[0],span=L.t-f0.t,p=participationOnce(q,c);
     return {...who(c),fol:L.fol,avgV:p?p.avgV:null,grow:span>=20*HOUR?(L.fol-f0.fol)/span*DAY:null}}).filter(Boolean).sort((a,b)=>b.fol-a.fol);
 }
 // null : aucun relevé d'état de chaîne (pas de section) ; [] : relevés, mais pas encore de chaîne comparable
@@ -1000,7 +1024,7 @@ function renderMap(q){
   const n=nodes.length,ids=nodes.map(nd=>nd.id),idx=new Map(ids.map((c,i)=>[c,i]));
   const nb=ids.map(()=>new Set());for(const e of edges){nb[idx.get(e.a)].add(e.b);nb[idx.get(e.b)].add(e.a)} // voisins = liens tracés
   // passages mesurés sur la période (même règle que l'onglet Flux : quelqu'un écrit chez A, puis chez B moins de 3 h après)
-  const pass=new Map();for(const f of flowsOf(q.pres).flows)if(idx.has(f.a)&&idx.has(f.b))pass.set(f.a+'>'+f.b,f.n);
+  const pass=new Map();for(const f of flowsOf(q.pres,q.sw).flows)if(idx.has(f.a)&&idx.has(f.b))pass.set(f.a+'>'+f.b,f.n);
   const passN=(a,b)=>pass.get(a+'>'+b)||0;
   // sens dominant d'un trait (1 : de a vers b, −1 : de b vers a, 0 : aucun) : au moins 10 passages, dont 60 % dans un sens
   const EDIR=edges.map(e=>{const ab=passN(e.a,e.b),ba=passN(e.b,e.a),t=ab+ba;return t>=10&&Math.max(ab,ba)/t>=.6?(ab>ba?1:-1):0});
@@ -1782,7 +1806,7 @@ function recoupData(q,users,flows){
   const top=flows.slice(0,3).map(f=>({from:who(f.a),to:who(f.b),n:f.n,gap:f.gaps.length?dur(median(f.gaps)):''}));
   const r=q.events.filter(e=>e.type==='raid').sort((a,b)=>b.t-a.t)[0];
   if(r&&r.from)loadAvatars([String(r.from).toLowerCase()]);
-  return {channels:keys.length,period,pairMax:PAIR_MAX,pairMin:PAIR_MIN,pairs:pairs.map(p=>({a:p.a,b:p.b,n:p.n,j:p.j})),flows:top,
+  return {channels:keys.length,period,pairMax:PAIR_MAX,pairMin:PAIR_MIN,pairs:pairs.map(p=>({a:p.a,b:p.b,n:p.n,share:p.share,j:p.j})),flows:top,
     raid:r?{from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0,ago:ago(r.t),when:when(r.t)}:null}}
 
 // Phase 3 : Top Streamers - analyse des viewers, heures de stream, croissance
@@ -1795,29 +1819,10 @@ function topStreamersData(q){
     viewersByChan[s.c].push(s.v);
   }
 
-  // Calculer les heures de stream par chaîne
-  const hoursByChan={},snapTimesByChan={};
-  for(const s of q.snaps){
-    if(!s.live) continue;
-    if(!snapTimesByChan[s.c]) snapTimesByChan[s.c]=[];
-    snapTimesByChan[s.c].push(s.t);
-  }
-
-  for(const c in snapTimesByChan){
-    const times=snapTimesByChan[c].sort((a,b)=>a-b);
-    if(times.length<2){
-      hoursByChan[c]=0.5;
-    } else {
-      const durationMin=(times[times.length-1]-times[0])/60000;
-      hoursByChan[c]=durationMin/60;
-    }
-  }
-
-  // Calculer les messages par chaîne
-  const msgByChan={};
-  for(const m of q.mins){
-    msgByChan[m.c]=(msgByChan[m.c]||0)+m.m;
-  }
+  // Heures de stream : tranches de 2 min avec un relevé en live, pauses entre deux lives exclues
+  const hoursByChan={};
+  const slots={};for(const s of q.snaps)if(s.live)(slots[s.c]=slots[s.c]||new Set()).add(Math.floor(s.t/SLOT));
+  for(const c in slots)hoursByChan[c]=slots[c].size*2/60;
 
   // Calculer les jours actifs par chaîne
   const daysByChan={};
@@ -1835,7 +1840,6 @@ function topStreamersData(q){
     const avgV=views.length>0?views.reduce((a,b)=>a+b,0)/views.length:info[c]?.v||0;
     const peakV=views.length>0?Math.max(...views):info[c]?.v||0;
     const hours=hoursByChan[c]||0;
-    const totalMsgs=msgByChan[c]||0;
     const activeDays=daysByChan[c]?.size||0;
 
     // Croissance des followers entre le premier et le dernier relevé d'état de la chaîne (au moins 20 h d'écart, comme followersData).
@@ -1855,7 +1859,6 @@ function topStreamersData(q){
       hours: Math.round(hours*10)/10,
       growth: growth,
       growthBase: growthBase,
-      avgMsgPerMin: activeDays>0?Math.round(totalMsgs/(activeDays*60*2)):0,
       activeDays: activeDays
     });
   }
@@ -1863,80 +1866,26 @@ function topStreamersData(q){
   return rows.filter(r=>r.viewers>0).sort((a,b)=>b.viewers-a.viewers);
 }
 
-// Phase 3 : Communautés Investies - taux d'interaction, subs, bits, raids
+// Communautés les plus impliquées : classées par la part des viewers qui écrivent chaque minute, puis par les messages pour
+// 1 000 viewers (décision du 27/11, CALCULS.md). Subs, bits et raids sont montrés à part et ne comptent pas dans le classement
+// (avant, les viewers d'un raid étaient additionnés aux subs). Sous INV_MIN viewers en moyenne, deux bavards suffisaient à passer devant.
+const INV_MIN=50;
 function investedCommunitiesData(q){
-  const viewersByChan={},interactionsByChan={},minutesByChan={};
-
-  // Indexer les viewers snapshot (max par chaîne)
-  for(const s of q.snaps){
-    if(!s.live) continue;
-    if(!viewersByChan[s.c] || s.v>viewersByChan[s.c]){
-      viewersByChan[s.c]=s.v;
-    }
-  }
-
-  // Compter les minutes avec interactions
-  for(const m of q.mins){
-    if(!minutesByChan[m.c]) minutesByChan[m.c]={total:0,withInteractions:0};
-    minutesByChan[m.c].total+=1;
-    if(m.r>0 || m.h>0 || m.n>0 || m.q>0){
-      minutesByChan[m.c].withInteractions+=1;
-    }
-  }
-
-  // Indexer les interactions par chaîne
-  for(const e of q.events){
-    if(!interactionsByChan[e.c]){
-      interactionsByChan[e.c]={react:0,inter:0,total:0};
-    }
-
-    if(e.type==='sub' || e.type==='gift'){
-      interactionsByChan[e.c].inter+=e.n;
-    } else if(e.type==='bits'){
-      interactionsByChan[e.c].react+=e.n;
-    } else if(e.type==='raid'){
-      interactionsByChan[e.c].inter+=e.n||0;
-    }
-  }
-
-  const shownList=shown();
   const rows=[];
-
-  for(const c of shownList){
-    const v=viewersByChan[c]||0;
-    const intData=interactionsByChan[c]||{react:0,inter:0,total:0};
-
-    const subs=q.events.filter(e=>e.c===c&&(e.type==='sub'||e.type==='gift')).reduce((s,e)=>s+e.n,0);
-    const bits=q.events.filter(e=>e.c===c&&e.type==='bits').reduce((s,e)=>s+e.n,0);
-    const raidsRecv=q.events.filter(e=>e.c===c&&e.type==='raid').length;
-    const raidsViewers=q.events.filter(e=>e.c===c&&e.type==='raid').reduce((s,e)=>s+(e.n||0),0);
-
-    const interactions=intData.inter;
-    const interactionRate=v>0?(interactions/v)*100:null;
-    const subsRate=v>0?(subs/v)*100:null;
-    const bitsRate=v>0?(bits/v)*100:null;
-
-    rows.push({
-      ...who(c),
-      viewers: v,
-      interactions: interactions,
-      interactionRate: interactionRate,
-      subs: subs,
-      subsRate: subsRate,
-      bits: bits,
-      bitsRate: bitsRate,
-      raidsReceived: raidsRecv,
-      raidsViewers: raidsViewers
-    });
+  for(const c of shown()){
+    const p=participationOnce(q,c);if(!p||p.liveMin<10||p.avgV<INV_MIN)continue;
+    const ev=q.events.filter(e=>e.c===c),sum=(...t)=>ev.filter(e=>t.includes(e.type)).reduce((s,e)=>s+e.n,0),raids=ev.filter(e=>e.type==='raid');
+    const subs=sum('sub','gift');
+    rows.push({...who(c),viewers:p.avgV,perMin:p.perMin,msgK:p.msgK,subs,subsK:subs/p.avgV*1000,bits:sum('bits'),
+      raidsReceived:raids.length,raidsViewers:raids.reduce((s,e)=>s+(e.n||0),0)});
   }
-
-  return rows.filter(r=>r.viewers>0 || r.interactions>0).sort((a,b)=>(b.interactions||0)-(a.interactions||0));
+  return rows.sort((a,b)=>b.perMin-a.perMin||b.msgK-a.msgK);
 }
 
 // Vue d'ensemble : l'ancien code calcule, React affiche (événement « legacy:overview », voir app/src/legacy/bridge.ts).
 function renderOverview(q){
   const users=usersBy(q.pres,p=>p.c),allU=new Set(q.pres.map(p=>p.u)),now=Date.now();
-  const msgs=q.mins.reduce((s,m)=>s+m.m,0);const {multi,flows}=flowsOf(q.pres);
+  const msgs=q.mins.reduce((s,m)=>s+m.m,0);const {multi,flows}=flowsOf(q.pres,q.sw);
   const subs=q.events.filter(e=>e.type==='sub'||e.type==='gift').reduce((s,e)=>s+e.n,0);
   const tr=msgTrend(q.mins);
   const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'toutes chaînes, ont écrit au moins un message'},
@@ -1953,7 +1902,7 @@ function renderOverview(q){
       viewers:I.live?I.v:null,uniq:U?U.size:0,msgs:q.mins.filter(m=>m.c===c).reduce((s,m)=>s+m.m,0),
       recent:liveData()?q.mins.filter(m=>m.c===c&&m.t>=now-5*MIN).reduce((s,m)=>s+m.m,0)/5:null,
       wrote:I.live&&I.v&&liveU.has(c)?liveU.get(c).size/liveAvgV(c):null}});
-  const part=!hasApi()?null:shown().map(c=>({c,p:participation(q,c),k:kindsOf(q,[c])})).filter(x=>x.p&&x.p.liveMin>=10).sort((a,b)=>b.p.perMin-a.p.perMin)
+  const part=!hasApi()?null:shown().map(c=>({c,p:participationOnce(q,c),k:kindsOf(q,[c])})).filter(x=>x.p&&x.p.liveMin>=10).sort((a,b)=>b.p.perMin-a.p.perMin)
     .map(({c,p,k})=>{const n=ktot(k);return {...who(c),limited:chatLimitLbl(c,q.t0),avgV:p.avgV,perMin:p.perMin,msgK:p.msgK,uniq:p.uniq,react:n?ksum(k,REACT)/n:null,inter:n?ksum(k,INTER)/n:null}});
   const msgBy=new Map();for(const m of q.mins)msgBy.set(m.c,(msgBy.get(m.c)||0)+m.m);
   const withMsg=shown().filter(c=>msgBy.get(c)>0);
@@ -2051,7 +2000,7 @@ function raidRecommendations(q,pres,shown,c,info){
   if(!info[c]||!info[c].live)return null;
 
   // Obtenir les flux organiques (switches A→B) pour la période
-  const {flows} = flowsOf(q.pres);
+  const {flows} = flowsOf(q.pres,q.sw);
 
   // Construire un index des flux organiques : "A>B" -> {n, gaps}
   const flowIndex = new Map();
@@ -2238,15 +2187,16 @@ const OV_OFTEN=3; // « changent souvent » : au moins 3 changements sur la pér
 const OV_FILTERS=[['all','Tous'],['multi','Sur 2 chaînes ou plus'],['move','Changent de stream'],['often','Changent souvent']];
 function moversOf(pres,sw=[]){
   const by=new Map();for(const p of pres){let a=by.get(p.u);if(!a)by.set(p.u,a=[]);a.push(p)}
-  const T=new Map(),slot=(u,d,a,b)=>{const k=u+'|'+d+'|'+a+'|'+b;let o=T.get(k);if(!o)T.set(k,o={u,a,b,est:0,ex:0});return o};
-  for(const [u,arr] of by){arr.sort((a,b)=>a.f-b.f); // estimation (règle de l'onglet Flux)
-    for(let i=1;i<arr.length;i++){const a=arr[i-1],b=arr[i];if(a.c===b.c)continue;const gap=b.f-a.l;if(gap<-10*MIN||gap>3*HOUR)continue;slot(u,dayKey(b.f),a.c,b.c).est++}}
-  for(const s of sw)slot(s.u,s.d,s.a,s.b).ex+=s.n; // compte exact du collecteur
+  const T=new Map(),slot=(u,d,a,b)=>{const k=u+'|'+d+'|'+a+'|'+b;let o=T.get(k);if(!o)T.set(k,o={u,a,b,n:0});return o};
+  if(sw.length)for(const s of sw)slot(s.u,s.d,s.a,s.b).n+=s.n; // compte du collecteur, la même source que l'onglet Flux
+  else for(const [u,arr] of by){arr.sort((a,b)=>a.f-b.f); // sans lui : estimation d'après le premier et le dernier message
+    for(let i=1;i<arr.length;i++){const a=arr[i-1],b=arr[i];if(a.c===b.c)continue;const gap=b.f-a.l;if(gap<-10*MIN||gap>3*HOUR)continue;slot(u,dayKey(b.f),a.c,b.c).n++}}
+  for(const arr of by.values())arr.sort((a,b)=>a.f-b.f); // les parcours se lisent dans l'ordre
   const V=new Map();for(const [u,arr] of by)V.set(u,{u,chans:new Set(arr.map(p=>p.c)),moves:0,rows:arr});
   const F=new Map();
-  for(const o of T.values()){const n=Math.max(o.est,o.ex),v=V.get(o.u);if(!n)continue;if(v)v.moves+=n;
-    const fk=o.a+'>'+o.b;let x=F.get(fk);if(!x)F.set(fk,x={a:o.a,b:o.b,n:0});x.n+=n}
-  return {V,flows:[...F.values()].sort((x,y)=>y.n-x.n)}}
+  for(const o of T.values()){const v=V.get(o.u);if(v)v.moves+=o.n;
+    const fk=o.a+'>'+o.b;let x=F.get(fk);if(!x)F.set(fk,x={a:o.a,b:o.b,users:new Set()});x.users.add(o.u)}
+  return {V,flows:[...F.values()].map(x=>({a:x.a,b:x.b,n:x.users.size})).sort((x,y)=>y.n-x.n)}}
 const ovKeep=(v,f)=>f==='multi'?v.chans.size>=2:f==='move'?v.moves>=1:f==='often'?v.moves>=OV_OFTEN:true;
 // Onglet « Chevauchement » : l'ancien code calcule, React affiche (événement « legacy:overlap », voir app/src/legacy/bridge.ts).
 // Le filtre de viewers est choisi dans React et passe par setOverlapFilter() (gardé dans ce navigateur).
@@ -2290,50 +2240,26 @@ const OV_TIPS={all:'Ont écrit au moins un message sur la période',multi:'Ont �
   move:'Ont changé de stream au moins une fois (message suivant chez une autre chaîne, moins de 3 h après)',often:`Ont changé de stream ${OV_OFTEN} fois ou plus`};
 
 // Onglet « Flux » : l'ancien code calcule, React affiche (événement « legacy:flows », voir app/src/legacy/bridge.ts).
-// Support du switch type flux : "all", "organic", "raid".
-function renderFlows(q, flowType = "all"){
+function renderFlows(q){
   $('t-flows').innerHTML='';
-  const {flows}=flowsOf(q.pres);
+  const {flows}=flowsOf(q.pres,q.sw);
   const bal=new Map();for(const f of flows){bal.set(f.a,(bal.get(f.a)||{in:0,out:0}));bal.set(f.b,(bal.get(f.b)||{in:0,out:0}));bal.get(f.a).out+=f.n;bal.get(f.b).in+=f.n}
   const raids=q.events.filter(e=>e.type==='raid').sort((a,b)=>b.t-a.t);
   loadAvatars(raids.slice(0,50).map(r=>String(r.from||'').toLowerCase()).filter(Boolean));
   const gaps=flows.flatMap(f=>f.gaps);
-
-  // Identifier les flux de raid : ceux entre des chaînes ayant eu un raid
-  const raidPairs = new Set(raids.map(r => `${String(r.from||'').toLowerCase()}|${r.c}`));
-
-  // Séparer les flux en organiques et raid (les deux listes sont toujours calculées)
-  const flowsOrganic = flows.filter(f => !raidPairs.has(`${f.a}|${f.b}`));
-  const flowsRaid = flows.filter(f => raidPairs.has(`${f.a}|${f.b}`));
-
-  // Calculer les totaux par type
-  const totalOrganic = flowsOrganic.reduce((s,f)=>s+f.n,0);
-  const totalRaid = flowsRaid.reduce((s,f)=>s+f.n,0);
-  const totalAll = totalOrganic + totalRaid;
-
-  // Métrics séparés
-  const organicGaps = flowsOrganic.flatMap(f=>f.gaps);
-  const raidGaps = flowsRaid.flatMap(f=>f.gaps);
-
-  // Flux à afficher selon le type sélectionné
-  const displayFlows = flowType === "organic" ? flowsOrganic : flowType === "raid" ? flowsRaid : flows;
+  // On ne sait pas quel passage vient d'un raid : le trajet qui en a connu un sur la période porte seulement un signe.
+  const raidPairs=new Set(raids.map(r=>`${String(r.from||'').toLowerCase()}|${r.c}`));
 
   const detail={
-    total:totalAll, routes:flows.length, medianGap:gaps.length?dur(median(gaps)):'',
+    total:flows.reduce((s,f)=>s+f.n,0), routes:flows.length, medianGap:gaps.length?dur(median(gaps)):'',
     raidCount:raids.length,raidViewers:raids.reduce((s,r)=>s+(r.n||0),0),
-    totalOrganic, totalRaid,
-    gapOrganic: organicGaps.length?dur(median(organicGaps)):'',
-    gapRaid: raidGaps.length?dur(median(raidGaps)):'',
-    flows:displayFlows.slice(0,20).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:dur(median(f.gaps)), type: raidPairs.has(`${f.a}|${f.b}`) ? 'raid' : 'organic'})),
-    flowsOrganic:flowsOrganic.slice(0,20).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:dur(median(f.gaps))})),
-    flowsRaid:flowsRaid.slice(0,20).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:dur(median(f.gaps))})),
+    flows:flows.slice(0,20).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:f.gaps.length?dur(median(f.gaps)):'',raid:raidPairs.has(`${f.a}|${f.b}`)})),
     balance:[...bal].map(([c,o])=>({...who(c),in:o.in,out:o.out,net:o.in-o.out})).sort((a,b)=>b.net-a.net),
-    raids:raids.slice(0,50).map(r=>({when:when(r.t),from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0})),
-    flowType};
+    raids:raids.slice(0,50).map(r=>({when:when(r.t),from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0}))};
   // Passages par jour (chantier C1) : champ « byDay » ajouté à l'événement. Le Sankey reçoit d'abord, tout de suite et sans attendre, les
   // mêmes données qu'avant ; la base est interrogée à part (résultat gardé 10 min : le rollup ne change que la nuit) et l'événement est
   // réémis avec byDay à l'arrivée. Échec ou base pas à jour : pas de byDay, aucune erreur visible.
-  const fd0=dayKey(q.t0||Date.now()-89*DAY),fd1=dayKey(Date.now()),fk=fd0+'|'+fd1,fc=flowsDayCache;
+  const fd0=dayKey(periodStart()||Date.now()-89*DAY),fd1=dayKey(Date.now()),fk=fd0+'|'+fd1,fc=flowsDayCache;
   const fresh=fc.key===fk&&Date.now()-fc.at<(fc.data?600000:120000);
   if(fresh&&fc.data)detail.byDay=flowsDayRows(fc.data);
   fc.last={fk,detail};
@@ -2429,43 +2355,15 @@ function statusOf(){
 // Période affichée : son nom et la plage réelle couverte par les relevés (« Tout » commence au premier jour relevé, pas à une
 // date inventée ; 7 ou 30 jours commencent plus tard si les relevés sont plus récents). Envoyée à React à chaque rendu.
 const PERIOD_LBL={all:'Tout',today:'Aujourd\'hui','7d':'7 jours','30d':'30 jours'};
-// Cache simple pour les heures : recalculer seulement si la période change
-let lastHoursCalc={periodId:'',hours:0};
-
-/**
- * Calcule les heures d'écoute pour la période donnée.
- * Optimisé : utilise cache si la période n'a pas changé.
- */
-function getPeriodHours(t0){
-  const periodId=period+(t0?'':'_')+String(t0);
-  if(lastHoursCalc.periodId===periodId){
-    return lastHoursCalc.hours;
-  }
-  let totalMs=0;
-  if(t0){
-    for(const p of Object.values(DB.presence)){
-      if(p.l>t0){
-        const start=Math.max(p.f,t0);
-        if(p.l>start)totalMs+=p.l-start;
-      }
-    }
-  }
-  const hours=Math.floor(totalMs/HOUR);
-  lastHoursCalc={periodId,hours};
-  return hours;
-}
-
 function periodInfo(){
-  const today=dayKey(Date.now()),t0=periodStart();let first='';
+  const today=dayKey(Date.now()),t0=dataStart();let first='';
   for(const k in DB.presence){const d=DB.presence[k].d;if(d&&(!first||d<first))first=d}
   const dm=d=>new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}),from0=t0?dayKey(t0):'';
   let range;
   if(!first)range='Pas encore de relevé';
   else{const from=from0&&from0>first?from0:first,days=Math.round((Date.parse(today)-Date.parse(from))/DAY)+1;
     range=period==='today'||days<=1?`Aujourd\'hui, ${dm(today)}`:`Du ${dm(from)} au ${dm(today)} (${days} jours)`}
-  // Calculer les heures d'écoute pour la période actuelle (avec cache)
-  const periodHours=getPeriodHours(t0);
-  return {key:period,label:PERIOD_LBL[period]||'',range,show:tab!=='settings'&&tab!=='map',hours:periodHours>0?periodHours:undefined}}
+  return {key:period,label:PERIOD_LBL[period]||'',range,show:tab!=='settings'&&tab!=='map'}}
 function render(){
   loadAvatars();buildLangSeg();
   pushStatus();

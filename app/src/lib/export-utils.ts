@@ -83,14 +83,13 @@ ${privacyFooter}`
   return printReport("Rapport Twitch Overlap", body)
 }
 
-/** CSV des flux : chaque trajet avec son type (organique / raid), puis les raids reçus. */
+/** CSV des flux : chaque trajet (et s'il a connu un raid), puis les raids reçus. */
 export function flowsCsv(f: FlowsData, period: string) {
-  const raidKeys = new Set(f.flowsRaid.map((x) => x.a.c + ">" + x.b.c))
   downloadCsv("flux-viewers", [
     ["Période", period],
     [],
-    ["Source", "Cible", "Personnes", "Délai médian", "Type"],
-    ...f.flows.map((x) => [x.a.c, x.b.c, x.n, x.gap, raidKeys.has(x.a.c + ">" + x.b.c) ? "raid" : "organique"]),
+    ["Source", "Cible", "Personnes", "Délai médian", "Raid sur le trajet"],
+    ...f.flows.map((x) => [x.a.c, x.b.c, x.n, x.gap, x.raid ? "oui" : ""]),
     [],
     ["Raids reçus : quand", "De", "Vers", "Viewers"],
     ...f.raids.map((r) => [r.when, r.from?.name ?? "", r.to.c, r.n]),

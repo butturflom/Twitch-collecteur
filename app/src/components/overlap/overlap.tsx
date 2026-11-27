@@ -1,6 +1,6 @@
 // Onglet « Chevauchement », en React. Les chiffres viennent de l'ancien code (événement legacy:overlap) ;
 // le filtre de viewers passe par setOverlapFilter(), qui recalcule tout l'onglet.
-import { ArrowLeftRight, ChevronRight, ExternalLink } from "lucide-react"
+import { ChevronRight, ExternalLink } from "lucide-react"
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { ChannelCell, DataTable, Empty, MeterList, Section, heat, muted, panel, type Col, Pending } from "@/components/overview/parts"
 import { Kpis } from "@/components/shared/blocks"
@@ -160,7 +160,7 @@ export function Overlap() {
       <FilterBar d={d} />
 
       <Section title="Viewers qui changent de stream" note={m ? (m.swStart
-        ? <>Changements comptés message par message, allers-retours compris, depuis le <b>{m.swStart}</b> (collecteur 1.5). Avant, ils sont estimés à partir du premier et du dernier message de chaque journée, ce qui ne voit pas les va-et-vient d'une même soirée.</>
+        ? <>Changements comptés message par message, allers-retours compris, depuis le <b>{m.swStart}</b> (collecteur 1.5). Même source que l'onglet Flux.</>
         : "Pour l'instant, les changements sont estimés à partir du premier et du dernier message de chaque journée : les va-et-vient d'une même soirée ne sont pas vus. Le collecteur 1.5 les compte message par message.") : undefined}>
         {!m ? (
           <Empty>Personne n'a encore changé de stream sur cette période : il faut que des chaînes suivies soient en live en même temps, ou à la suite.</Empty>
@@ -197,17 +197,17 @@ export function Overlap() {
       </Section>
 
       <div className="mt-9 grid gap-x-4 gap-y-9 lg:grid-cols-2 [&>*]:mt-0 [&>*]:min-w-0">
-        <Section title="Paires les plus proches" note="Indice de Jaccard = viewers actifs communs ÷ viewers actifs uniques des deux chaînes réunies. Il ne dépend pas de la taille des chaînes, donc il compare mieux un petit et un gros streamer que le pourcentage.">
+        <Section title="Paires les plus proches" note="Pourcentage : part des viewers actifs de la première chaîne (la plus petite des deux) qui écrivent aussi chez la seconde. Classées par ressemblance (communs ÷ viewers des deux réunies).">
           {d.pairs.length ? (
             <div className={cn(panel, "px-4 py-2")}>
               <MeterList
                 wide
                 rows={d.pairs.map((p) => ({
-                  key: p.a.c + p.b.c, v: p.j, right: <>{pct(p.j)} · {fmt(p.n)} en commun</>,
+                  key: p.a.c + p.b.c, v: p.share, right: <>{pct(p.share)} · {fmt(p.n)} en commun</>,
                   label: (
                     <span className="inline-flex min-w-0 items-center gap-1.5">
                       <ChannelAvatar {...p.a} /><span className="truncate">{p.a.c}</span>
-                      <ArrowLeftRight className="size-3 shrink-0 text-dusk" />
+                      <ChevronRight className="size-3 shrink-0 text-dusk" />
                       <ChannelAvatar {...p.b} /><span className="truncate">{p.b.c}</span>
                     </span>
                   ),

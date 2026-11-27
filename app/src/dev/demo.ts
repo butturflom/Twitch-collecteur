@@ -44,9 +44,9 @@ function demo(): OverviewData {
           pairMax: 25,
           pairMin: 10,
           pairs: [
-            { a: who("etoiles", "#4d8dff"), b: who("xari", "#ff7a45"), n: 1304, j: 0.14 },
-            { a: who("etoiles", "#4d8dff"), b: who("gotaga", "#2fbf71"), n: 745, j: 0.07 },
-            { a: who("xari", "#ff7a45"), b: who("kamet0", "#f5b83d"), n: 290, j: 0.06 },
+            { a: who("xari", "#ff7a45"), b: who("etoiles", "#4d8dff"), n: 1304, share: 0.21, j: 0.14 },
+            { a: who("gotaga", "#2fbf71"), b: who("etoiles", "#4d8dff"), n: 745, share: 0.13, j: 0.07 },
+            { a: who("kamet0", "#f5b83d"), b: who("xari", "#ff7a45"), n: 290, share: 0.11, j: 0.06 },
           ],
           flows: [
             { from: who("xari", "#ff7a45"), to: who("etoiles", "#4d8dff"), n: 612, gap: "8 min" },
@@ -86,12 +86,16 @@ function demo(): OverviewData {
     chartOf: { shown: 4, total: 4 },
     // croissance des followers : kamet0 a une petite base (60 followers au départ, +179 000 % sans le seuil) et doit afficher « — »
     topStreamers: [
-      { ...who("etoiles", "#4d8dff"), viewers: 13900, peakViewers: 16204, hours: 21.5, growth: 0.4, growthBase: 1030000, avgMsgPerMin: 61, activeDays: 3 },
-      { ...who("gotaga", "#2fbf71"), viewers: 9800, peakViewers: 12100, hours: 14.2, growth: 0.1, growthBase: 4120000, avgMsgPerMin: 38, activeDays: 3 },
-      { ...who("xari", "#ff7a45"), viewers: 6100, peakViewers: 8300, hours: 17.8, growth: 1.9, growthBase: 512000, avgMsgPerMin: 70, activeDays: 3 },
-      { ...who("kamet0", "#f5b83d"), viewers: 2232, peakViewers: 3100, hours: 6.1, growth: 179000, growthBase: 60, avgMsgPerMin: 22, activeDays: 2 },
+      { ...who("etoiles", "#4d8dff"), viewers: 13900, peakViewers: 16204, hours: 21.5, growth: 0.4, growthBase: 1030000, activeDays: 3 },
+      { ...who("gotaga", "#2fbf71"), viewers: 9800, peakViewers: 12100, hours: 14.2, growth: 0.1, growthBase: 4120000, activeDays: 3 },
+      { ...who("xari", "#ff7a45"), viewers: 6100, peakViewers: 8300, hours: 17.8, growth: 1.9, growthBase: 512000, activeDays: 3 },
+      { ...who("kamet0", "#f5b83d"), viewers: 2232, peakViewers: 3100, hours: 6.1, growth: 179000, growthBase: 60, activeDays: 2 },
     ] as TopStreamerRow[],
-    investedCommunities: [] as InvestedCommunityRow[],
+    investedCommunities: [
+      { ...who("kamet0", "#f5b83d"), viewers: 2232, perMin: 0.031, msgK: 48.2, subs: 96, subsK: 43, bits: 1200, raidsReceived: 1, raidsViewers: 4120 },
+      { ...who("xari", "#ff7a45"), viewers: 6100, perMin: 0.018, msgK: 27.5, subs: 210, subsK: 34.4, bits: 5400, raidsReceived: 2, raidsViewers: 980 },
+      { ...who("etoiles", "#4d8dff"), viewers: 13900, perMin: 0.007, msgK: 11.3, subs: 402, subsK: 28.9, bits: 9100, raidsReceived: 0, raidsViewers: 0 },
+    ] as InvestedCommunityRow[],
   }
 }
 
@@ -165,9 +169,9 @@ function channelDemo(c: string): ChannelData {
       : { alsoBase: 6210, also: CH.filter(([x]) => x !== c).map(([x, col], k) => ({ ...who(x, col), share: [0.21, 0.12, 0.05][k], n: [1304, 745, 310][k] })) }),
     games: [{ g: "Teamfight Tactics", hours: 21.5 }, { g: "Just Chatting", hours: 8.2 }, { g: "League of Legends", hours: 3.1 }],
     raids: live ? [
-      { to: who(CH[1][0], CH[1][1]), name: CH[1][0], live: true, score: 87, viewers: 1304, share: 0.21 },
-      { to: who(CH[2][0], CH[2][1]), name: CH[2][0], live: false, score: 64, viewers: 745, share: 0.12 },
-      { to: who(CH[3][0], CH[3][1]), name: CH[3][0], live: false, score: 42, viewers: 310, share: 0.05 },
+      { to: who(CH[1][0], CH[1][1]), name: CH[1][0], live: true, score: 87, viewers: 1304, share: 21, organicAB: 612 },
+      { to: who(CH[2][0], CH[2][1]), name: CH[2][0], live: false, score: 64, viewers: 745, share: 12, organicAB: 288 },
+      { to: who(CH[3][0], CH[3][1]), name: CH[3][0], live: false, score: 42, viewers: 310, share: 5, organicAB: 92 },
     ] : null,
     msgChart: spec([{ name: c, c, color, pts: series(i, 60, now) }], { unit: " msg/min" }),
     viewerChart: spec([{ name: c, c, color, pts: series(i, 6000, now) }], { unit: " viewers" }),
@@ -249,7 +253,7 @@ function overlapDemo(): OverlapData {
       ],
     },
     matrix: { rows: W.map((w, i) => ({ k: w.c, size: sizes[i], who: w, cells: W.map((_, j) => (i === j ? null : { r: R[i][j], n: Math.round(sizes[i] * R[i][j]) })) })) },
-    pairs: [[0, 1, 0.14, 1304], [0, 2, 0.07, 745], [1, 3, 0.06, 290], [0, 3, 0.04, 310], [2, 3, 0.03, 240], [1, 2, 0.03, 370]].map(([a, b, j, n]) => ({ a: W[a], b: W[b], j, n })),
+    pairs: [[0, 1, 0.14, 1304], [0, 2, 0.07, 745], [1, 3, 0.06, 290], [0, 3, 0.04, 310], [2, 3, 0.03, 240], [1, 2, 0.03, 370]].map(([a, b, j, n]) => ({ a: W[a], b: W[b], j, share: j * 1.6, n })),
     dist: [{ k: 1, v: 15161, share: 0.823 }, { k: 2, v: 2410, share: 0.131 }, { k: 3, v: 702, share: 0.038 }, { k: 4, v: 159, share: 0.009 }],
   }
 }
@@ -261,14 +265,8 @@ export function flowsDemo(): FlowsData {
   // Autres flux sont organiques
   return {
     total: 2394, routes: 9, medianGap: "12 min", raidCount: 3, raidViewers: 5310,
-    totalOrganic: 1274, totalRaid: 1120,
-    gapOrganic: "14 min", gapRaid: "8 min",
     flows: [[1, 0, 612, "8 min"], [0, 1, 540, "11 min"], [2, 3, 310, "25 min"], [0, 2, 288, "14 min"], [3, 1, 204, "6 min"], [1, 2, 160, "31 min"], [2, 0, 140, "18 min"], [3, 0, 92, "9 min"], [1, 3, 48, "42 min"]]
-      .map(([a, b, n, gap]) => ({ a: W[a as number], b: W[b as number], n: n as number, gap: gap as string })),
-    flowsOrganic: [[0, 2, 288, "14 min"], [1, 2, 160, "31 min"], [2, 0, 140, "18 min"], [3, 0, 92, "9 min"], [1, 3, 48, "42 min"]]
-      .map(([a, b, n, gap]) => ({ a: W[a as number], b: W[b as number], n: n as number, gap: gap as string })),
-    flowsRaid: [[1, 0, 612, "8 min"], [3, 1, 204, "6 min"]]
-      .map(([a, b, n, gap]) => ({ a: W[a as number], b: W[b as number], n: n as number, gap: gap as string })),
+      .map(([a, b, n, gap]) => ({ a: W[a as number], b: W[b as number], n: n as number, gap: gap as string, raid: (a === 1 && b === 0) || (a === 3 && b === 1) })),
     balance: [{ ...W[3], in: 358, out: 296 }, { ...W[0], in: 1104, out: 1068 }, { ...W[1], in: 744, out: 820 }, { ...W[2], in: 448, out: 450 }]
       .map((r) => ({ ...r, net: r.in - r.out })).sort((a, b) => b.net - a.net),
     raids: [
@@ -276,7 +274,6 @@ export function flowsDemo(): FlowsData {
       { when: "mer. 19 nov. 22h31", from: { ...W[3], name: "Kamet0" }, to: W[1], n: 980 },
       { when: "mar. 18 nov. 01h12", from: null, to: W[2], n: 210 },
     ],
-    flowType: "all",
   }
 }
 
@@ -284,7 +281,7 @@ export function flowsDemo(): FlowsData {
 // qui varie d'un jour à l'autre ; la paire « raid » (Etoiles > Xari) porte surtout des raids, l'une des autres un peu.
 function byDayDemo(nDays: number): NonNullable<FlowsData["byDay"]> {
   const P = flowsDemo()
-  const raid = new Set(P.flowsRaid.map((f) => f.a.c + ">" + f.b.c))
+  const raid = new Set(P.flows.filter((f) => f.raid).map((f) => f.a.c + ">" + f.b.c))
   const out: NonNullable<FlowsData["byDay"]> = []
   for (let k = nDays - 1; k >= 0; k--) {
     const dt = new Date(Date.now() - k * 86400000)

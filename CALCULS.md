@@ -4,18 +4,21 @@ Audit R1 du 27/11/2026 : chaque chiffre, sa formule, sa source, sa limite. Étab
 
 **Non audité** : rapports PDF et CSV (`export-utils.ts`, `report.ts`, `scripts/rapport-mensuel.mjs`), graphiques d'historique (`history.tsx`), signaux animés de la Carte, mode « Ce navigateur », panneau d'état.
 
-## 1. À corriger, par gravité
+## 1. Problèmes relevés et leur état
 
-| N° | Problème | Mesure du 27/11 | Correction proposée |
+Corrigés dans le tableau de bord 2.0.5 (27/11), sauf mention.
+
+| N° | Problème | Mesure du 27/11 | État |
 |---|---|---|---|
-| 1 | **Heures de stream** (Classements → Top des chaînes, « Heures cumulées ») : écart entre le premier et le dernier relevé en live, pauses entre deux lives comprises | 3 463 h affichables contre 1 170 h réelles, environ ×3 | Compter les tranches de 2 min en live, comme « Par jeu » et la participation |
-| 2 | **Une même période, des jours différents** : « Tout » prend tout ce qui reste de chaque table, et les durées de conservation diffèrent. Le titre n'annonce que les jours des présences | Viewers actifs : depuis le 26/11. Relevés et événements : depuis le 24/11. Messages : depuis le 22/11 | « Aujourd'hui » par défaut règle le cas courant. Pour « Tout », borner à la fenêtre commune |
-| 3 | **Raids comptés comme des « interactions »** (Communautés investies) : viewers apportés par raid + subs + subs offerts, classement trié sur cette somme. Visible depuis la réparation des raids (2.0.4) | Sur 24 h : 29 075 viewers de raid contre 11 429 subs, soit 72 % du total | Sortir les raids de la somme ; les garder dans leur colonne |
-| 4 | **Trois comptages des migrations** : Flux et Recoupements estiment d'après le premier et le dernier message ; Chevauchement prend le plus grand de l'estimation et du compte du collecteur ; les rollups prennent le compte du collecteur | 26 et 27/11 : 5 109 passages estimés, 7 141 comptés par le collecteur | Une seule source : la table `switches`. L'estimation ne sert qu'au délai médian |
-| 5 | **Part « raid » des migrations** : Flux classe tout un trajet « raidé » dès qu'il a connu un raid sur la période ; les rollups prennent le nombre de viewers du raid (tous, pas seulement actifs), doublons du 23 au 25/11 compris | Non mesurable : on ne sait pas quel passage vient d'un raid | Supprimer la répartition en nombres ; marquer d'un signe les trajets qui ont eu un raid |
-| 6 | **« Part en commun » a quatre définitions** : communs ÷ réunion (Recoupements, paires), communs ÷ la plus petite (épaisseur des liens de la Carte), communs ÷ la chaîne de la ligne (matrice), communs ÷ la chaîne choisie (fiche, « écrivent aussi chez ») | | Garder « part des viewers actifs de A vus chez B » ; communs ÷ réunion seulement pour classer, sous le nom « ressemblance » |
-| 7 | **Fidélité du chat** : un viewer parti vers deux chaînes compte deux départs ; un départ voulu (raid lancé par le streamer) compte aussi | | Compter les partants distincts dans le rollup (`schema.sql` à rejouer) ; le dire pour les raids |
-| 8 | **Recommandations de raid** : les passages « organiques » comprennent ceux qui suivent un raid ; le score est relatif, la première a toujours 100 | | Renommer, ou afficher les passages au lieu du score |
+| 1 | Heures de stream : pauses entre deux lives comprises | 3 463 h contre 1 170 h réelles | ✅ tranches de 2 min en live |
+| 2 | Sous un même titre, des jours différents selon la table | actifs depuis le 26/11, messages depuis le 22/11 | ✅ « Tout », 7 et 30 jours bornés au début commun des présences, minutes et relevés |
+| 3 | Viewers de raid additionnés aux subs dans « Communautés investies » | 72 % du total sur 24 h | ✅ nouveau classement : part qui écrit chaque minute, puis messages pour 1 000 viewers |
+| 4 | Trois comptages des migrations | 5 109 estimés contre 7 141 comptés | ✅ source unique `switches` ; les rollups l'utilisaient déjà |
+| 5 | Part « raid » des migrations en nombres | | ✅ plus de nombre, un signe sur le trajet. Les rollups gardent leurs colonnes, non affichées |
+| 6 | Quatre définitions de « part en commun » | | ✅ « part des viewers actifs de A vus chez B », A étant la plus petite des deux ; ressemblance pour classer |
+| 7 | Fidélité du chat : un partant vers deux chaînes compte deux fois | | ⏳ dit à l'écran. La correction demande `schema.sql` (colonne dans le rollup) : sur « oui » |
+| 8 | Recommandations de raid : score relatif, passages après raid compris | | ✅ dit à l'écran, passages affichés |
+| 9 | « N h de données » : somme des durées de tous les viewers | trouvé pendant la correction | ✅ retiré |
 
 ## 2. Hiérarchie des données
 
@@ -44,19 +47,19 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Chiffre | Formule | Source | Verdict |
 |---|---|---|---|
 | Viewers actifs uniques | empreintes distinctes, toutes chaînes | `presence` | ✅ (voir n° 2) |
-| Messages | somme des messages par minute | `minutes` | ⚠️ autre fenêtre (n° 2) |
+| Messages | somme des messages par minute | `minutes` | ✅ même fenêtre que les actifs |
 | Actifs dans 2 chats ou plus | empreintes vues sur au moins 2 chaînes | `presence` | ✅ « chaînes suivies » à dire |
 | Abonnements et subs offerts | somme | `events` | ✅ |
-| Paires les plus proches | communs ÷ réunion, 25 chaînes les plus actives, 10 communs au moins | `presence` | ⚠️ n° 6 ; pas toutes les chaînes |
-| Trajets les plus fréquents | passages estimés, 3 h au plus ; délai médian | `presence` | ❌ n° 4 |
+| Paires les plus proches | communs ÷ la plus petite ; classées par communs ÷ réunion ; 25 chaînes les plus actives, 10 communs au moins | `presence` | ✅ pas toutes les chaînes, c'est dit |
+| Trajets les plus fréquents | personnes distinctes par trajet ; délai médian estimé | `switches`, `presence` | ✅ |
 | Les chaînes : part qui écrit | actifs depuis le début du live ÷ viewers moyens du live | `presence`, `snaps` | ✅ |
 | Participation : « écrivent chaque minute » | auteurs par minute ÷ viewers moyens | `minutes`, `snaps` | ✅ pendant les lives seulement |
 | Participation : « actifs ÷ viewers » | actifs de la période ÷ viewers moyens | `presence`, `snaps` | ⚠️ peut dépasser 100 % sur plusieurs jours |
 | Viewers totaux (Top) | somme des moyennes par chaîne | `snaps` | ⚠️ ni simultané ni unique ; à retirer |
-| Heures, heures cumulées | dernier relevé moins premier | `snaps` | ❌ n° 1 |
+| Heures, heures cumulées | tranches de 2 min en live | `snaps` | ✅ |
 | Croissance des followers | dernier contre premier, 20 h d'écart au moins | `chan_meta` | ✅ |
-| Communautés investies : interactions | subs + offerts + viewers de raid | `events` | ❌ n° 3 |
-| Taux d'interaction, de subs, de bits | total ÷ **pic** de viewers | `events`, `snaps` | ⚠️ le pic pénalise un moment fort ; prendre la moyenne |
+| Communautés investies | part qui écrit chaque minute, puis messages pour 1 000 viewers ; au moins 10 min de live et 50 viewers en moyenne | `minutes`, `snaps` | ✅ |
+| Subs pour 1 000 viewers | subs de la période ÷ viewers moyens | `events`, `snaps` | ⚠️ grandit avec la durée de la période |
 | Rythme des chaînes | actifs par jour, 7 derniers jours contre les précédents ; écart de 15 % et hors variations | rollups | ✅ à partir de 14 journées |
 | Historique du réseau : audience | somme des moyennes des chaînes du jour | rollups | ⚠️ chaînes en live à des heures différentes |
 
@@ -64,12 +67,12 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Chiffre | Formule | Verdict |
 |---|---|---|
 | Sur combien de chaînes écrivent les gens (« 96 % ») | chaînes distinctes par empreinte | ✅ voir ci-dessous |
-| Matrice | communs ÷ actifs de la ligne | ✅ n° 6 |
-| Changent de stream, souvent (3 fois ou plus) | plus grand de l'estimation et du compte exact | ⚠️ n° 4 |
-| Migrations, bilan par chaîne | passages estimés | ❌ n° 4 |
-| Sans raid, trajets raidés | trajet entier classé | ❌ n° 5 |
+| Matrice | communs ÷ actifs de la ligne | ✅ |
+| Changent de stream, souvent (3 fois ou plus) | compte du collecteur (`switches`) | ✅ |
+| Migrations, bilan par chaîne | personnes distinctes, une fois par trajet | ✅ |
 | Raids reçus, viewers apportés | table des raids, doublons écartés | ✅ chaînes suivies seulement |
-| Carte des migrations (par jour) | rollup : passages, viewers distincts du jour | ✅ sauf la part raid (n° 5) |
+| Carte des migrations (par jour) | rollup : viewers distincts du jour | ✅ |
+| Historique « Où vont », « D'où viennent » | somme des passages des rollups | ⚠️ des passages, pas des personnes : c'est dit à l'écran |
 
 **Le 96 %** : en base le 27/11, 95,4 % des viewers actifs n'ont écrit que chez une chaîne suivie. Mais 38 % n'ont écrit qu'un seul message, et ne pouvaient donc pas être sur deux chaînes. Parmi ceux qui ont écrit au moins 3 messages : 91 %. Libellé conseillé : « 9 viewers actifs sur 10 n'écrivent que chez une seule de tes chaînes ».
 
@@ -84,18 +87,16 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Avant et après un changement de jeu | 20 min de chaque côté | ⚠️ messages divisés par 20 même si le live vient de commencer |
 | Son univers | uniques sur 30 jours (esquisses) | ✅ |
 | Fidélité du chat | 100 × (1 − partants ÷ actifs), 200 actifs au moins | ⚠️ n° 7 |
-| Recommandations de raid | passages A→B × (1 + retour ÷ actifs de A) | ⚠️ n° 8 |
+| Recommandations de raid | personnes A→B × (1 + retour ÷ actifs de A), relatif à la première | ✅ dit à l'écran |
 | Par jeu : viewers moyens | moyenne par chaîne et par relevé | ⚠️ pas l'audience de la catégorie |
 | Types de messages, ambiance | règles, tranches de 10 min | ⚠️ précision non mesurée |
 | Moments à clipper | au moins 2,5 fois la médiane des 20 min d'avant, 10 messages au moins | ✅ |
 | Net Reach, cannibalisation (Rosters) | réunion ; 1 − réunion ÷ somme | ✅ |
 | Comparaison : viewers moyens | moyenne des moyennes quotidiennes | ⚠️ un jour court pèse autant qu'un long |
-| Carte : taille, liens | actifs de la période ; liens choisis par ressemblance, épaisseur = communs ÷ la plus petite | ⚠️ n° 6 ; passe au direct avec le chantier « Carte en direct » |
+| Carte : taille, liens | actifs de la période ; liens choisis par ressemblance, épaisseur = communs ÷ la plus petite | ✅ passe au direct avec le chantier « Carte en direct » |
 
-Code mort relevé : `avgMsgPerMin` (calculé avec « 2 heures par jour actif » supposées) n'est affiché nulle part ; à supprimer.
+## 4. Décisions prises le 27/11
 
-## 4. À décider avant de corriger
-
-1. **Communautés les plus impliquées** : proposé, part des viewers qui écrivent chaque minute, puis messages pour 1 000 viewers ; subs pour 1 000 viewers à part ; plus de raids.
-2. **Part en commun** : proposé, « part des viewers actifs de A vus chez B » partout.
-3. **Part raid des migrations** : proposé, plus de chiffre, seulement un signe sur le trajet.
+1. **Communautés les plus impliquées** : part des viewers qui écrivent chaque minute, puis messages pour 1 000 viewers ; subs à part ; raids hors du classement.
+2. **Part en commun** : « part des viewers actifs de A vus chez B » partout.
+3. **Part due aux raids** : pas de chiffre, un signe sur le trajet.

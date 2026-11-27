@@ -90,7 +90,7 @@ const LEGEND = (
   <>
     <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-2 rounded-full bg-zinc-300" /><i aria-hidden className="size-3 rounded-full bg-zinc-300" />taille = viewers actifs</span>
     <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-3 rounded-full bg-[radial-gradient(circle,var(--star-core)_0_35%,var(--star-gold)_36%_60%,transparent_62%)]" />étoile = le plus de viewers actifs du système · plus près d’elle = plus de viewers en commun</span>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-[2px] w-4 rounded-full bg-map-link" />10 %<i aria-hidden className="ms-1 h-[4.5px] w-4 rounded-full bg-map-link" />50 % et plus : part de viewers en commun</span>
+    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-[2px] w-4 rounded-full bg-map-link" />10 %<i aria-hidden className="ms-1 h-[4.5px] w-4 rounded-full bg-map-link" />50 % et plus : part des viewers de la plus petite aussi vus chez l’autre</span>
   </>
 )
 const helpH = "text-xs font-medium text-dusk"
@@ -307,7 +307,7 @@ export function MapView() {
                 <Button size="sm" className="mt-2.5 h-8 text-xs shadow-action transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200" data-open={info.c}>Ouvrir dans Par chaîne</Button>
                 {info.links.length ? (
                   <>
-                    <p className="mt-3 mb-1 text-xs text-zinc-400">Part de ses viewers actifs qui écrivent aussi chez chaque voisine, puis le sens des passages</p>
+                    <p className="mt-3 mb-1 text-xs text-zinc-400">Part de ses viewers actifs qui écrivent aussi chez chaque voisine, puis le nombre de personnes passées dans chaque sens</p>
                     <MeterList
                       max={0.5}
                       thick
@@ -315,7 +315,7 @@ export function MapView() {
                         key: l.c, v: l.share, color: l.color,
                         right: <>{pct(l.share)} · {fmt(l.n)} pers.</>,
                         sub: l.out + l.inn > 0 ? (
-                          <span title={`→ : ${fmt(l.out)} passages ${deC(info.c)} vers ${l.c} · ← : ${fmt(l.inn)} ${deC(l.c)} vers ${info.c}`}>{passWords(l.c, l.out, l.inn)}</span>
+                          <span title={`→ : ${fmt(l.out)} personnes ${deC(info.c)} vers ${l.c} · ← : ${fmt(l.inn)} ${deC(l.c)} vers ${info.c}`}>{passWords(l.c, l.out, l.inn)}</span>
                         ) : undefined,
                         label: <button type="button" onClick={() => api?.select(l.c)} className="inline-flex min-h-6 items-center gap-1.5 transition-colors duration-200 hover:text-primary-soft"><ChannelAvatar {...l} />{l.c}</button>,
                       }))}

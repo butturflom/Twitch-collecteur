@@ -6,7 +6,9 @@
 
 **Review de l'utilisateur (27/11)** : points rangés, notés et planifiés dans `IDEES.md` (« Review du 27/11 »). Décisions : constellation des Recoupements centrée au-dessus du texte ; Chevauchement et Flux réunis dans un onglet « Audiences » ; la Carte doit refléter le direct ; viewers max dans « Les chaînes » et « Par chaîne » ; les 96 % à mettre en avant. Un chantier à la fois, sur « lance ».
 
-**R0 livré (27/11, tableau de bord 2.0.4)** : les raids ne s'affichaient plus en mode collecteur (lus dans `events`, écrits dans `raid_events`). Vérifié contre une fausse base ; **à confirmer par l'utilisateur sur ses données**. **R1 livré (27/11)** : audit des calculs dans `CALCULS.md`. Les plus graves : heures de stream environ ×3, jours différents sous « Tout », raids qui dominent les « interactions » (conséquence de la 2.0.4), trois comptages des migrations. Prochain : décisions de `CALCULS.md` §4, puis « R1 corr », avant la Carte en direct.
+**R0 livré (27/11, tableau de bord 2.0.4)** : les raids ne s'affichaient plus en mode collecteur (lus dans `events`, écrits dans `raid_events`). Vérifié contre une fausse base ; **à confirmer par l'utilisateur sur ses données**. **R1 livré (27/11)** : audit des calculs dans `CALCULS.md`. Les plus graves : heures de stream environ ×3, jours différents sous « Tout », raids qui dominent les « interactions » (conséquence de la 2.0.4), trois comptages des migrations. 
+
+**R1 corr livré (27/11, 2.0.5)**, décisions de `CALCULS.md` §4 acceptées par l'utilisateur. **Reste** : fidélité du chat (`schema.sql`, sur « oui ») ; à confirmer par l'utilisateur sur ses données. Prochain : Carte en direct.
 
 **Deux constats du 26/11 au soir (lecture seule en base)** : (1) la liste suivie est à **100 chaînes sur 100** ; (2) `raid_events` contient **47 doublons** sur 365 lignes (même paire, même nombre de viewers, souvent à 1 ms), entre le 23/11 et le 25/11 à 16 h 07, aucun ensuite, cause non cherchée. Le bloc des raids les écarte à l'affichage, mais la part « raid » des passages (`daily_switches_rollup`, Flux et carte des migrations) additionne les viewers des raids : elle peut être **surestimée sur ces jours-là**. Rien n'a été modifié en base.
 
@@ -108,6 +110,7 @@
 | #69 | `worktree-regle-fusions` | Règle des fusions : copies alignées sur le §4 | fusionnée le 26/11, sur demande |
 | #73 | `raids-affichage` | R0 : raids de nouveau affichés (2.0.4) ; review du 27/11 rangée dans `IDEES.md` | fusionnée le 27/11 |
 | #74 | `audit-calculs` | R1 : audit des calculs (`CALCULS.md`), documentation seule | fusionnée le 27/11 |
+| #75 | `calculs-corriges` | R1 corr : calculs corrigés (2.0.5) | fusionnée le 27/11 |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. La règle actuelle des fusions est au §4 (autorisation permanente du 26/11).
 

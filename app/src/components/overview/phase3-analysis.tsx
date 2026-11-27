@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useOverviewData, type TopStreamerRow, type InvestedCommunityRow } from "@/legacy/bridge"
 import { StatCard } from "@/components/ui/stat-card"
 import { cn } from "@/lib/utils"
-import { fmt, pct } from "@/lib/format"
+import { fmt, fmt1, pct } from "@/lib/format"
 import { quartiles } from "@/lib/universe"
 import { ChannelCell, DataTable, Section, Empty, heat, type Col } from "./parts"
 
@@ -111,16 +111,16 @@ export function Phase3Analysis() {
                 hint="Nombre de raids reçus"
               />
               <StatCard
-                label="Viewers moyens"
-                value={fmt(investedCommunities.reduce((s, r) => s + r.viewers, 0) / investedCommunities.length)}
-                hint="Viewers moyens par chaîne"
+                label="Chaînes classées"
+                value={fmt(investedCommunities.length)}
+                hint="Au moins 10 min de live et 50 viewers en moyenne"
               />
             </div>
             <InvestedCommunitiesTable rows={investedCommunities} />
           </>
         ) : (
           <Empty>
-            Pas encore assez de données pour mesurer l'investissement des communautés : il faut des événements (subs, bits, raids) sur la période.
+            Pas encore assez de données : il faut une chaîne avec au moins 10 minutes de live et 50 viewers en moyenne sur la période (API Twitch requise).
           </Empty>
         )}
         </>
@@ -152,12 +152,13 @@ function TopStreamersTable({ rows }: { rows: TopStreamerRow[] }) {
 }
 
 function InvestedCommunitiesTable({ rows }: { rows: InvestedCommunityRow[] }) {
-  const maxI = Math.max(1, ...rows.map((r) => r.interactions || 0))
+  const maxP = Math.max(0, ...rows.map((r) => r.perMin)) || 1
   const cols: Col<InvestedCommunityRow>[] = [
-    { head: "Chaîne", left: true, cell: (r) => <ChannelCell who={r} />, style: (r) => heat(((r.interactions || 0) / maxI) * 0.4) },
-    { head: "Viewers", cell: (r) => fmt(r.viewers) },
-    { head: "Interactions", cell: (r) => fmt(r.interactions || 0) },
-    { head: "Taux d'interaction", cell: (r) => r.interactionRate != null ? pct(r.interactionRate / 100) : "—" },
+    { head: "Chaîne", left: true, cell: (r) => <ChannelCell who={r} />, style: (r) => heat((r.perMin / maxP) * 0.4) },
+    { head: "Viewers moyens", cell: (r) => fmt(r.viewers) },
+    { head: "Écrivent chaque minute", title: "Viewers actifs différents par minute ÷ viewers : c'est l'ordre du classement", cell: (r) => pct(r.perMin) },
+    { head: "Msg/min pour 1 000 viewers", cell: (r) => fmt1(r.msgK) },
+    { head: "Subs pour 1 000 viewers", title: "Abonnements et subs offerts de la période, pour 1 000 viewers en moyenne", cell: (r) => fmt1(r.subsK) },
     { head: "Subs", cell: (r) => fmt(r.subs) },
     { head: "Bits", cell: (r) => fmt(r.bits) },
     { head: "Raids", cell: (r) => `${fmt(r.raidsReceived)} (${fmt(r.raidsViewers)} viewers)` },

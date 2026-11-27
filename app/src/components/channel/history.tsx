@@ -47,7 +47,7 @@ function Routes({ rows, note }: { rows: HistoryRoute[]; note: string }) {
       <MeterList
         rows={rows.map((r) => ({
           key: r.c, v: r.n, color: r.color,
-          right: <>{fmt(r.n)}{r.raid ? <span className="text-dusk"> · dont raids ≤ {fmt(r.raid)}</span> : null}</>,
+          right: <>{fmt(r.n)}{r.raid ? <span className="text-dusk"> · avec raid</span> : null}</>,
           label: <button type="button" data-open={r.c} className="inline-flex items-center gap-2 hover:text-primary-soft"><ChannelAvatar {...r} className="pointer-events-none" /><span className="pointer-events-none">{r.c}</span></button>,
         }))}
       />
@@ -119,7 +119,7 @@ export function History({ ch, color, chans }: { ch: string; color: string; chans
             <Section title="Où vont ses viewers" note="Total des passages sur la période. Une même personne revenue plusieurs jours compte plusieurs fois.">
               <Routes rows={st.h.out} note="Aucun départ vers une autre chaîne suivie." />
             </Section>
-            <Section title="D'où ils viennent" note="« dont raids » est une borne haute : on ne sait pas dire quels passages viennent d'un raid.">
+            <Section title="D'où ils viennent" note="« avec raid » : un raid a eu lieu sur ce trajet ; on ne sait pas quels passages en viennent.">
               <Routes rows={st.h.in} note="Aucune arrivée depuis une autre chaîne suivie." />
             </Section>
           </Two>

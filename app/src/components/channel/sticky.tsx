@@ -109,7 +109,7 @@ export function Sticky({ ch, days, chans }: { ch: string; days: 30 | 90; chans?:
       <p className="mt-2 max-w-[72ch] px-0.5 text-xs leading-relaxed text-dusk">
         {tier ? tierText(tier, ref.scope) : "Pas assez de chaînes suivies pour se comparer."}
         {tier && ref.net.med != null ? ` Médiane : ${fmt(Math.round(ref.net.med))}${peers ? `, sur ${peers.n} chaînes comparées` : ""}.` : ""}
-        {" Estimation : un viewer parti vers deux chaînes compte deux fois."}
+        {" Estimation : un viewer parti vers deux chaînes compte deux fois, et un départ qui suit un raid compte aussi."}
       </p>
     </div>
   )

@@ -47,8 +47,8 @@ export interface RecoupData {
   pairMax: number
   /** une paire n'est retenue qu'à partir de pairMin viewers actifs en commun */
   pairMin: number
-  /** les 3 paires les plus proches (indice de Jaccard j, n viewers actifs en commun) */
-  pairs: { a: Who; b: Who; n: number; j: number }[]
+  /** les 3 paires les plus proches : classées par ressemblance j (communs ÷ réunion) ; share = part des viewers de a (la plus petite) vus chez b */
+  pairs: { a: Who; b: Who; n: number; share: number; j: number }[]
   /** les 3 trajets les plus fréquents : n personnes, délai médian entre les deux chats */
   flows: { from: Who; to: Who; n: number; gap: string }[]
   /** le raid le plus récent reçu par une chaîne suivie */
@@ -62,19 +62,17 @@ export interface TopStreamerRow extends Who {
   hours: number
   growth: number | null // croissance des followers entre le premier et le dernier relevé (%)
   growthBase: number | null // followers au premier relevé : la base du pourcentage (null : pas assez de relevés)
-  avgMsgPerMin: number
   activeDays: number
 }
 
-/** Communautés Investies : taux d'interaction, redemptions, bits */
+/** Communautés les plus impliquées : classées par perMin puis msgK ; subs, bits et raids à part. */
 export interface InvestedCommunityRow extends Who {
   viewers: number
-  interactions: number | null
-  interactionRate: number | null
+  perMin: number // part des viewers qui écrivent chaque minute
+  msgK: number // messages par minute pour 1 000 viewers
   subs: number
-  subsRate: number | null
+  subsK: number // subs pour 1 000 viewers
   bits: number
-  bitsRate: number | null
   raidsReceived: number
   raidsViewers: number
 }
@@ -122,6 +120,8 @@ export interface RaidRecommendation {
   viewers: number
   /** Pourcentage des viewers actifs qui se trouvent chez la cible */
   share: number
+  /** Personnes passées de la chaîne vers la cible */
+  organicAB: number
 }
 export interface ChannelHead extends Who { langs: string[]; live: boolean | null; game: string; title: string; viewers: number | null; since: string }
 export interface ChannelData {
@@ -187,26 +187,21 @@ export interface OverlapData {
     top: { id: string; moves: number; chans: number; path: (Who & { when: string })[]; more: number; span: string }[]
   } | null
   matrix: MatrixData
-  pairs: { a: Who; b: Who; n: number; j: number }[]
+  pairs: { a: Who; b: Who; n: number; share: number; j: number }[]
   dist: { k: number; v: number; share: number }[]
 }
 
 export interface FlowRoute {
-  a: Who; b: Who; n: number; gap: string; type?: "organic" | "raid"
+  a: Who; b: Who; n: number; gap: string
+  /** un raid a eu lieu sur ce trajet pendant la période (on ne sait pas quels passages en viennent) */
+  raid?: boolean
 }
 
 export interface FlowsData {
   total: number; routes: number; medianGap: string; raidCount: number; raidViewers: number
   flows: FlowRoute[]
-  flowsOrganic: FlowRoute[]  // Flux naturels (non-raid)
-  flowsRaid: FlowRoute[]     // Flux liés aux raids
   balance: (Who & { in: number; out: number; net: number })[]
   raids: { when: string; from: (Who & { name: string }) | null; to: Who; n: number }[]
-  flowType: "all" | "organic" | "raid"  // Type de flux affiché
-  totalOrganic?: number  // Total des flux organiques
-  totalRaid?: number     // Total des flux de raid
-  gapOrganic?: string    // Délai médian des flux organiques
-  gapRaid?: string       // Délai médian des flux de raid
   /** Passages par jour et par paire (SQL flows_by_day). Absent si pas de base, base pas à jour ou erreur. Les viewers sont distincts
    *  par jour et par paire : ils ne s'additionnent pas d'un jour à l'autre. `raid` est une borne haute ; organic + raid = passages. */
   byDay?: { d: string; a: Who; b: Who; viewers: number; passages: number; organic: number; raid: number }[]
@@ -366,7 +361,7 @@ export const useChannelData = legacyStore<ChannelData | null>("legacy:channel")
 
 export const useOverviewData = legacyStore<OverviewData>("legacy:overview")
 /** La période choisie : son nom, la plage réelle couverte par les relevés, et si les filtres sont affichés (ni Réglages ni Carte). */
-export interface PeriodInfo { key: string; label: string; range: string; show: boolean; hours?: number }
+export interface PeriodInfo { key: string; label: string; range: string; show: boolean }
 export const usePeriodInfo = legacyStore<PeriodInfo>("legacy:period")
 /** Onglet actuellement affiché. */
 export const useCurrentTab = legacyStore<TabId>("legacy:tab")

@@ -33,8 +33,7 @@ function split(n: number, weights: number[]): number[] {
 function buildDays(): FlowDay[] {
   const P = flowsDemo()
   const key = (a: string, b: string) => a + ">" + b
-  const raidPairs = new Set(P.flowsRaid.map((f) => key(f.a.c, f.b.c)))
-  const orgPairs = new Set(P.flowsOrganic.map((f) => key(f.a.c, f.b.c)))
+  const raidPairs = new Set(P.flows.filter((f) => f.raid).map((f) => key(f.a.c, f.b.c)))
   const hist = new Map<string, ReturnType<typeof historyDemo>>()
   const histOf = (c: string) => hist.get(c) ?? hist.set(c, historyDemo(c, 14)).get(c)!
   const dates = histOf(P.flows[0].a.c).days.map((x) => x.d)
@@ -55,7 +54,7 @@ function buildDays(): FlowDay[] {
     const rd = isRaid ? raidDay(f.a.c, f.b.c) : -1
     const per = rd >= 0 ? dates.map((_, i) => (i === rd ? f.n : 0)) : split(f.n, histOf(f.a.c).days.map((x) => x.out))
     per.forEach((n, i) => {
-      if (n > 0) days[i].routes.push({ a: f.a, b: f.b, n, organic: isRaid ? 0 : orgPairs.has(k) ? n : null })
+      if (n > 0) days[i].routes.push({ a: f.a, b: f.b, n, raid: isRaid })
     })
   }
   return days

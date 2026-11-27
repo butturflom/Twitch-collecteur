@@ -292,3 +292,14 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à 
 - **Les raids s’affichent de nouveau** avec la source « Collecteur 24h/24 » : « Dernier raid » de la Vue d’ensemble, Flux, Par chaîne et communautés investies. Le tableau les cherchait dans la table `events`, alors que le collecteur les écrit dans `raid_events`.
 - Les raids encore en base sur 60 jours sont rechargés au premier lancement. Un même raid enregistré deux fois à moins d’une minute n’est compté qu’une fois.
 - Flux : « Organiques » et « Raids » deviennent « Sans raid » et « Trajets raidés ». Ces deux chiffres comptent des migrations, pas des viewers de raid, et un trajet qui a connu un raid sur la période y est rangé en entier.
+
+## Tableau de bord 2.0.5 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer. Détail des calculs dans `CALCULS.md`. **Plusieurs chiffres changent**, parce que les anciens étaient faux ou mélangés.
+
+- **Heures de stream** : les pauses entre deux lives ne comptent plus (environ trois fois moins en base).
+- **« Tout », 7 et 30 jours** : tous les chiffres portent sur les mêmes jours, à partir du moment où messages, viewers et viewers actifs sont tous disponibles. La mention « N h de données », qui additionnait les durées de tous les viewers, est retirée.
+- **Migrations** : une seule source, le compte du collecteur, sur toutes les pages. Un nombre = des personnes distinctes sur un trajet.
+- **Raids** : plus de part « due aux raids » en nombres ; les trajets qui ont eu un raid portent la mention « raid ». Le filtre Organique / Raids de Flux est retiré.
+- **Communautés investies** : classées par la part des viewers qui écrivent chaque minute, puis les messages pour 1 000 viewers (au moins 50 viewers en moyenne). Les raids ne sont plus additionnés aux subs.
+- **Part en commun** : partout, la part des viewers actifs de la première chaîne aussi vus chez la seconde.
