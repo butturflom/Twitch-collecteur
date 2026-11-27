@@ -382,3 +382,9 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à 
 - Cinq formes, choisies d’après le nom de la chaîne. La lumière ne suit plus l’étoile du système.
 - La Carte est plus fluide à 100 planètes (mesure sur données fictives).
 - Les photos sont maintenant téléchargées depuis Twitch pour toutes les chaînes affichées.
+
+## Tableau de bord 2.0.14 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
+
+- **Planètes plus en relief** : les reflets ne sont plus adoucis, les facettes se détachent mieux. Les photos très claires sont un peu plus blanches du côté éclairé.
