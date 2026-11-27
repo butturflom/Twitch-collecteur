@@ -107,6 +107,7 @@
 | #68 | `suivi-pr67-fusionnee` | Suivi : statut de la PR #67 | fusionnée le 26/11 |
 | #69 | `worktree-regle-fusions` | Règle des fusions : copies alignées sur le §4 | fusionnée le 26/11, sur demande |
 | #73 | `raids-affichage` | R0 : raids de nouveau affichés (2.0.4) ; review du 27/11 rangée dans `IDEES.md` | fusionnée le 27/11 |
+| #74 | `audit-calculs` | R1 : audit des calculs (`CALCULS.md`), documentation seule | fusionnée le 27/11 |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. La règle actuelle des fusions est au §4 (autorisation permanente du 26/11).
 
