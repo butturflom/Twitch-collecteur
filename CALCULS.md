@@ -64,6 +64,16 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Subs pour 1 000 viewers | subs de la période ÷ viewers moyens | `events`, `snaps` | ⚠️ grandit avec la durée de la période |
 | Rythme des chaînes | actifs par jour, 7 derniers jours contre les précédents ; écart de 15 % et hors variations | rollups | ✅ à partir de 14 journées |
 | Historique du réseau : audience | somme des moyennes des chaînes du jour | rollups | ⚠️ chaînes en live à des heures différentes |
+| Réseau : viewers actifs par jour (`actives` de `network_history`) | pseudos hachés distincts ayant écrit chez au moins une chaîne suivie ce jour-là (heure de Paris), estimés par HyperLogLog | esquisse `daily_hll`, ligne `*` | ✅ ± 2,3 % (1 écart type) ; vide sans esquisse ; aujourd'hui absent ; les jours ne s'additionnent pas ; silencieux invisibles |
+| Réseau : pic de viewers simultanés par jour (`peak`, `peakAt`) | somme des viewers de toutes les chaînes en live à chaque passage de relevés (même horodatage), puis plus grand total du jour et son heure (le premier si égalité) | `snaps` → `daily_network_rollup`, jamais purgé | ✅ voir les limites ci-dessous |
+
+**Limites du pic réseau** (calcul ajouté le 27/11, `build_daily_network_peak`) :
+- un relevé toutes les 2 min environ : un pic plus bref passe entre deux ;
+- ce sont des places de spectateur, pas des personnes : quelqu'un qui regarde deux lives compte deux fois ;
+- chaînes suivies au moment du relevé : ajouter ou retirer des chaînes rend les jours moins comparables ;
+- collecteur ou API arrêtés une partie du jour : le pic est celui des heures relevées, donc un minimum ;
+- calculé la nuit pour la veille, seulement si les relevés du jour sont encore tous en base : vide avec `joursReleves` = 1, pour la première journée de collecte, et après une coupure assez longue pour qu'il ne reste aucun relevé d'avant le jour ;
+- à l'exécution de `schema.sql`, seules les journées encore entières dans les relevés sont rattrapées. Une valeur enregistrée ne peut que monter (relevés arrivés en retard), jamais baisser.
 
 ### Chevauchement et Flux
 | Chiffre | Formule | Verdict |

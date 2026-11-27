@@ -1,7 +1,7 @@
 // Barre latérale : structure reprise de « Dashboard Shell » (21st.dev, @isaiahbjork) —
 // groupes titrés, élément actif surligné avec une barre d'accent, encart et action en pied.
 import {
-  Users, ArrowLeftRight, Gamepad2, LayoutDashboard, Map as MapIcon, MessageSquare,
+  Users, Gamepad2, LayoutDashboard, Map as MapIcon, MessageSquare,
   Plus, Scissors, ShieldCheck, SlidersHorizontal, Tv, X, type LucideIcon,
 } from "lucide-react"
 import type { SVGProps } from "react"
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { TabId } from "@/legacy/bridge"
 
-const OverlapIcon: LucideIcon = ((p: SVGProps<SVGSVGElement>) => (
+/** Deux cercles qui se recoupent : « en commun », sans sens de lecture. */
+export const OverlapIcon: LucideIcon = ((p: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden="true" {...p}>
     <circle cx="9" cy="12" r="6" /><circle cx="15" cy="12" r="6" />
   </svg>
@@ -21,8 +22,7 @@ export const NAV: { label: string; items: { id: TabId; label: string; icon: Luci
     { id: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
   ] },
   { label: "Analyse et flux", items: [
-    { id: "overlap", label: "Chevauchement", icon: OverlapIcon },
-    { id: "flows", label: "Flux", icon: ArrowLeftRight },
+    { id: "audiences", label: "Audiences", icon: OverlapIcon },
     { id: "rosters", label: "Rosters", icon: Users },
   ] },
   { label: "Exploration", items: [

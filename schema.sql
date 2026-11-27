@@ -206,6 +206,15 @@ create table if not exists daily_hll (
   primary key (d, c)
 );
 
+-- Pic de viewers simultanés du réseau par jour (27/11/2026), toutes chaînes suivies ensemble. Le rollup par chaîne garde le pic de
+-- chaque chaîne, à des heures différentes : leur somme n'est pas un pic. Calculé depuis « snaps » (voir build_daily_network_peak),
+-- jamais purgé. Un jour sans ligne : relevés incomplets ou déjà purgés au moment du calcul.
+create table if not exists daily_network_rollup (
+  d text primary key,                       -- jour (AAAA-MM-JJ, heure de Paris)
+  peak_viewers int not null,                -- plus grande somme des viewers d'un même passage de relevés
+  peak_at bigint not null                   -- heure de ce passage (ms)
+);
+
 -- Rosters (listes de chaînes groupées)
 create table if not exists rosters (
   id bigserial primary key,
@@ -473,7 +482,39 @@ end $$;
 -- PROCÉDURE DE ROLLUP QUOTIDIENNE
 -- ============================================================
 
--- Agrège UNE journée (heure de Paris) dans daily_switches_rollup, daily_streamer_rollup et daily_overlap_matrix.
+-- Pic de viewers simultanés d'UNE journée terminée (heure de Paris), toutes chaînes ensemble (27/11/2026). Le collecteur donne le même
+-- horodatage à tous les relevés d'un passage (pollStreams) : on additionne les viewers par « t », puis on garde le plus grand total.
+-- Rien n'est écrit si les relevés du jour ont pu être purgés, même en partie. Il faut les deux : le début du jour est plus récent que
+-- la limite de conservation annoncée par le collecteur (joursReleves), et un relevé d'avant ce jour est encore en base (cleanup()
+-- supprime les plus anciens d'abord à l'échelle des heures : la limite n'a donc pas entamé la journée, même si la durée a été
+-- rallongée depuis). Conséquences : avec joursReleves = 1 le calcul de nuit arrive trop tard et ne remplit rien ; la toute première
+-- journée de collecte n'est pas calculée. Rejouable : une valeur ne peut que monter (des relevés arrivés en retard), jamais baisser.
+create or replace function build_daily_network_peak(target_date date) returns void
+language plpgsql set search_path = public, pg_catalog as $$
+declare
+  t0 bigint := (extract(epoch from (target_date::timestamp at time zone 'Europe/Paris'))*1000)::bigint;
+  t1 bigint := (extract(epoch from ((target_date + 1)::timestamp at time zone 'Europe/Paris'))*1000)::bigint;
+  keep numeric := (select (retention->>'snaps')::numeric from collector_status where id = 1);
+begin
+  if target_date >= (now() at time zone 'Europe/Paris')::date then return; end if; -- journée pas terminée
+  if keep is not null and t0 < extract(epoch from now())*1000 - keep*86400000 then return; end if;
+  if not exists (select 1 from snaps where t < t0) then return; end if;
+  insert into daily_network_rollup (d, peak_viewers, peak_at)
+  select to_char(target_date, 'YYYY-MM-DD'), sum(v), t from snaps where t >= t0 and t < t1 and live = 1
+  group by t order by sum(v) desc, t limit 1
+  on conflict (d) do update set peak_viewers = excluded.peak_viewers, peak_at = excluded.peak_at
+    where excluded.peak_viewers > daily_network_rollup.peak_viewers;
+end $$;
+
+-- Rattrapage à l'exécution de ce script : les journées terminées encore entières dans « snaps » et pas encore calculées. Une journée
+-- déjà calculée n'est pas reprise ; une journée entamée par le ménage est refusée par la fonction.
+select build_daily_network_peak(m.d0 + i)
+from (select (to_timestamp(min(t) / 1000.0) at time zone 'Europe/Paris')::date as d0 from snaps) m
+cross join lateral generate_series(0, (now() at time zone 'Europe/Paris')::date - m.d0 - 1) as i
+where not exists (select 1 from daily_network_rollup r where r.d = to_char(m.d0 + i, 'YYYY-MM-DD'));
+
+-- Agrège UNE journée (heure de Paris) dans daily_switches_rollup, daily_streamer_rollup et daily_overlap_matrix, et calcule le pic
+-- du réseau (daily_network_rollup).
 -- Rejouable : chaque table est vidée pour ce jour puis remplie (pas de reste si une paire disparaît).
 -- Lancée chaque nuit par pg_cron (scripts/cron_rollup.sql) pour la veille, AVANT que cleanup() ne supprime les présences de ce
 -- jour : avec joursPresence = 1, la veille reste en base jusqu'au lendemain soir (cleanup garde d >= aujourd'hui - 1, en UTC).
@@ -491,6 +532,8 @@ declare
 begin
   -- une seule exécution à la fois pour un même jour ; verrou libéré à la fin de la transaction, même en cas d'erreur
   if not pg_try_advisory_xact_lock(hashtext('rollup:' || jour)) then return; end if;
+  -- pic du réseau : ne dépend que des relevés, avec ses propres gardes contre les journées purgées
+  perform build_daily_network_peak(target_date);
   -- jour déjà purgé par cleanup() : on garde le rollup existant au lieu de l'écraser par du vide (backfill sur une longue période)
   if not exists (select 1 from presence where presence.d = jour) then return; end if;
 
@@ -679,20 +722,30 @@ language sql stable set search_path = public, pg_catalog as $$
     'chans', coalesce((select jsonb_agg(jsonb_build_object('c', per.c, 'n', per.n) order by per.n desc) from per), '[]'))
 $$;
 
--- Historique du réseau pour la Vue d'ensemble, lu dans daily_streamer_rollup (25/11/2026). Lecture seule.
+-- Historique du réseau pour la Vue d'ensemble, lu dans les rollups quotidiens (25/11/2026). Lecture seule.
 --   days : par jour, messages (exact), audience moyenne cumulée (somme des viewers moyens des chaînes en live : une même personne
---          qui regarde deux lives compte deux fois), nombre de chaînes qui ont été écoutées
+--          qui regarde deux lives compte deux fois), nombre de chaînes qui ont été écoutées ; depuis le 27/11 :
+--          actives = viewers actifs distincts du réseau ce jour-là (esquisse c = '*' de daily_hll, ± 2,3 %), null sans esquisse ;
+--          peak, peakAt = pic de viewers simultanés toutes chaînes ensemble et son heure en ms (daily_network_rollup), null sans calcul
 --   top  : les 8 chaînes qui ont le plus écrit sur la période, avec leurs viewers moyens (moyenne des jours en live)
--- Les viewers uniques du réseau se lisent à part : period_reach(array['*'], days).
+-- Les viewers uniques du réseau sur la période entière se lisent à part : period_reach(array['*'], days). Les « actives » des jours
+-- ne s'additionnent pas.
 create or replace function network_history(days int default 30) returns jsonb
 language sql stable set search_path = public, pg_catalog as $$
   with p as (select to_char((now() at time zone 'Europe/Paris')::date - least(greatest(days, 1), 366), 'YYYY-MM-DD') as d0),
-  s as (select r.* from daily_streamer_rollup r, p where r.d >= p.d0)
+  s as (select r.* from daily_streamer_rollup r, p where r.d >= p.d0),
+  x as (select d, sum(total_messages)::bigint as msgs, sum(avg_viewers)::bigint as avg, (count(*) filter (where minutes_live > 0))::int as chans
+        from s group by d),
+  -- « regs || '' » : chaque esquisse est décompressée une seule fois, pas à chacune des 2 048 lectures (30 fois plus rapide à l'essai)
+  h as materialized (select daily_hll.d, daily_hll.regs || ''::bytea as regs from daily_hll, p where daily_hll.c = '*' and daily_hll.d >= p.d0),
+  u as (select h.d, hll_card(sum(power(2::float8, -get_byte(h.regs, g.j))), (count(*) filter (where get_byte(h.regs, g.j) = 0))::int) as n
+        from h cross join generate_series(0, 2047) as g(j) group by h.d)
   select jsonb_build_object(
-    'days', coalesce((select jsonb_agg(x order by x.d) from (
-      select d, sum(total_messages)::bigint as msgs, sum(avg_viewers)::bigint as avg, (count(*) filter (where minutes_live > 0))::int as chans
-      from s group by d) x), '[]'),
-    'top', coalesce((select jsonb_agg(x order by x.msgs desc) from (
+    'days', coalesce((
+      select jsonb_agg(jsonb_build_object('d', x.d, 'msgs', x.msgs, 'avg', x.avg, 'chans', x.chans,
+                                          'actives', u.n, 'peak', k.peak_viewers, 'peakAt', k.peak_at) order by x.d)
+      from x left join u on u.d = x.d left join daily_network_rollup k on k.d = x.d), '[]'),
+    'top',coalesce((select jsonb_agg(x order by x.msgs desc) from (
       select c, sum(total_messages)::bigint as msgs, coalesce(round(avg(avg_viewers) filter (where avg_viewers > 0)), 0)::int as avg
       from s group by c order by 2 desc limit 8) x), '[]'))
 $$;
@@ -767,6 +820,7 @@ alter table daily_switches_rollup enable row level security;
 alter table daily_streamer_rollup enable row level security;
 alter table daily_overlap_matrix enable row level security;
 alter table daily_hll enable row level security;
+alter table daily_network_rollup enable row level security;
 alter table rosters enable row level security;
 alter table roster_streamers enable row level security;
 alter table raid_events enable row level security;
@@ -826,6 +880,7 @@ drop policy if exists read_all on daily_switches_rollup; create policy read_all 
 drop policy if exists read_all on daily_streamer_rollup; create policy read_all on daily_streamer_rollup for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on daily_overlap_matrix; create policy read_all on daily_overlap_matrix for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on daily_hll; create policy read_all on daily_hll for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on daily_network_rollup; create policy read_all on daily_network_rollup for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on rosters; create policy read_all on rosters for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on roster_streamers; create policy read_all on roster_streamers for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on raid_events; create policy read_all on raid_events for select to anon, authenticated using ((select public.board_ok()));
@@ -856,6 +911,10 @@ grant execute on function flows_by_day(text, date, date, int) to anon, authentic
 revoke all on function build_daily_hll(text) from public, anon, authenticated;
 grant execute on function build_daily_hll(text) to service_role;
 grant select on daily_hll to anon, authenticated;
+revoke all on function build_daily_network_peak(date) from public, anon, authenticated;
+grant execute on function build_daily_network_peak(date) to service_role;
+revoke insert, update, delete on daily_network_rollup from anon, authenticated;
+grant select on daily_network_rollup to anon, authenticated;
 grant execute on function add_channels(text, text[]) to anon, authenticated, service_role;
 grant execute on function remove_channels(text, text[]) to anon, authenticated, service_role;
 

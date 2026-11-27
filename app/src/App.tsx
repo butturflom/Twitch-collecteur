@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useEffect, useState } from "react"
+import { memo, useEffect, useState } from "react"
 import { flushSync } from "react-dom"
 import { AppSidebar } from "@/components/app-sidebar"
 import { AppHeader } from "@/components/app-header"
@@ -7,8 +7,7 @@ import { Channel } from "@/components/channel/channel"
 import { Chat } from "@/components/chat/chat"
 import { Clip } from "@/components/clip/clip"
 import { Game } from "@/components/game/game"
-import { Overlap } from "@/components/overlap/overlap"
-import { Flows } from "@/components/flows/flows"
+import { Audiences } from "@/components/audiences/audiences"
 import { Settings } from "@/components/settings/settings"
 import { MapView } from "@/components/map/map"
 import { Rosters } from "@/components/rosters/rosters"
@@ -22,19 +21,14 @@ const PAGES: Record<TabId, [string, string]> = {
   game: ["Par jeu", "Les catégories streamées, leur audience et l'effet d'un changement de jeu."],
   chat: ["Chat", "Ambiance, types de messages, emotes et mots du chat."],
   clip: ["Clip", "Les moments forts du chat à clipper, et les clips déjà faits."],
-  overlap: ["Chevauchement", "Les viewers actifs que les chaînes suivies ont en commun."],
+  audiences: ["Audiences", "Ce que tes chaînes ont en commun, et qui va de l’une à l’autre. Viewers actifs seulement : ceux qui écrivent dans le chat."],
   map: ["Carte", ""],
-  flows: ["Flux", "Les viewers actifs qui passent d'une chaîne à l'autre, et les raids reçus."],
   settings: ["Réglages", "Source des données, chaînes suivies, API Twitch et sauvegardes."],
   rosters: ["Rosters", "Regroupe des chaînes pour mesurer leur audience cumulée sans doublons (Net Reach)."],
 }
 
 /** Onglets qui montrent le ciel étoilé (la Carte a le sien). Pour étendre le décor à d'autres pages, ajouter leur identifiant ici. */
-const SKY_TABS: TabId[] = ["overview", "channel", "game", "chat", "clip", "overlap", "flows", "settings", "rosters"]
-
-// Prototype C0 (carte des migrations), en mode démo seulement : ?demo=flows-map remplace l'onglet Flux par la page de test.
-// En production, import.meta.env.DEV vaut false : la condition disparaît au build, et l'import avec elle.
-const FlowsMapDemo = import.meta.env.DEV && new URLSearchParams(location.search).get("demo") === "flows-map" ? lazy(() => import("@/dev/flows-map-demo")) : null
+const SKY_TABS: TabId[] = ["overview", "channel", "game", "chat", "clip", "audiences", "settings", "rosters"]
 
 // Zones gérées par l'ancien code : rendues une seule fois, React n'y touche plus jamais.
 const LegacyFilters = memo(() => <div className="legacy" dangerouslySetInnerHTML={{ __html: filtersHtml }} />)
@@ -120,8 +114,7 @@ export default function App() {
           {tab === "chat" && <Chat />}
           {tab === "clip" && <Clip />}
           {tab === "game" && <Game />}
-          {tab === "overlap" && <Overlap />}
-          {tab === "flows" && (FlowsMapDemo ? <Suspense fallback={null}><FlowsMapDemo /></Suspense> : <Flows />)}
+          {tab === "audiences" && <Audiences />}
           {tab === "settings" && <Settings />}
           {tab === "map" && <MapView />}
           {tab === "rosters" && <Rosters />}

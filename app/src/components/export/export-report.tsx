@@ -1,5 +1,5 @@
 // Réglages → Rapports : rapport général en PDF (impression du navigateur) et flux en CSV.
-// Les données sont recalculées au clic pour la période choisie : pas besoin d'avoir ouvert la Vue d'ensemble ou Flux avant.
+// Les données sont recalculées au clic pour la période choisie : pas besoin d'avoir ouvert la Vue d'ensemble ou Audiences avant.
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, FileDown } from "lucide-react"

@@ -18,7 +18,7 @@ import { ShareButton } from "@/components/share"
 
 /** Deux graphiques côte à côte : le panneau prend toute la hauteur de la rangée, les axes restent alignés. */
 const PAIR = "flex flex-col [&>:last-child]:flex-1"
-/** L'indicateur qui mène à l'onglet Chevauchement. */
+/** L'indicateur qui mène à l'onglet Audiences. */
 const MULTI = "Actifs dans 2 chats ou plus"
 const maxOf = <T,>(a: T[], f: (x: T) => number | null) => Math.max(0, ...a.map((x) => f(x) ?? 0)) || 1
 const nf = (x: number | null, f: (n: number) => string) => (x != null && isFinite(x) ? f(x) : "—")
@@ -287,7 +287,7 @@ export function Overview() {
       <Section title={period?.key === "today" ? (period.range.startsWith("Aujourd") ? period.range : period.label) : period?.label ? `${period.label} · ${period.range || "Activité"}` : "Activité sur la période"} badge={!d.hasApi || period?.range === "Pas encore de relevé" ? "Données incomplètes" : undefined}>
         <StatCardGroup className="bg-linear-to-b from-dome-crest/90 to-dome/85 shadow-console max-sm:[&>[data-slot=stat-card]]:basis-36">
           {d.kpis.map((k) => (
-            <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="overlap" className="-my-1 inline-block py-1 underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
+            <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="audiences" data-part="haut" className="-my-1 inline-block py-1 underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
           ))}
         </StatCardGroup>
       </Section>
