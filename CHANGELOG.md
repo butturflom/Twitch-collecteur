@@ -359,3 +359,10 @@ Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejoue
 - **Lives précédents** (30 jours) dans une liste repliée sous le bloc.
 - **Sur « Aujourd’hui »**, la case « Viewers max » et le bloc « Jeux streamés » laissent leur place à ce bloc ; ils reviennent sur les autres périodes.
 - **Base** : historique des lives (table `lives`, fonction `channel_lives`), rempli chaque nuit, non purgé.
+
+## Tableau de bord 2.0.11 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
+
+- **« Par chaîne » n’est plus vide** quand la chaîne choisie est en direct (erreur « shown is not a function » dans les recommandations de raid, présente depuis l’import du projet le 24/11).
+- **« Recommandations de raid » se remplit** : le calcul ne recevait que les viewers de la chaîne choisie, il ne trouvait donc jamais de cible.
