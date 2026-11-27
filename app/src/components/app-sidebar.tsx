@@ -2,7 +2,7 @@
 // groupes titrés, élément actif surligné avec une barre d'accent, encart et action en pied.
 import {
   Users, ArrowLeftRight, Gamepad2, LayoutDashboard, Map as MapIcon, MessageSquare,
-  Plus, ShieldCheck, SlidersHorizontal, Tv, X, type LucideIcon,
+  Plus, Scissors, ShieldCheck, SlidersHorizontal, Tv, X, type LucideIcon,
 } from "lucide-react"
 import type { SVGProps } from "react"
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,7 @@ export const NAV: { label: string; items: { id: TabId; label: string; icon: Luci
     { id: "channel", label: "Par chaîne", icon: Tv },
     { id: "game", label: "Par jeu", icon: Gamepad2 },
     { id: "chat", label: "Chat", icon: MessageSquare },
+    { id: "clip", label: "Clip", icon: Scissors },
   ] },
   { label: "Configuration", items: [
     { id: "settings", label: "Réglages", icon: SlidersHorizontal },

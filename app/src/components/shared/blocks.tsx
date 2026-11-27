@@ -1,6 +1,6 @@
-// Blocs communs aux onglets Par chaîne et Chat : choix de la chaîne, bandeau, indicateurs, moments à clipper, clips.
+// Blocs communs aux onglets Par chaîne, Chat et Clip : choix de la chaîne, bandeau, indicateurs, types de messages, clips.
 import type { ReactNode } from "react"
-import { ExternalLink, Gamepad2, Users } from "lucide-react"
+import { ExternalLink, Gamepad2, Scissors, Users } from "lucide-react"
 import { LangBadge } from "@/components/lang-badge"
 import { StatCard, StatCardGroup } from "@/components/ui/stat-card"
 import { Hint } from "@/components/ui/hint"
@@ -44,9 +44,9 @@ const pillOff = "border-border bg-card text-muted-foreground hover:border-input 
 
 /**
  * Choix de la chaîne : photos, en live d'abord. Le clic passe par un attribut lu par l'ancien code :
- * data-open (onglet Par chaîne) ou data-chat (onglet Chat, avec l'option « Toutes » : valeur « * »).
+ * data-open (Par chaîne), data-chat (Chat) ou data-clip (Clip) ; ces deux derniers ont l'option « Toutes » (valeur « * »).
  */
-export function ChannelPicker({ list, current, attr, withAll }: { list: (Who & { live: boolean })[]; current: string; attr: "data-open" | "data-chat"; withAll?: boolean }) {
+export function ChannelPicker({ list, current, attr, withAll }: { list: (Who & { live: boolean })[]; current: string; attr: "data-open" | "data-chat" | "data-clip"; withAll?: boolean }) {
   return (
     <div className="-mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pt-0.5 pb-2 [scrollbar-width:thin]">
       {withAll && (
@@ -64,6 +64,38 @@ export function ChannelPicker({ list, current, attr, withAll }: { list: (Who & {
           {x.live && <span aria-label="en live" className="absolute top-1 left-6 size-2 rounded-full bg-live-red shadow-[0_0_0_2px_var(--card),0_0_6px_var(--live-red)]" />}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** Lien vers l'onglet Clip, sur la chaîne donnée (« * » : toutes). Le clic est géré par l'ancien code (data-clip). */
+export function ClipLink({ chan, className }: { chan: string; className?: string }) {
+  return (
+    <button type="button" data-clip={chan} className={cn("inline-flex min-h-6 items-center gap-1.5 rounded-md text-[12.5px] font-medium text-primary-soft hover:text-violet-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&>*]:pointer-events-none", className)}>
+      <Scissors className="size-3.5" />
+      <span>{chan === "*" ? "Moments à clipper et clips" : "Ses moments à clipper et ses clips"}</span>
+    </button>
+  )
+}
+
+/** Répartition des types de messages : une barre empilée et sa légende (survol : description du type). */
+export function KindBar({ parts }: { parts: { key: string; label: string; desc: string; color: string; share: number }[] }) {
+  return (
+    <div>
+      <div className="flex h-3.5 gap-0.5 overflow-hidden rounded-[5px]" role="img" aria-label={parts.map((p) => `${p.label} ${pct(p.share)}`).join(", ")}>
+        {parts.filter((p) => p.share > 0).map((p) => (
+          <i key={p.key} title={`${p.label} : ${pct(p.share)}`} className="block h-full first:rounded-l-[5px] last:rounded-r-[5px]" style={{ width: `${(p.share * 100).toFixed(2)}%`, background: p.color }} />
+        ))}
+      </div>
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+        {parts.map((p) => (
+          <span key={p.key} className="inline-flex items-center gap-1.5">
+            <i className="size-2.5 rounded-full" style={{ background: p.color }} />
+            {p.label} <b className="font-mono font-medium text-foreground">{pct(p.share)}</b>
+            {p.desc && <Hint label={p.label}>{p.desc}</Hint>}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -103,7 +135,7 @@ export function Hero({ ch, compact }: { ch: ChannelHead; compact?: boolean }) {
   )
 }
 
-/** Moments à clipper ; showChan ajoute la colonne Chaîne (onglet Chat, toutes les chaînes). */
+/** Moments à clipper ; showChan ajoute la colonne Chaîne (toutes les chaînes). */
 export function Moments({ rows, showChan }: { rows: MomentRow[]; showChan?: boolean }) {
   const cols: Col<MomentRow>[] = [
     { head: "Quand", left: true, cell: (r) => <span className="whitespace-nowrap">{r.when}</span> },

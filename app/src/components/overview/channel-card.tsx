@@ -23,6 +23,8 @@ function Metric({ label, value, title }: { label: string; value: string; title?:
   )
 }
 
+const PEAK_HINT = "Le pic de viewers relevé sur la période (un relevé toutes les 2 minutes environ)"
+
 export function ChannelCard({ ch }: { ch: ChannelInfo }) {
   // l'ambiance de la carte reprend la couleur dominante du logo du streamer
   const color = useAvatarColor(ch.img, ch.color)
@@ -62,18 +64,18 @@ export function ChannelCard({ ch }: { ch: ChannelInfo }) {
         </div>
       </header>
 
-      {/* deux échelles de temps, jamais mélangées : l'instant présent, puis la période choisie en haut de page */}
+      {/* deux échelles de temps, jamais mélangées : la période choisie en haut de page, puis l'instant présent */}
       <div className="relative mt-3.5">
-        <p className="mb-1 text-[11px] text-dusk">Maintenant</p>
+        <p className="mb-1 text-[11px] text-dusk">Sur la période</p>
         <div className="grid grid-cols-2 gap-1.5">
-          <Metric label="Viewers" value={ch.viewers != null ? fmt(ch.viewers) : "—"} />
-          <Metric label="Msg/min (5 min)" title="Messages par minute sur les 5 dernières minutes" value={ch.recent != null ? fmt1(ch.recent) : "—"} />
-        </div>
-        <p className="mt-2.5 mb-1 text-[11px] text-dusk">Sur la période</p>
-        <div className="grid grid-cols-2 gap-1.5">
-          <Metric label="Actifs (période)" title="Viewers différents de cette chaîne qui ont écrit au moins un message sur la période" value={fmt(ch.uniq)} />
+          <div className="col-span-2">
+            <Metric label="Viewers max" title={PEAK_HINT} value={ch.peak != null ? fmt(ch.peak) : "—"} />
+          </div>
+          <Metric label="Actifs" title="Viewers différents de cette chaîne qui ont écrit au moins un message sur la période" value={fmt(ch.uniq)} />
           <Metric label="Messages" value={fmt(ch.msgs)} />
         </div>
+        <p className="mt-2.5 mb-1 text-[11px] text-dusk">Maintenant</p>
+        <Metric label="Msg/min (5 min)" title="Messages par minute sur les 5 dernières minutes" value={ch.recent != null ? fmt1(ch.recent) : "—"} />
       </div>
 
       {ch.wrote != null && (
@@ -103,7 +105,7 @@ export function ChannelCard({ ch }: { ch: ChannelInfo }) {
 }
 
 /**
- * Ligne compacte d'une chaîne hors ligne : ses deux chiffres de la période et le lien vers son détail.
+ * Ligne compacte d'une chaîne hors ligne : ses chiffres de la période et le lien vers son détail.
  * Une chaîne hors ligne n'a ni viewers ni messages « maintenant » à montrer : une carte entière serait presque vide.
  */
 export function ChannelRow({ ch }: { ch: ChannelInfo }) {
@@ -115,9 +117,13 @@ export function ChannelRow({ ch }: { ch: ChannelInfo }) {
         <span className="truncate text-[13.5px] font-medium">{ch.c}</span>
         <LangBadge langs={ch.langs} className="h-[18px]" />
       </div>
-      <dl className="flex items-baseline gap-5 text-xs">
+      <dl className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-xs">
+        <div className="flex items-baseline gap-1.5" title={PEAK_HINT}>
+          <dt className="text-muted-foreground">Viewers max</dt>
+          <dd className="font-mono text-[13px] font-medium text-foreground tabular-nums">{ch.peak != null ? fmt(ch.peak) : "—"}</dd>
+        </div>
         <div className="flex items-baseline gap-1.5">
-          <dt className="text-muted-foreground">Actifs (période)</dt>
+          <dt className="text-muted-foreground">Actifs</dt>
           <dd className="font-mono text-[13px] font-medium text-foreground tabular-nums">{fmt(ch.uniq)}</dd>
         </div>
         <div className="flex items-baseline gap-1.5">

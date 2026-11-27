@@ -43,6 +43,11 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
           <Tabs.Trigger value="manipuler" className={tab}>Manipuler</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="lire" className="outline-none">
+          {/* la légende, sortie de la carte (elle masquait une planète) */}
+          <div className="mt-2.5 flex flex-col items-start gap-1.5 border-b border-white/10 pb-2.5">
+            {legendItems(d.since)}
+            {d.groups && <span>couleur = groupe</span>}
+          </div>
           <ul className={list}>
             <li>{scope}.</li>
             <li><b>Une planète</b> est une chaîne ; sa <b>taille</b> dit ses viewers en direct. Hors ligne, elle est petite et éteinte. Au centre, la planète Twitch.</li>
@@ -86,7 +91,7 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
   )
 }
 
-/** Légende, toujours visible sur ordinateur ; sur téléphone, repliée derrière « Comment lire la carte » pour ne pas couvrir la carte. */
+/** Légende de la carte, affichée dans l'aide (onglet « Lire »). */
 const legendItems = (since: string) => (
   <>
     <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-2 rounded-full bg-zinc-300" /><i aria-hidden className="size-3 rounded-full bg-zinc-300" />taille = viewers en direct</span>
@@ -99,22 +104,6 @@ const helpH = "text-xs font-medium text-dusk"
 const Kbd = ({ children }: { children: ReactNode }) => (
   <kbd className="rounded border border-white/15 bg-zinc-900 px-1 py-px font-mono text-[11px] text-zinc-200">{children}</kbd>
 )
-function Legend({ groups, since }: { groups: boolean; since: string }) {
-  const grp = groups ? <span className="inline-flex items-center gap-1.5">couleur = groupe</span> : null
-  const box = "rounded-xl border border-white/10 bg-zinc-950/75 px-3 py-1.5 text-xs text-zinc-300 backdrop-blur-sm"
-  return (
-    <>
-      <div className={cn(box, "pointer-events-auto max-sm:hidden")}>
-        <p className="flex flex-wrap items-center justify-end gap-x-3.5 gap-y-1">{legendItems(since)}{grp}</p>
-      </div>
-      <details className={cn(box, "pointer-events-auto sm:hidden")}>
-        <summary className="cursor-pointer list-none text-right text-zinc-200 [&::-webkit-details-marker]:hidden">Comment lire la carte</summary>
-        <div className="mt-1.5 flex flex-col gap-1">{legendItems(since)}{grp}</div>
-      </details>
-    </>
-  )
-}
-
 const ctl = "grid size-8 place-items-center rounded-lg border border-white/10 bg-zinc-900/70 text-zinc-400 shadow-lg shadow-black/40 backdrop-blur-xl transition-[color,background-color,border-color,box-shadow,opacity,transform] motion-reduce:transition-colors duration-200 hover:border-white/20 hover:bg-zinc-800 hover:text-white active:scale-95 focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none [&>svg]:size-3.5"
 /** Curseur en mode Globe : crosshair au lieu de grab/grabbing pour signaler la rotation 3D. */
 const GLOBE_CURSOR = "crosshair"
@@ -288,9 +277,6 @@ export function MapView() {
               <button type="button" className={cn(ctl, help && "border-primary/40 text-primary-soft")} aria-haspopup="dialog" aria-expanded={help} title="Aide : lire, signaux, manipuler (?)" aria-label="Aide de la carte" onClick={() => { setMenu(false); setHelp((h) => !h) }}><CircleQuestionMark /></button>
             </div>
             {help && <MapHelp d={d} onClose={() => setHelp(false)} />}
-            <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "hidden")}>
-              <Legend groups={!!d.groups} since={d.since} />
-            </div>
             <p className="sr-only" aria-live="polite">{info ? `Fiche ${deC(info.c)} : ${info.sub}` : ""}</p>
             {info && (
               <div role="region" aria-label={`Fiche ${deC(info.c)}`} className="absolute bottom-3 left-3 max-h-[min(46%,calc(100%-70px))] w-[min(380px,calc(100%-24px))] animate-in fade-in-0 slide-in-from-bottom-2 overflow-auto rounded-2xl border border-white/10 bg-zinc-900/80 p-3.5 shadow-2xl shadow-black/60 backdrop-blur-xl backdrop-saturate-150 duration-200">

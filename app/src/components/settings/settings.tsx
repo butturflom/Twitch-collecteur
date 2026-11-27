@@ -229,9 +229,7 @@ function Channels({ d }: { d: SettingsData }) {
   return (
     <Card icon={<Users />} title="Chaînes suivies" desc={d.chansMsg}>
       <div className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          {d.chans.length} chaîne(s) suivie(s){d.chanLimit ? ` sur ${d.chanLimit} au maximum` : ""}.{d.chanLimit && d.chans.length >= d.chanLimit ? " Retire-en une avant d'en ajouter." : ""}
-        </p>
+        <Quota n={d.chans.length} limit={d.chanLimit} />
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" aria-expanded={showAdd} onClick={() => toggle("one")}>
             {showAdd ? <X /> : <Plus />}
@@ -274,6 +272,29 @@ function Channels({ d }: { d: SettingsData }) {
         <Followed chans={d.chans} />
       </div>
     </Card>
+  )
+}
+
+/** Combien de chaînes sont suivies, et la limite du collecteur (aucune en mode local). */
+function Quota({ n, limit }: { n: number; limit: number | null }) {
+  const left = limit != null ? Math.max(0, limit - n) : null
+  return (
+    <div>
+      <p className="flex flex-wrap items-baseline gap-x-2">
+        <span className="font-mono text-[28px] leading-none font-semibold tabular-nums">{n}{limit != null && <span className="text-dusk"> / {limit}</span>}</span>
+        <span className="text-[13px] text-muted-foreground">chaîne{n > 1 ? "s" : ""} suivie{n > 1 ? "s" : ""}</span>
+      </p>
+      {limit != null && left != null && (
+        <>
+          <div role="meter" aria-label="Places utilisées" aria-valuemin={0} aria-valuemax={limit} aria-valuenow={n} className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[.06]">
+            <div className={cn("h-full rounded-full", left === 0 ? "bg-destructive" : "bg-primary")} style={{ width: `${Math.min(100, (n / limit) * 100)}%` }} />
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {left === 0 ? `Limite atteinte : le collecteur suit ${limit} chaînes au maximum. Retire-en une avant d'en ajouter.` : `${left} place${left > 1 ? "s" : ""} libre${left > 1 ? "s" : ""} : le collecteur suit ${limit} chaînes au maximum.`}
+          </p>
+        </>
+      )}
+    </div>
   )
 }
 

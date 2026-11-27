@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react"
 import legacySrc from "./legacy.js?raw"
 import legacyMarkup from "./legacy-markup.html?raw"
 
-export type TabId = "overview" | "channel" | "game" | "chat" | "overlap" | "map" | "flows" | "settings" | "rosters"
+export type TabId = "overview" | "channel" | "game" | "chat" | "clip" | "overlap" | "map" | "flows" | "settings" | "rosters"
 
 /** Une chaîne telle que l'affiche l'ancien code : couleur attribuée et photo de profil (ou ''). */
 export interface Who { c: string; color: string; img: string }
@@ -25,7 +25,9 @@ export interface ChannelInfo extends Who {
   langs: string[] // codes de langue (fr, us, ru…) : plusieurs = chaîne multilingue
   live: boolean | null // null : état inconnu (pas d'API Twitch)
   game: string; title: string
-  viewers: number | null; uniq: number; msgs: number
+  viewers: number | null // viewers en direct (intro, export)
+  peak: number | null // viewers max relevés sur la période : c'est lui qu'affichent les cartes
+  uniq: number; msgs: number
   recent: number | null // msg/min sur les 5 dernières minutes, si l'écoute tourne
   wrote: number | null // part des viewers qui ont écrit pendant le live en cours
 }
@@ -77,6 +79,12 @@ export interface InvestedCommunityRow extends Who {
   raidsViewers: number
 }
 
+/** Bandeau des raids reçus (raidTickerData dans legacy.js). older : aucun aujourd'hui, ce sont les derniers relevés. */
+export interface RaidTickerData {
+  older: boolean
+  rows: { t: number; from: (Who & { name: string }) | null; to: Who; n: number; ago: string }[]
+}
+
 export interface OverviewData {
   kpis: Kpi[]
   channels: ChannelInfo[]
@@ -87,6 +95,9 @@ export interface OverviewData {
   part: PartRow[] | null
   followers: FollowerRow[]
   brand: BrandRow[] | null
+  /** « avec ou sans pub » calculé sur tout le détail, faute de comparaison possible aujourd'hui */
+  brandWide?: boolean
+  raids: RaidTickerData
   mod: { rows: ModRow[]; noDel: boolean } | null
   msgChart: LineSpec
   viewerChart: LineSpec | null
@@ -130,8 +141,11 @@ export interface ChannelData {
   main: Kpi[]
   more: Kpi[]
   hasApi: boolean
-  moments: MomentRow[]
-  clips: ClipsData | null
+  /** types de messages (sorted : messages triés) et ambiance (analysed : messages analysés) de la chaîne */
+  talk: {
+    sorted: number; parts: { key: string; label: string; desc: string; color: string; share: number }[] | null
+    analysed: number; moods: { key: string; label: string; share: number | null }[]
+  }
   switches: SwitchRow[] | null // null : pas d'API Twitch
   also: (Who & { share: number; n: number })[]
   alsoBase: number // viewers actifs de la chaîne : la base des pourcentages de « also »
@@ -156,21 +170,23 @@ export interface ChatData {
   moodRows: (Who & { n: number; moods: number[]; emote: string })[] | null
   emotes: { k: string; v: number; share: number | null }[]
   words: { k: string; v: number }[]
-  moments: MomentRow[]
-  clips: ClipsData | null
   moodChart: LineSpec
   kindChart: LineSpec | null
+}
+
+/** Onglet « Clip » : moments à clipper et clips, d'une chaîne ou de toutes. */
+export interface ClipTabData {
+  all: boolean
+  ch: ChannelHead | null
+  list: (Who & { live: boolean })[]
+  moments: MomentRow[]
+  clips: ClipsData | null
 }
 
 /** Matrice de chevauchement : cells[i] = part des viewers actifs de la ligne vus aussi chez la colonne i (null sur la diagonale). */
 export interface MatrixData { rows: { k: string; size: number; who: Who | null; cells: ({ r: number | null; n: number } | null)[] }[] }
 export interface GameData {
   hasApi: boolean
-  canSearch: boolean // API Twitch configurée dans ce navigateur (la recherche passe par elle)
-  discover: {
-    q: string; lang: string; status: "idle" | "loading" | "done" | "error"; error: string; game: string
-    streams: (Who & { name: string; title: string; viewers: number; followed: boolean })[]
-  }
   games: { g: string; chans: Who[]; air: string; avgV: number | null; users: number; msgs: number; perUser: number | null }[]
   switchGames: { g: string; n: number; dv: number | null; dm: number | null }[]
   matrix: MatrixData | null
@@ -305,7 +321,6 @@ declare global {
     raidSuggestions?: () => Promise<RaidSuggestions | null>
     showTab?: (t: TabId) => void
     openAddStreamer?: () => void
-    runDiscover?: (q: string, lang: string) => void
     setOverlapFilter?: (f: string) => void
     // Réglages (actions de l'ancien code)
     settingsMode?: (m: "local" | "cloud") => Promise<void>
@@ -391,6 +406,7 @@ export const useStatusData = legacyStore<StatusData>("legacy:status")
 
 export const useChatData = legacyStore<ChatData>("legacy:chat")
 export const useGameData = legacyStore<GameData>("legacy:game")
+export const useClipData = legacyStore<ClipTabData>("legacy:clip")
 export const useOverlapData = legacyStore<OverlapData>("legacy:overlap")
 export const useFlowsData = legacyStore<FlowsData>("legacy:flows")
 export const useRaidRecommendations = legacyStore<RaidRecommendation[]>("legacy:raid-recommendations")

@@ -28,16 +28,18 @@ Exemple déjà en place : **Stat Card** (`src/components/ui/stat-card.tsx`) pour
   - `legacy.js` : tout l'ancien code (collecte, base locale, Supabase, calculs, graphiques, carte).
   - `legacy-markup.html` : les filtres et les onglets que remplit l'ancien code.
   - `legacy.css` : ses styles, tous préfixés par `.legacy` pour ne pas gêner Tailwind.
-  - `bridge.ts` : le pont. L'ancien code prévient React par des événements (`legacy:tab`, `legacy:overview`, `legacy:channel`, `legacy:chat`, `legacy:game`, `legacy:overlap`, `legacy:flows`, `legacy:settings`, `legacy:map`) ; React l'appelle par `showTab()` et `openAddStreamer()`.
+  - `bridge.ts` : le pont. L'ancien code prévient React par des événements (`legacy:tab`, `legacy:overview`, `legacy:channel`, `legacy:chat`, `legacy:clip`, `legacy:game`, `legacy:overlap`, `legacy:flows`, `legacy:settings`, `legacy:map`) ; React l'appelle par `showTab()` et `openAddStreamer()`.
 
 ### Onglets déjà convertis
 
-- **Vue d'ensemble** (`src/components/overview/`) : indicateurs (Stat Card 21st.dev), cartes des chaînes, tableaux (shadcn Table) avec cases colorées. L'ancien `renderOverview()` calcule et envoie l'événement `legacy:overview`.
-- **Par chaîne** (`src/components/channel/`) : barre de choix avec photos, bandeau de la chaîne (live, jeu, lien Twitch), indicateurs principaux et « Communauté et événements », moments à clipper, clips, changements de jeu, chaînes voisines et jeux streamés. Événement `legacy:channel`.
+- **Vue d'ensemble** (`src/components/overview/`) : bandeau des raids reçus (`raid-ticker.tsx`), indicateurs (Stat Card 21st.dev), cartes des chaînes (viewers max), tableaux (shadcn Table) avec cases colorées. L'ancien `renderOverview()` calcule et envoie l'événement `legacy:overview`.
+- **Par chaîne** (`src/components/channel/`) : barre de choix avec photos, bandeau de la chaîne (live, jeu, lien Twitch), indicateurs principaux et « Communauté et événements », types de messages et ambiance, changements de jeu, chaînes voisines et jeux streamés en pastilles. Événement `legacy:channel`.
 
-- **Chat** (`src/components/chat/`) : choix « Toutes » ou une chaîne, ambiance, répartition des types de messages (barre empilée), tableaux par chaîne, emotes, mots, moments à clipper et clips. Événement `legacy:chat`.
+- **Chat** (`src/components/chat/`) : choix « Toutes » ou une chaîne, ambiance, répartition des types de messages (barre empilée), tableaux par chaîne repliés, emotes (podium des 3 premières), mots. Événement `legacy:chat`.
 
-- **Par jeu** (`src/components/game/`) : catégories, effet d'un changement de jeu, chevauchement entre jeux, recherche de streamers par catégorie (formulaire React qui appelle `runDiscover(q, langue)` de l'ancien code). Événement `legacy:game`.
+- **Clip** (`src/components/clip/`) : choix « Toutes » ou une chaîne (`data-clip`), moments à clipper et clips. Événement `legacy:clip`.
+
+- **Par jeu** (`src/components/game/`) : catégories, effet d'un changement de jeu, chevauchement entre jeux. Événement `legacy:game`.
 - **Chevauchement** (`src/components/overlap/`) : filtre de viewers (contrôle segmenté qui appelle `setOverlapFilter()`), viewers qui changent de stream, chaîne par chaîne, parcours les plus nomades, matrice entre chaînes, paires les plus proches, nombre de chaînes par viewer. Événement `legacy:overlap`.
 - **Flux** (`src/components/flows/`) : indicateurs (migrations, délai médian, raids), migrations A → B, bilan par chaîne avec barre de solde, raids reçus, et carte des migrations jour par jour (`flows-map.tsx`) à côté du Sankey quand `byDay` est présent (fonction SQL `flows_by_day`). Événement `legacy:flows`.
 - **Réglages** (`src/components/settings/`) : source des données, chaînes suivies (recherche, ajout, retrait avec confirmation, liste en bloc), API Twitch, sauvegardes. L'ancien `renderSettings()` envoie l'état (`legacy:settings`) ; chaque bouton appelle une action de l'ancien code : `settingsMode`, `saveSupabase`, `runAddSearch`, `addFromSearch`, `importLocal`, `dropLocal`, `removeChan`, `saveChanList`, `saveApi`, `genToken`, `exportDb`, `importDbFile`, `resetDb`. Les messages d'état sont gardés dans `smsg` au lieu d'être écrits dans la page. **Attention** : `importLocal`, `dropLocal`, `saveApi` (coller un jeton), `settingsMode` (mode local ou nuage) et `saveChanList` (remplacer toute la liste) existent dans `legacy.js` mais n'ont pas de bouton dans React. L'ajout en bloc passe par `addChanList`, qui n'enlève rien. Le bloc des raids (`raid-suggestions.tsx`) lit `window.raidSuggestions()` : table `raid_events` sur 30 jours, doublons à moins d'une minute écartés, réponse gardée 10 minutes.

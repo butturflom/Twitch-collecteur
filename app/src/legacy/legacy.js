@@ -44,7 +44,7 @@ const curMin={};      // canal -> {mt,m,set}
 const curGame={};     // canal -> jeu actuel
 const info={};        // canal -> {live,v,g,ti,since}
 let apiState='';      // '', 'ok', message d'erreur
-let tab='overview',period='all',selChan=null,selChat='*',discover=null,lastMap=0;
+let tab='overview',period='today',selChan=null,selChat='*',selClip='*',lastMap=0;
 
 const colorOf=c=>{const i=shown().indexOf(c); // rang dans la liste affichée (filtre Langue compris)
   return i>=0&&i<8?PAL[i]:OTHER};
@@ -739,8 +739,17 @@ function renderChat(q){
     kindRows,moodRows,
     emotes:Object.entries(agg.e).sort((a,b)=>b[1]-a[1]).slice(0,15).map(([k,v])=>({k,v,share:N?v/N:null})),
     words:Object.entries(agg.w).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([k,v])=>({k,v})),
-    moments:momentsData(moments(q.mins,chans,all?12:10)),clips:clipsData(q,chans),
     moodChart,kindChart}}));
+}
+
+/* ---------- onglet Clip ---------- */
+// Moments à clipper et clips, sortis des onglets Chat et Par chaîne (événement « legacy:clip »).
+function renderClip(q){
+  const all=selClip==='*'||!cfg.chans.includes(selClip),chans=all?shown():[selClip];$('t-clip').innerHTML='';
+  window.dispatchEvent(new CustomEvent('legacy:clip',{detail:{
+    all,ch:all?null:chHead(selClip),
+    list:liveFirst(shown()).map(x=>({...who(x),live:!!(info[x]&&info[x].live)})),
+    moments:momentsData(moments(q.mins,chans,all?12:10)),clips:clipsData(q,chans)}}));
 }
 
 /* ---------- onglet Carte ---------- */
@@ -1352,9 +1361,6 @@ function renderMap(q){
     // la zone des boutons + − ⤢ compte comme occupée
     const Lg=logoAt(),lz=LOGO*Math.min(Math.sqrt(mapView.k),2.2); // la planète Twitch et son anneau, là où ils sont à l'écran
     const placed=[{x:W-50,y:0,w:50,h:Object.keys(cfg.mapPins||{}).length?324:286} /* colonne de boutons : pause, globe, +, −, tout afficher, recentrer, aide (et remettre en place) */,{x:0,y:0,w:hudW,h:els.radar.querySelector('.radar-log.on')?58:30},{x:Lg.x-lz/2,y:Lg.y-lz*.32,w:lz,h:lz*.64}],rank=i=>(ids[i]===mapView.sel||ids[i]===hover?2:F&&F.s.has(ids[i])?1:0);
-    // la pile en bas à droite (légende et note « nom masqué », dessinées par React, repérées par data-maplegend) est évitée par les noms, comme le bandeau en haut à gauche
-    {const sr=svg.getBoundingClientRect();if(sr.width&&sr.height)document.querySelectorAll('[data-maplegend]').forEach(lg=>{if(!lg.offsetParent)return;const r=lg.getBoundingClientRect();
-      placed.push({x:(r.left-sr.left)*W/sr.width,y:(r.top-sr.top)*H/sr.height,w:r.width*W/sr.width,h:r.height*H/sr.height})})}
     const order=[...ids.keys()].sort((a,b)=>rank(b)-rank(a)||isStar[b]-isStar[a]||nodes[b].size-nodes[a].size);let hidden=0;
     const back=i=>S[i].z<-.45; // au fond de l'univers (globe tourné à la main) : pas de nom (sauf survolée ou choisie), et les noms de devant peuvent passer dessus
     const hitsNode=(x,y,w,h,self)=>S.some((s,j)=>{if(j===self||back(j))return false;const cx=Math.max(x,Math.min(s.x,x+w)),cy=Math.max(y,Math.min(s.y,y+h));return Math.hypot(s.x-cx,s.y-cy)<s.r+5});
@@ -1884,6 +1890,15 @@ function investedCommunitiesData(q){
   return rows.sort((a,b)=>b.perMin-a.perMin||b.msgK-a.msgK);
 }
 
+// Bandeau des raids reçus par les chaînes suivies. Aucun sur « Aujourd'hui » : les derniers relevés, et le bandeau le dit.
+function raidTickerData(q){
+  const S=new Set(shown()),pick=list=>list.filter(e=>e.type==='raid'&&S.has(e.c)).sort((a,b)=>b.t-a.t).slice(0,15);
+  let list=pick(q.events),older=false;
+  if(!list.length&&period==='today'){list=pick(DB.events);older=list.length>0}
+  loadAvatars(list.map(r=>String(r.from||'').toLowerCase()).filter(Boolean));
+  return {older,rows:list.map(r=>({t:r.t,from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0,ago:ago(r.t)}))};
+}
+
 // Vue d'ensemble : l'ancien code calcule, React affiche (événement « legacy:overview », voir app/src/legacy/bridge.ts).
 function renderOverview(q){
   const users=usersBy(q.pres,p=>p.c),allU=new Set(q.pres.map(p=>p.u)),now=Date.now();
@@ -1899,9 +1914,10 @@ function renderOverview(q){
   // (marathon de 24 h), l'audience tourne et chute en fin de live, et le rapport dépassait 100 %.
   const liveU=new Map();for(const p of Object.values(DB.presence)){const I=info[p.c];if(I&&I.live&&I.since&&p.l>=I.since){let s=liveU.get(p.c);if(!s)liveU.set(p.c,s=new Set());s.add(p.u)}}
   const liveAvgV=c=>{const I=info[c],vs=DB.snaps.filter(s=>s.c===c&&s.live&&s.t>=I.since);return vs.length?vs.reduce((s,x)=>s+x.v,0)/vs.length:I.v};
+  const peak=new Map();for(const s of q.snaps)if(s.live&&!(peak.get(s.c)>=s.v))peak.set(s.c,s.v); // viewers max relevés sur la période
   const channels=liveFirst(shown()).map(c=>{const I=info[c]||{},U=users.get(c);
     return {...who(c),langs:langsOf(c),live:I.live===true?true:I.live===false?false:null,game:I.live?I.g||'':'',title:I.live?I.ti||'':'',
-      viewers:I.live?I.v:null,uniq:U?U.size:0,msgs:q.mins.filter(m=>m.c===c).reduce((s,m)=>s+m.m,0),
+      viewers:I.live?I.v:null,peak:peak.has(c)?peak.get(c):null,uniq:U?U.size:0,msgs:q.mins.filter(m=>m.c===c).reduce((s,m)=>s+m.m,0),
       recent:liveData()?q.mins.filter(m=>m.c===c&&m.t>=now-5*MIN).reduce((s,m)=>s+m.m,0)/5:null,
       wrote:I.live&&I.v&&liveU.has(c)?liveU.get(c).size/liveAvgV(c):null}});
   const part=!hasApi()?null:shown().map(c=>({c,p:participationOnce(q,c),k:kindsOf(q,[c])})).filter(x=>x.p&&x.p.liveMin>=10).sort((a,b)=>b.p.perMin-a.p.perMin)
@@ -1915,7 +1931,10 @@ function renderOverview(q){
   $('t-overview').innerHTML='';
   const topStreamers=topStreamersData(q);
   const investedCommunities=investedCommunitiesData(q);
-  window.dispatchEvent(new CustomEvent('legacy:overview',{detail:{kpis,channels,recoup:recoupData(q,users,flows),hasApi:hasApi(),chartOf,part,followers:followersData(q),brand:brandData(q),mod:modData(q),msgChart,viewerChart,topStreamers,investedCommunities}}));
+  // « avec ou sans pub » demande les deux côtés : une journée ne les donne presque jamais, on garde alors tout le détail
+  let brand=brandData(q),brandWide=false;
+  if(period==='today'&&brand&&!brand.length){brand=brandData(Q(true));brandWide=brand.length>0}
+  window.dispatchEvent(new CustomEvent('legacy:overview',{detail:{kpis,channels,recoup:recoupData(q,users,flows),hasApi:hasApi(),chartOf,part,followers:followersData(q),brand,brandWide,raids:raidTickerData(q),mod:modData(q),msgChart,viewerChart,topStreamers,investedCommunities}}));
 }
 
 // Onglet « Par chaîne » : l'ancien code calcule, React affiche (événement « legacy:channel », voir app/src/legacy/bridge.ts).
@@ -1948,7 +1967,11 @@ function renderChannel(q){
   const pres=q.pres.filter(p=>p.c===c),U=new Set(pres.map(p=>p.u)),mins=q.mins.filter(m=>m.c===c),ev=q.events.filter(e=>e.c===c);
   const msgs=mins.reduce((s,m)=>s+m.m,0),activeMin=mins.length;
   const days=new Map();for(const p of pres){let s=days.get(p.u);if(!s)days.set(p.u,s=new Set());s.add(p.d)}
-  const loyal=[...days.values()].filter(s=>s.size>=2).length,nDays=new Set(pres.map(p=>p.d)).size;
+  // fidélité : il faut au moins 2 jours. Sur « Aujourd'hui », elle garde tout le détail gardé, et son libellé le dit.
+  let loyalDays=days,loyalPres=pres;
+  if(period==='today'){const t0=commonStart(),d0=t0?dayKey(t0):'';loyalPres=Object.values(DB.presence).filter(p=>p.c===c&&p.d>=d0);
+    loyalDays=new Map();for(const p of loyalPres){let s=loyalDays.get(p.u);if(!s)loyalDays.set(p.u,s=new Set());s.add(p.d)}}
+  const loyal=[...loyalDays.values()].filter(s=>s.size>=2).length,nDays=new Set(loyalPres.map(p=>p.d)).size;
   const sum=t=>ev.filter(e=>e.type===t).reduce((s,e)=>s+e.n,0),cnt=t=>ev.filter(e=>e.type===t).length;
   const vs=q.snaps.filter(s=>s.c===c&&s.live),avgV=vs.length?vs.reduce((s,x)=>s+x.v,0)/vs.length:NaN,peakV=vs.length?maxOf(vs,s=>s.v):NaN;
   const perUser=new Map();for(const p of pres)perUser.set(p.u,(perUser.get(p.u)||0)+p.n);
@@ -1960,13 +1983,13 @@ function renderChannel(q){
   const main=[
     K('Viewers actifs uniques',fmt(U.size)),
     K('Messages',fmt(msgs),activeMin?fmt1(msgs/activeMin)+' msg/min en moyenne':'',{trend:tr.trend,trendLabel:tr.label}),
-    K('Viewers en moyenne',isFinite(avgV)?fmt(avgV):'—',isFinite(peakV)?'pic : '+fmt(peakV):''),
+    K('Viewers max',isFinite(peakV)?fmt(peakV):'—',isFinite(avgV)?'moyenne : '+fmt(avgV):''),
     K('Écrivent chaque minute',p?pct(p.perMin):'—',p?fmt1(p.msgK)+' msg/min pour 1\u00a0000 viewers':'pendant les lives, API Twitch requise'),
     K('Followers',fol!=null?fmt(fol):'—',fol!=null?(isFinite(avgV)?pct(avgV/fol)+' en moyenne devant le live':''):'relevé par le collecteur 1.2')];
   const modOk=isFinite(modStart(['ban','timeout','clear'])),delOk=isFinite(modStart(['del'])),nb=sum('ban'),nt=sum('timeout');
   const more=[
-    K('Interactions',kn?pct(ksum(k,INTER)/kn):'—',kn?`${pct(ksum(k,REACT)/kn)} de réactions · détail dans l'onglet Chat`:'tri des messages : collecteur 1.1'),
-    K('Viewers actifs fidèles',nDays>=2?pct(loyal/U.size):'—',nDays>=2?'revenus sur 2 jours ou plus':'il faut au moins 2 jours de données'),
+    K('Interactions',kn?pct(ksum(k,INTER)/kn):'—',kn?`${pct(ksum(k,REACT)/kn)} de réactions · détail plus bas`:'tri des messages : collecteur 1.1'),
+    K('Viewers actifs fidèles',nDays>=2?pct(loyal/loyalDays.size):'—',nDays>=2?'revenus sur 2 jours ou plus'+(period==='today'?`, sur les ${nDays} jours gardés`:''):'il faut au moins 2 jours de données'),
     K('Messages du top 10 %',isFinite(top10)?pct(top10):'—','concentration du chat'),
     K('Premiers messages',fmt(sum('first')),'nouveaux venus dans le chat'),
     K('Abonnements',fmt(sum('sub')+sum('gift')),`dont ${fmt(sum('gift'))} offerts`),
@@ -1981,6 +2004,11 @@ function renderChannel(q){
   const games=hasApi()?[...gt].map(([g,sl])=>({g,hours:sl.size*2/60})).sort((a,b)=>b.hours-a.hours).slice(0,8):null;
   const switches=hasApi()?switchesOf(q.snaps,q.mins,[c]).slice(0,20).map(x=>({when:when(x.t),from:x.from,to:x.to,vB:nn(x.vB),vA:nn(x.vA),mB:nn(x.mB),mA:nn(x.mA)})):null;
   const hours=Array.from({length:24},(_,i)=>({k:i+'h',lbl:i+'h – '+(i+1)+'h',v:0}));for(const m of mins)hours[hourOf(m.t)].v+=m.m;
+  // types de messages et ambiance de la chaîne sur la période
+  const d0w=q.t0?dayKey(q.t0):'',md={rire:0,hype:0,negatif:0,question:0};let wn=0;
+  for(const W of Object.values(DB.words)){if(W.c!==c||W.d<d0w)continue;wn+=W.n;for(const x in md)md[x]+=W.moods[x]||0}
+  const talk={sorted:kn,parts:kn?KINDS.map(([key,label,desc,col])=>({key,label,desc,color:col,share:(k[key]||0)/kn})):null,
+    analysed:wn,moods:MOODS.map(([key,label])=>({key,label,share:wn?md[key]/wn:null}))};
   const color=colorOf(c);
   // Raid recommandations : score = organic A→B × (1 + reciprocal B→A / total)
   const raids=hasApi()?raidRecommendations(q,pres,shown(),c,info):null;
@@ -1990,7 +2018,7 @@ function renderChannel(q){
     ch:chHead(c),
     list:listFallback.map(x=>({...who(x),live:!!(info[x]&&info[x].live)})),
     main,more,hasApi:hasApi(),
-    moments:momentsData(moments(q.mins,[c],6)),clips:clipsData(q,[c]),switches,also:also.slice(0,10),alsoBase:U.size,games,raids,
+    talk,switches,also:also.slice(0,10),alsoBase:U.size,games,raids,
     msgChart:lineSpec([{name:c,c,color,pts:minuteSeries(q.mins,c,'m')}],{unit:' msg/min',gaps:listenGaps([c],q.t0)}),
     viewerChart:hasApi()?lineSpec([{name:c,c,color,pts:viewerSeries(q.snaps,c)}],{unit:' viewers'}):null,
     hourChart:{items:hours,color:color===OTHER?'#5b93ff':color,unit:' messages'}}}));
@@ -2082,10 +2110,7 @@ function matrixData(keys,sets,photos=false){
 // Onglet « Par jeu » : l'ancien code calcule, React affiche (événement « legacy:game », voir app/src/legacy/bridge.ts).
 function renderGame(q){
   $('t-game').innerHTML='';
-  const D=discover||{};
-  const disc={q:D.q||'',lang:D.lang!=null?D.lang:'fr',status:D.status||'idle',error:D.error||'',game:D.game||'',
-    streams:(D.streams||[]).map(s=>({...who(s.c),name:s.name,title:s.title,viewers:s.viewers,followed:cfg.chans.includes(s.c)}))};
-  if(!hasApi()){window.dispatchEvent(new CustomEvent('legacy:game',{detail:{hasApi:false,canSearch:apiReady(),discover:disc,games:[],switchGames:[],matrix:null}}));return}
+  if(!hasApi()){window.dispatchEvent(new CustomEvent('legacy:game',{detail:{hasApi:false,games:[],switchGames:[],matrix:null}}));return}
   const known=q.pres.filter(p=>p.g!==UNKNOWN&&p.g!==OFFLINE),G=new Map();
   for(const p of known){let o=G.get(p.g);if(!o)G.set(p.g,o={g:p.g,users:new Set(),msgs:0,chans:new Set(),air:0,vs:0,vn:0});o.users.add(p.u);o.msgs+=p.n;o.chans.add(p.c)}
   for(const s of q.snaps){if(!s.live)continue;let o=G.get(s.g);if(!o)G.set(s.g,o={g:s.g,users:new Set(),msgs:0,chans:new Set(),air:0,vs:0,vn:0});o.chans.add(s.c);(o.slots||(o.slots=new Set())).add(s.c+'|'+Math.floor(s.t/SLOT));o.air=o.slots.size*2;o.vs+=s.v;o.vn++}
@@ -2093,25 +2118,10 @@ function renderGame(q){
   const top=games.filter(o=>o.users.size).slice(0,8),sets=new Map(top.map(o=>[o.g,o.users]));
   const sw=switchesOf(q.snaps,q.mins,shown()),SG=new Map();
   for(const x of sw){let o=SG.get(x.to);if(!o)SG.set(x.to,o={g:x.to,n:0,dv:[],dm:[]});o.n++;const a=rel(x.vA,x.vB),b=rel(x.mA,x.mB);if(isFinite(a))o.dv.push(a);if(isFinite(b))o.dm.push(b)}
-  window.dispatchEvent(new CustomEvent('legacy:game',{detail:{hasApi:true,canSearch:apiReady(),discover:disc,
+  window.dispatchEvent(new CustomEvent('legacy:game',{detail:{hasApi:true,
     games:games.map(o=>({g:o.g,chans:liveFirst([...o.chans]).map(who),air:dur(o.air*MIN),avgV:o.vn?o.vs/o.vn:null,users:o.users.size,msgs:o.msgs,perUser:o.users.size?o.msgs/o.users.size:null})),
     switchGames:[...SG.values()].sort((a,b)=>b.n-a.n).map(o=>({g:o.g,n:o.n,dv:o.dv.length?median(o.dv):null,dm:o.dm.length?median(o.dm):null})),
     matrix:top.length>=2?matrixData(top.map(o=>o.g),sets):null}}));
-}
-// Recherche des plus gros lives d'une catégorie (API Twitch), lancée depuis React.
-async function runDiscover(qn,lang){
-  qn=String(qn||'').trim();if(!qn)return;
-  discover={q:qn,lang,status:'loading'};if(tab==='game')render();
-  try{
-    let g=(await helix('games?name='+encodeURIComponent(qn))).data[0];
-    if(!g){const s=(await helix('search/categories?first=5&query='+encodeURIComponent(qn))).data;g=s[0]&&{id:s[0].id,name:s[0].name}}
-    if(!g)throw new Error('catégorie introuvable');
-    const r=await helix('streams?first=30&game_id='+g.id+(lang?'&language='+lang:''));
-    discover.list=r.data.map(s=>s.user_login.toLowerCase());
-    if(r.data.length)try{const u=await helix('users?'+discover.list.map(c=>'login='+encodeURIComponent(c)).join('&'));for(const x of u.data)setAvatar(x.login.toLowerCase(),x.profile_image_url)}catch(e){}
-    Object.assign(discover,{status:'done',game:g.name,streams:r.data.map(s=>({c:s.user_login.toLowerCase(),name:s.user_name,title:s.title,viewers:s.viewer_count}))});
-  }catch(e){Object.assign(discover,{status:'error',error:e.message})}
-  if(tab==='game')render();
 }
 const MAX_CLOUD_CHANS=100; // limite du collecteur
 function addChans(list){
@@ -2124,7 +2134,7 @@ function addChans(list){
       .catch(e=>{cloud.err=e.message;smsg.chans='Échec de l\'ajout : '+e.message;cloudSync().then(render)});
     if(tab==='settings')renderSettings();return nw.length}
   let added=0;for(const c of list)if(!cfg.chans.includes(c)){cfg.chans.push(c);added++;if(running&&ws&&ws.readyState===1)setTimeout(()=>{if(running&&ws&&ws.readyState===1&&cfg.chans.includes(c))ws.send('JOIN #'+c)},added*600)}
-  saveCfg();buildChanSel();if(running){pollStreams();loadEmotes(list)}if(discover&&tab==='game')render(); /* « suivie » se met à jour dans la recherche */
+  saveCfg();buildChanSel();if(running){pollStreams();loadEmotes(list)}
   if(added)smsg.chans=`${added} chaîne${added>1?'s':''} ajoutée${added>1?'s':''}.`+(running?'':(added>1?' Elles seront écoutées':' Elle sera écoutée')+' au prochain « Démarrer l\'écoute ».');
   if(tab==='settings')renderSettings();return added}
 function removeChan(c){
@@ -2261,7 +2271,8 @@ function renderFlows(q){
   // Passages par jour (chantier C1) : champ « byDay » ajouté à l'événement. Le Sankey reçoit d'abord, tout de suite et sans attendre, les
   // mêmes données qu'avant ; la base est interrogée à part (résultat gardé 10 min : le rollup ne change que la nuit) et l'événement est
   // réémis avec byDay à l'arrivée. Échec ou base pas à jour : pas de byDay, aucune erreur visible.
-  const fd0=dayKey(periodStart()||Date.now()-89*DAY),fd1=dayKey(Date.now()),fk=fd0+'|'+fd1,fc=flowsDayCache;
+  // le rollup n'a jamais le jour en cours : sur « Aujourd'hui », la carte des migrations garde toutes ses journées
+  const fd0=dayKey((period!=='today'&&periodStart())||Date.now()-89*DAY),fd1=dayKey(Date.now()),fk=fd0+'|'+fd1,fc=flowsDayCache;
   const fresh=fc.key===fk&&Date.now()-fc.at<(fc.data?600000:120000);
   if(fresh&&fc.data)detail.byDay=flowsDayRows(fc.data);
   fc.last={fk,detail};
@@ -2381,7 +2392,7 @@ function render(){
   // quand il y a 3 chaînes ou moins (toutes en auraient un, il ne distinguerait plus rien). Calculé avant l'événement de l'onglet.
   {const by=usersBy(q.pres,p=>p.c);window.planetRing=new Set(by.size>3?[...by].sort((a,b)=>b[1].size-a[1].size).slice(0,3).map(x=>x[0]):[])}
   // 24/11/2026 : « rosters » manquait dans cette table : sur cet onglet, chaque rafraîchissement levait « is not a function ».
-  ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,overlap:renderOverlap,map:renderMap,flows:renderFlows,rosters:window.renderRosters})[tab](q);
+  ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,clip:renderClip,overlap:renderOverlap,map:renderMap,flows:renderFlows,rosters:window.renderRosters})[tab](q);
 }
 
 // Onglet « Rosters » : pour chaque chaîne suivie, l'ensemble des viewers actifs (empreintes) de la période et ses messages.
@@ -2417,8 +2428,7 @@ document.body.addEventListener('click',e=>{
   const o=e.target.closest('[data-open]');if(o){selChan=o.dataset.open;buildChanSel();showTab('channel');return}
   const g=e.target.closest('[data-goto]');if(g){e.preventDefault();showTab(g.dataset.goto);return}
   const ch=e.target.closest('[data-chat]');if(ch){selChat=ch.dataset.chat;buildChanSel();render();return}
-  const a=e.target.closest('[data-add]');if(a){const im=a.closest('.res')&&a.closest('.res').querySelector('img');if(im)setAvatar(a.dataset.add,im.src);addChans([a.dataset.add]);return}
-  const at=e.target.closest('[data-addtop]');if(at&&discover&&discover.list){addChans(discover.list.slice(0,+at.dataset.addtop));return}
+  const cl=e.target.closest('[data-clip]');if(cl){selClip=cl.dataset.clip;if(tab==='clip')render();else{showTab('clip');window.scrollTo(0,0)}return}
 });
 /* ---------- Réglages : actions appelées par React (app/src/components/settings/) ---------- */
 function settingsMode(m){return setMode(m).then(renderSettings)}
