@@ -30,8 +30,8 @@ Avant d'agir, classe la demande dans ce tableau. Une seule ligne par demande ; s
 | Vérification de rendu | `/verifier` (captures Chrome headless) ; Playwright seulement pour les clics, survols et états, sur `npm run dev` |
 | Base Supabase | Lecture seule. Aucune écriture, aucune migration sans « oui » explicite |
 | Audit, « tout est à jour ? », liens cassés | `/audit` (script `scripts/audit-projet.mjs`) ; corriger ce qu'il signale ou le noter dans le compte rendu |
-| Chantier sur plusieurs sessions | Plan dans `IDEES.md`, un chantier par session |
-| Travail volumineux et indépendant | Sous-agent ; sinon, faire dans la session |
+| Chantier sur plusieurs sessions | Plan dans `IDEES.md`, un chantier à la fois |
+| Tâche d'un chantier (code, maquette, audit) | Sous-agent au modèle du barème, sans demander (section « Délégation, modèles et contexte ») |
 
 ## Idées et plans
 
@@ -56,19 +56,29 @@ Verdict, un seul par idée :
 
 Si une idée remet en cause un choix passé de l'utilisateur, dis-le clairement (« [ton choix] ») : il l'accepte.
 
-**3. Planifier et déléguer.** Pour les idées « Faire » et « Prototype », fais un plan par chantier. **Un chantier = une session** (`/clear` entre deux). Pour chaque tâche : fichiers concernés, modèle, effort, exécutant, vérification, critère de fin. Le barème de modèles est dans `SUIVI.md` §7 : ne le recopie pas ici.
+**3. Planifier et déléguer.** Pour les idées « Faire » et « Prototype », fais un plan par chantier. **Un chantier à la fois.** Pour chaque tâche : fichiers concernés, modèle, effort, exécutant, vérification, critère de fin. Le barème de modèles est dans `SUIVI.md` §7 : ne le recopie pas ici.
 
 **4. Restituer.** Rends, dans cet ordre : le tableau des idées (idée, scores, plus-value /25, coût, verdict, raison en une ligne) ; le plan (chantiers ordonnés, tâches, modèle, effort, exécutant, vérification, critère d'abandon) ; le coût estimé (sessions, part d'Opus) et ce qu'on ne fait pas ; la prochaine action. Range le résultat dans `IDEES.md` (sections « Évaluées », « Plan en cours », « Écartées ») et propose la ligne à ajouter à `SUIVI.md`. N'exécute le plan que si l'utilisateur dit de lancer, et un chantier à la fois.
 
 **5. Après un chantier.** Note dans `IDEES.md` le coût réel (sessions, modèles) face à l'estimé et ce que la fonction a apporté. Si l'estimation était fausse de plus d'un cran, corrige le barème dans `SUIVI.md` §7, pas ici.
 
-## Délégation
+## Délégation, modèles et contexte
 
+Décision de l'utilisateur (27/11) : il ne veut ni choisir le modèle ni gérer le contexte. Ne lui écris jamais « prends Opus », « change de modèle » ou « délègue » : fais-le.
+
+**Qui fait quoi**
+- Dans la session : réponses, idées, plans, retouches d'une ligne ou d'un texte, documentation de suivi, contrôle, commit, PR et fusion.
+- En sous-agent, d'office : toute tâche d'un chantier (code, maquette, audit). Passe `model` et `effort` d'après le plan ou le barème de `SUIVI.md` §7, et annonce le choix en une ligne.
+- Une tâche ciblée par agent, avec ses fichiers exacts et le résultat attendu, pas un chantier entier. Les agents repartent de zéro : donne-leur le contexte utile, pas l'historique.
 - Un chantier à la fois. Deux tâches qui touchent le même fichier passent l'une après l'autre, jamais en parallèle.
-- Chaque brief nomme ses fichiers exacts et le résultat attendu. Découpe un chantier en tâches ciblées plutôt que de tout confier à un seul agent.
-- Les agents repartent de zéro : donne-leur le contexte utile, pas l'historique.
-- Choix du modèle : barème de `SUIVI.md` §7. Justifie le choix en une ligne.
-- Un sous-agent seulement pour un travail **indépendant et volumineux**. Sinon, fais-le dans la session. Précise `model` dans l'appel, avec un prompt autonome (fichiers, contraintes, résultat attendu).
+
+**Contexte de la session**
+- Demande aux agents un compte rendu court : fichiers modifiés, ce qui a été vérifié, ce qui ne l'a pas été. Ne relis pas ce qu'ils ont lu.
+- Contrôle avec le moins de lecture possible : `git diff --stat`, le diff par fichier si un point inquiète, les captures utiles.
+- Tu ne peux pas lancer `/clear`, `/compact` ni `/model`, et aucun hook ne le peut. Si la session devient lourde, mets d'abord `SUIVI.md` à jour, puis demande `/clear` à l'utilisateur dans « Commande à lancer ».
+
+**Limites**
+- Un agent ne peut pas interroger l'utilisateur : les choix te reviennent, tu les poses.
 - Pas d'agent de critique de design : le design passe par `ui-ux-pro-max` (suggestions, `DESIGN.md` prime), à la demande seulement.
 - Ne jamais éditer `twitch-overlap.html` (généré). Après toute modification de `app/src`, `npm run build` dans `app/`.
 
@@ -100,4 +110,4 @@ Court, en trois lignes :
 
 - **Fait** : ce qui est terminé et vérifié, avec ce qui a été testé et comment.
 - **Attend un choix** : ce qui demande une décision de l'utilisateur, ou « rien ».
-- **Commande à lancer** : si une action manuelle est nécessaire, écris « lance ceci dans <chemin complet> : » suivi du bloc de commandes et du résultat attendu ; sinon « aucune ».
+- **Commande à lancer** : tout ce qui demande son intervention (terminal, commande `/…`, réglage, vérification sur ses données). Pour une commande de terminal, écris « lance ceci dans <chemin complet> : » suivi du bloc et du résultat attendu ; sinon « aucune ».
