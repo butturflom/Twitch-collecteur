@@ -127,6 +127,14 @@ Confirmé ensuite (27/11) : sur la Carte, les hors ligne sont masqués ; « jeux
 
 R0 à R4 : 8 à 9 sessions, 2 avec Opus. R5 et R6 : 2 à 4 sessions de plus, et des crédits Higgsfield.
 
+**R5 intégration (sur « lance », M, Sonnet 5.5 high)** : source = `gabarit.html`, `planetes.py` et `rendus/` du prototype (composition B2 adouci, `REFLET_B2 = .08`, `GENOU_B2 = .82`). À faire :
+- `planetSvg` et `av()` (`legacy.js`) : un seul `<image>` par planète, tiré d'un cache ; plus de médaillon ni d'initiale sauf photo manquante.
+- Photos composées dans un canvas (`crossOrigin="anonymous"`, CORS autorisé par Twitch), par petits lots (environ 0,5 s bloquantes pour 100 d'un coup).
+- Images intégrées au build (environ 205 Ko), forme choisie d'après le nom ; couleur de la chaîne exacte au bord et en halo ; endormie grise.
+- `lib/planet.ts`, `channel-avatar.tsx`, `DESIGN.md` (« Avatar-planète »), version et `CHANGELOG.md`.
+- Pertes connues : lumière orientée vers l'étoile du système ; planète Twitch fixe, sauf à garder le globe actuel (`TW_MESH`).
+- Vérification : `/verifier`, Carte dense dans un vrai navigateur, vraies photos. Abandon : saccades, ou photos moins lisibles qu'en avatar rond (alors planètes actuelles).
+
 ### Plan précédent
 
 **État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), gardé comme prototype (26/11) ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), fonction `flows_by_day` présente en base (vérifié le 26/11), à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se déploie sans ta demande ; pour les fusions, voir `SUIVI.md` §4.
