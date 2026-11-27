@@ -192,8 +192,8 @@ export function Flows() {
       <Kpis
         items={[
           { label: "Migrations", value: fmt(d.total), hint: d.routes ? `sur ${fmt(d.routes)} trajets différents` : "" },
-          { label: "Organiques", value: fmt(totalOrganic), hint: "Flux naturels (non-raid)" },
-          { label: "Raids", value: fmt(totalRaid), hint: "Viewers portés par les raids" },
+          { label: "Sans raid", value: fmt(totalOrganic), hint: "Migrations sur un trajet sans raid" },
+          { label: "Trajets raidés", value: fmt(totalRaid), hint: "Migrations sur un trajet qui a connu un raid" },
           { label: "Délai médian", value: flowType === "raid" ? (d.gapRaid || "—") : (d.gapOrganic || "—"), hint: "entre le dernier message chez A et le premier chez B" },
           { label: "Raids reçus", value: fmt(d.raidCount) },
           { label: "Viewers apportés", value: fmt(d.raidViewers) },

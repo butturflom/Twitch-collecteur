@@ -269,6 +269,27 @@ function mergeRow(t,r){
 // lignes d'avant ne seraient plus jamais téléchargées. cloud.gen change à chaque remplacement.
 function cloudReset(){cloud.gen++;cloud.syncing=false;cloud.progress=0}
 
+// Les raids ne sont pas dans « events » : le collecteur les écrit dans raid_events (sans colonne rev, on suit donc l'id).
+// Ils entrent dans DB.events au format des autres événements, que lisent tous les blocs « raids ». La chaîne de l'événement
+// est celle qui reçoit. Une même paire à moins d'une minute compte pour un seul raid (doublons dans la table, 23 au 25/11).
+async function syncRaids(stale,syncFromMs){
+  const seen=new Map(),isNew=e=>{const k=e.from+'|'+e.c,ts=seen.get(k)||[];
+    if(ts.some(t=>Math.abs(t-e.t)<60000))return false;
+    ts.push(e.t);seen.set(k,ts);return true};
+  for(const e of DB.events)if(e.type==='raid')isNew(e);
+  let last=DB.revs.raid_events||0,added=0;
+  for(;;){
+    let rows;
+    try{rows=await sbReq(`raid_events?select=id,ts,from_channel,to_channel,viewers&id=gt.${last}&ts=gte.${syncFromMs}&order=id.asc&limit=1000`)}
+    catch(e){if(/PGRST205|42P01|Supabase 404/.test(e.message))return added;throw e} // base d'avant la table raid_events
+    if(stale()||!rows||!rows.length)return added;
+    for(const r of rows){const e={t:+r.ts,c:r.to_channel,type:'raid',from:r.from_channel,n:r.viewers||0};
+      if(isNew(e)){DB.events.push(e);added++}}
+    last=DB.revs.raid_events=+rows[rows.length-1].id;
+    if(rows.length<1000)return added;
+  }
+}
+
 async function cloudSync(){
   if(!isCloud()||cloud.syncing)return;
   const gen=cloud.gen,stale=()=>gen!==cloud.gen;cloud.syncing=true;
@@ -300,6 +321,7 @@ async function cloudSync(){
       for(const r of rows)mergeRow(t,r);total+=rows.length;if(rows.length)DB.revs[t]=+rows[rows.length-1].rev;
       if(rows.length<1000)break;cloud.progress=total;pushStatus();
     }
+    total+=await syncRaids(stale,syncFromMs);if(stale())return;
     const st=(await sbReq('collector_status?select=*'))[0]||null;if(stale())return;cloud.status=st;
     // Le statut des chaînes (live, viewers, jeu) n'est valable que si le collecteur vient de l'envoyer : sinon c'est
     // celui du moment où il s'est arrêté, et une chaîne resterait « LIVE » des heures après la fin de son live.

@@ -13,6 +13,26 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 - 2026-11-26 · « J'ai déjà regardé l'intro. Pour le moment, je la laisse et la considère comme prototype. J'ajouterai des idées et des inspirations à suivre pour cette animation. » → (L'intro reste en place, au rang de prototype, en attente d'inspirations. Voir « Inspirations pour l'intro ».)
 - 2026-11-26 · « Pour les planètes, je pense qu'il faut qu'on revoie comment on définit le design d'une planète comme sa forme ou sa texture, et comment l'icône de profil du streamer se colle à la planète. » → (Redéfinir la planète d'une chaîne : forme, texture, et pose de la photo de profil.)
 - 2026-11-26 · « J'aimerais que la recherche de streamers à suivre soit améliorée. » → (Trois pistes, hypothèse faute de précision : gérer la liste suivie, résultats plus parlants, suggestions de chaînes à suivre.)
+- 2026-11-27 · Review, général : « J'aimerais que la période affichée soit « Aujourd'hui » pour toutes les informations de l'application. » → (Période par défaut : aujourd'hui.)
+- 2026-11-27 · Review, calculs : « Un agent ou un skill pour revoir les calculs des analyses, et la hiérarchie des infos qu'on a et qu'on utilise. » → (Audit des calculs et des sources de données.)
+- 2026-11-27 · Review, Carte : « Enlever la légende entourée en rouge ; revoir le fonctionnement des filtres ; générer des modèles 3D des planètes avec Blender et Higgsfield. » → (Légende, filtres (à préciser), planètes 3D.)
+- 2026-11-27 · Review, menu : « Fusionner Chevauchement et Flux dans la Vue d'ensemble, retirer les onglets du menu, réutiliser le rangement par chaîne et par jeu. » → (Menu plus court.)
+- 2026-11-27 · Review, Vue d'ensemble : « Réutiliser les modèles 3D ; modifier l'emplacement montré sur capture ; afficher « les jeux du moment » et « les streamers du moment ». » → (Nouveaux blocs du présent (capture manquante).)
+- 2026-11-27 · Review, Vue d'ensemble : « Remonter le « Tout » et le montrer par jour, en différenciant viewers et viewers actifs. » → (Bloc d'activité en haut, jour par jour.)
+- 2026-11-27 · Review, Vue d'ensemble : « Réduire et simplifier « Les chaînes » ; clic sur une planète : détails du streamer avec animation. » → (Chaînes compactes et fiche animée.)
+- 2026-11-27 · Review, Vue d'ensemble : « Hors ligne : 5 par défaut puis déroulé ; animation de planète endormie. » → (Liste courte et planète endormie.)
+- 2026-11-27 · Review, Vue d'ensemble : « Viewers max à la place de « viewers » ; tableaux de détail à dérouler ou ouvrir au clic. » → (Pic d'abord, détail replié.)
+- 2026-11-27 · Review, Vue d'ensemble : « Participation du chat : mettre en avant les communautés les plus impliquées ; classement à mettre dans « Par chaîne ». » → (Classement d'implication.)
+- 2026-11-27 · Review, Chevauchement : « Une mascotte (le viewer actif) qui va de planète en planète sur un fond de mini-galaxies ; la ligne « 96 % écrivent sur 1 chat » ; animer le parcours entre chaînes. » → (Parcours animé.)
+- 2026-11-27 · Review, Flux : « La carte des migrations dit la même chose que Chevauchement : en garder une ; supprimer le diagramme ; migrations en viewers actifs seulement, avec animation. » → (Une seule lecture des déplacements.)
+- 2026-11-27 · Review, Flux : « Bilan par chaîne en carte à collectionner (TCG) animée. » → (Fiche résumé d'un streamer.)
+- 2026-11-27 · Review, Raids : « Afficher les raids de la plateforme en global pour en tirer des analyses ; bandeau défilant des raids dans la Vue d'ensemble. » → (Analyse et bandeau des raids.)
+- 2026-11-27 · Review, Par chaîne : « Données du jour en priorité ; messages par minute en machine qui produit de l'énergie ; début et fin du live, viewers moyens, pic et minimum ; jeux en badges. » → (Résumé du live du jour.)
+- 2026-11-27 · Review, Par chaîne : « « Où vont ses viewers » et « d'où ils viennent » réservés à l'abonnement agences et streamers. » → (Fonction payante.)
+- 2026-11-27 · Review, Par jeu : « Modèles 3D de planètes pour les jeux ; une carte des jeux, taille selon les viewers de la catégorie ; retirer « Trouver des streamers ». » → (Carte des jeux.)
+- 2026-11-27 · Review, Chat : « Animation de remplissage à la place des tableaux ; types de messages et ambiance par chaîne dans « Par chaîne » ; podium des 3 emotes. » → (Chat lisible.)
+- 2026-11-27 · Review, Clip : « « Moments à clipper » dans un onglet à part nommé Clip. » → (Onglet Clip.)
+- 2026-11-27 · Review, Réglages : « Source des données visible seulement par moi ; trouver la limite de chaînes suivies et l'afficher. » → (Réglages pour futurs utilisateurs.)
 
 ### Inspirations pour l'intro
 
@@ -32,6 +52,26 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 | Gérer les chaînes suivies (liste entière, filtre, retrait avec confirmation, ajout en bloc) | 3 : sans retrait, la limite de 100 chaînes bloque ; aucune analyse nouvelle | 5 : rétablit ce que `app/LISEZMOI.md` décrit déjà | 5 : les actions existent dans `legacy.js` | 4 : le retrait modifie la liste du collecteur, donc confirmation obligatoire | **20** | S (1 session) | **Faire** | Régression du portage React, à traiter en premier. |
 | Suggestions « à suivre » d'après les raids reçus | 4 : montre qui amène déjà des viewers vers le réseau suivi sans être mesuré ; aide à choisir les chaînes pour une agence | 4 : à libeller « a raidé une de tes chaînes », rien de plus | 4 : `raid_events` est déjà rempli, lisible et jamais purgé ; volume réel à compter avant | 4 : lecture seule, pas de `schema.sql` ; ne voit que les raids reçus par les chaînes suivies | **20** | M (1 à 2 sessions) | **Faire** | La piste la plus intéressante. D'abord compter les chaînes candidates dans la base. |
 | Résultats de recherche plus parlants (viewers en direct, langue, en direct d'abord, clavier) | 2 : confort | 5 | 4 : un appel `streams` de plus, seulement avec l'API | 4 : quota Twitch négligeable | **17** | S (même session que la gestion) | **Faire**, en second | Utile seulement si l'API est configurée dans le navigateur. |
+| Audit des calculs et hiérarchie des données (27/11) | 5 : tout chiffre montré à une agence en dépend | 5 : « honnête sur ses limites » | 4 : code et schéma disponibles | 5 : lecture seule | **24** | M (1 session) | **Faire**, en premier | Un document de référence, pas un agent. |
+| Raids sortis des migrations (viewers actifs seulement) | 4 : corrige un chiffre faux | 5 : même unité partout | 4 : séparation déjà stockée | 3 : touche les rollups | **20** | S | **Faire** | Part raid surestimée du 23 au 25/11 (`SUIVI.md` §0). |
+| Période « Aujourd'hui » par défaut | 4 : on voit le présent | 3 : fidélité (200 actifs) et rythme ne vivent pas sur un jour | 5 : réglage existant | 3 : écrans presque vides après minuit | **19** | S | **Faire** | Les blocs d'historique gardent leur échelle ; pas sur la Carte [ton choix, règle des deux temps]. |
+| Rangement : onglet Clip, retrait de « Trouver des streamers », hors ligne à 5, types et ambiance dans Par chaîne, jeux en badges, limite mise en avant, podium d'emotes | 3 : pages plus lisibles | 4 : aucune décision remise en cause | 5 : données présentes | 5 : affichage seul | **20** | M (1 à 2 sessions) | **Faire** | Rapport effet/coût le plus haut. |
+| Légende de la Carte déplacée dans l'aide | 3 : Carte dégagée | 4 : seulement si la légende reste accessible | 5 : l'aide existe | 4 : lecture moins immédiate | **19** | S | **Faire** (déplacer, pas supprimer) | Sans elle, taille, étoile et liens ne se lisent plus. |
+| Pic de viewers mis en avant, détails repliés | 3 : chiffre plus parlant | 5 : à libeller « pic » | 5 : donnée relevée | 5 : affichage seul | **21** | S | **Faire** (bloc à confirmer) | Capture ou nom du bloc attendu. |
+| Onglet « Audiences » unique (Chevauchement + Flux, diagramme retiré) | 4 : une question, une page | 4 : direction et chevauchement restent distincts | 4 : données présentes | 3 : refonte de deux pages | **19** | M (2 sessions) | **Faire** | Contre-proposition à la fusion dans la Vue d'ensemble. |
+| Tout fusionner dans la Vue d'ensemble | 3 : un seul écran | 2 : contredit la demande de simplifier | 4 : données présentes | 3 : page très lourde | **15** | L | **Écarter** (sauf avis contraire) | Page interminable. On perd un seul écran pour tout. |
+| Activité jour par jour en haut, viewers distincts des actifs | 4 : tendance lisible | 5 : deux unités nommées | 4 : rollups quotidiens, peu de journées | 4 : lecture seule | **21** | M | **Faire** | Sert aussi la trajectoire. |
+| Raids : bandeau défilant dans la Vue d'ensemble | 3 : signal du moment | 3 : pause obligatoire, arrêt si mouvements réduits | 5 : `raid_events` déjà lu | 4 : mouvement permanent | **18** | S | **Faire** | Raids reçus par les chaînes suivies. |
+| Raids de toute la plateforme | 3 : analyse neuve | 2 : on ne voit que les raids reçus par les chaînes suivies | 1 : non collecté | 3 : quotas Twitch | **12** | L | **Écarter** sous ce nom | On analyse les raids reçus par le réseau suivi. |
+| Résumé du live du jour (début, fin, moyen, pic, minimum) | 5 : lecture d'un live | 5 : mesures directes | 3 : relevés gardés peu de jours, un toutes les 2 min | 3 : `schema.sql` pour garder l'historique | **21** | M (2 sessions) | **Faire** | Minimum mesuré après les 10 premières minutes. |
+| Classement des communautés impliquées | 3 : déjà en partie là | 3 : « Communautés investies » existe ; Par chaîne ne montre qu'une chaîne | 5 : calculé | 5 : affichage seul | **19** | S | **Faire** en fusionnant avec l'existant | Rang de la chaîne dans Par chaîne. |
+| Fiche « carte à collectionner » (clic sur planète, bilan Flux) | 4 : résumé partageable | 4 : si les chiffres restent lisibles | 4 : données présentes | 4 : composant isolé | **20** | M | **Prototype d'abord** | Un seul composant pour les deux demandes. |
+| Planètes 3D Blender (chaînes, jeux, endormie) | 3 : identité forte | 4 : style low-poly du chantier E | 3 : crédits Higgsfield | 2 : poids du HTML unique, fluidité à 100 planètes | **15** | L | **Prototype d'abord** | Images pré-rendues dans Blender, moteur de la Carte inchangé. |
+| Animation de remplissage à la place des tableaux du Chat | 3 : plus lisible | 3 : valeurs exactes à garder au clic | 5 : données présentes | 4 : affichage seul | **18** | M | **Prototype d'abord** | Forme à définir. |
+| Mascotte qui suit les parcours | 2 : plaisir, aucune analyse | 3 : mouvement qui peut cacher la donnée | 3 : parcours bruts d'un seul jour | 3 : poids et fluidité | **13** | L | **Prototype d'abord**, en dernier | Un seul parcours réel à la fois. |
+| Machine à énergie pour les messages par minute | 1 : même chiffre, moins lisible | 2 : la courbe doit rester | 5 : donnée présente | 4 : affichage seul | **13** | M | **Écarter** pour l'instant | On perd un effet, pas une information. |
+| Carte des jeux | 3 : vue neuve | 3 : viewers des chaînes suivies seulement, pas de la catégorie Twitch | 3 : liens entre jeux existants | 2 : moteur de `legacy.js` | **14** | L | **Planifier** après les planètes | Pas de logos ni de personnages de jeux (droits). |
+| Flux par chaîne et source des données réservés (abonnement) | 4 : modèle payant | 2 : pas de comptes | 1 : droits à construire | 1 : un masquage dans un HTML ne protège rien | **12** | L | **Planifier** avec le chantier D | Après un premier contrat. |
 
 ### Ce qui est déjà livré du texte collé (PR #43 et #44)
 
@@ -46,6 +86,38 @@ Dépose ici tes idées en vrac, sans te censurer : une ligne chacune. L'orchestr
 - Les pastilles de moins de 20 px de `ChannelAvatar` (légende de `line-chart.tsx`, menu de la Carte) : sans relief ni halo par choix de lisibilité. Ce choix peut rester, avec un relief léger sans halo.
 
 ## Plan en cours
+
+### Review du 27/11 (proposé, rien de lancé)
+
+Captures reçues le 27/11 : légende de la Carte (en bas à droite, elle masque une planète) ; Recoupements (constellation à déplacer vers le haut à gauche, phrase à descendre vers les listes, à confirmer).
+
+Réponses de l'utilisateur (27/11), elles priment sur les hypothèses plus haut :
+- **Recoupements** : la constellation passe au-dessus du texte, centrée, dans le même bloc.
+- **Menu** : onglet « Audiences » retenu (Chevauchement + Flux).
+- **Carte** : elle doit refléter le direct. Constat dans `renderMap` (`legacy.js`) : elle montre les chaînes qui ont des viewers actifs sur la période, hors ligne comprises ; « En live » est une option coupée par défaut ; taille, audience minimale et jeu portent sur la période. La règle des deux temps du 26/11 (E3) allait dans ce sens et n'a jamais été codée. Hypothèse : en live par défaut, hors ligne visibles sur demande, en planètes endormies.
+- **Viewers max** : à la place de « viewers » dans « Les chaînes » (Vue d'ensemble) et dans « Par chaîne ».
+- **96 %** : à mettre en avant, libellé « des viewers actifs n'écrivent que sur une seule de tes chaînes suivies », en tête d'« Audiences ».
+- **« Tout »** : confirmé, le bloc d'activité « Tout · du … au … ».
+
+En attente : l'emplacement des « jeux du moment » et « streamers du moment » (hypothèse : un bloc « En ce moment » au-dessus de « Les chaînes »).
+
+**Carte en direct** (nouveau, reprend E3 sans attendre les planètes 3D) : valeur 4 (la Carte dit le présent), cohérence 5 (règle validée le 26/11), faisabilité 4 (direct et viewers déjà connus), risque 3 (moteur de la Carte). Plus-value 20/25, coût M, **Faire**.
+
+| Chantier | Contenu | Fichiers | Modèle, effort | Vérification | Abandon |
+|---|---|---|---|---|---|
+| R0 (S, d'abord) | **Bug constaté le 27/11** : aucun raid ne s'affiche (« Dernier raid », Flux, communautés investies, Par chaîne). Le collecteur écrit les raids dans `raid_events` (68 le 26/11, 36 le 27/11 à 15 h 32), le tableau de bord les lit dans `events`, où il n'y en a aucun | `app/src/legacy/legacy.js` | Sonnet 5.5, high | `/verifier`, puis lecture sur les vraies données | Aucun |
+| R1 (1 session) | Audit des calculs : chaque chiffre, sa formule, sa source, sa limite ; hiérarchie des données ; raids dans les migrations | `CALCULS.md` (neuf), lecture de `legacy.js` et `schema.sql` | Opus 5.5, high | Relu avec l'utilisateur | Aucun |
+| R1 bis (1 session) | Carte en direct : en live par défaut, taille = viewers en direct, filtres audience et jeu sur le direct, sélecteur de période retiré de la Carte, liens sur tout le détail (date de début dans l'aide) | `legacy.js` (`renderMap`, `liveR`), `map/map.tsx`, `map/menu.tsx`, `DESIGN.md` | Sonnet 5.5, high | `/verifier`, Carte dense dans un vrai navigateur | Carte saccadée ou presque vide hors des heures de live |
+| R2 (1 à 2 sessions) | « Aujourd'hui » par défaut, rangement rapide, légende dans l'aide, bandeau des raids, constellation centrée au-dessus du texte, viewers max | `legacy.js`, `legacy-markup.html`, `overview/`, `chat/`, `channel/`, `game/`, `map/map.tsx`, onglet Clip | Sonnet 5.5, medium | `/verifier` | Un bloc vide sur « Aujourd'hui » garde sa période |
+| R3 (2 sessions) | Onglet Audiences, activité jour par jour en haut | `overlap/`, `flows/`, `overview/`, `app-sidebar.tsx`, `legacy.js` | Opus 5.5 high (maquette), puis Sonnet 5.5 high | Prototype choisi, `/verifier` | Page illisible : deux sections repliables |
+| R4 (2 sessions) | Résumé du live du jour | `schema.sql`, `legacy.js`, `channel/` | Sonnet 5.5, high | SQL en transaction annulée, `/verifier` | Début ou fin faux sur un live réel |
+| R5 (1 à 2 sessions) | Prototype planètes Blender en images (remplace E1) | page de démo `app/src/dev/` | Opus 5.5, high ; devis Higgsfield avant génération | Poids, 60 i/s, `file://` | Saccades ou poids excessif : planètes actuelles |
+| R6 (1 à 2 sessions) | Prototype fiche à collectionner, après R5 | page de démo | Opus 5.5 high puis Sonnet 5.5 high | Choix de l'utilisateur | Fiche moins lisible que le tableau |
+| Ensuite | Podium, remplissage du Chat, mascotte, carte des jeux | | | | |
+
+R0 à R4 : 8 à 9 sessions, 2 avec Opus. R5 et R6 : 2 à 4 sessions de plus, et des crédits Higgsfield.
+
+### Plan précédent
 
 **État au 26/11** : A livré (PR #51, puis planètes peintes #55). B livré (PR #52), gardé comme prototype (26/11) ; la revue de mouvement B4 n'a pas été lancée. C livré (PR #53), fonction `flows_by_day` présente en base (vérifié le 26/11), à juger sur 14 journées vers le 8/12 ; C3 abandonné. D dormant. Le détail ci-dessous est le plan d'origine, proposé le 2026-11-25. **Un chantier = une session** (`/clear` entre deux). Rien ne se déploie sans ta demande ; pour les fusions, voir `SUIVI.md` §4.
 
@@ -310,3 +382,4 @@ Critère de réussite : on reconnaît la chaîne sans lire son nom à 40 px, et 
 | F · Gérer les chaînes suivies | 1 | 1 (avec la réparation 2.0.1) | Sonnet 5.5 | Liste entière, retrait, ajout en bloc, résultats avec viewers et langue (#71) |
 | G · Suggestions d'après les raids | 1 à 2 | 1 | Sonnet 5.5 | 96 chaînes proposées sur la base (26/11, 4 jours de raids) ; à juger : combien sont réellement ajoutées. Doublons de raids découverts au passage |
 | C · Carte des migrations | 2 à 3 | non relevé | | Passages par jour dans Flux (#53), à juger vers le 8/12 |
+| R0 · Raids invisibles | moins d'1 | moins d'1 | Sonnet 5.5, dans la session | Raids de nouveau affichés (2.0.4) ; légendes fausses de Flux corrigées au passage |
