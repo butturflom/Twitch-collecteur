@@ -342,6 +342,7 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à re
 Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejouer** : avant cela, les viewers actifs et le pic des journées passées affichent « — », et la page le dit.
 
 - **Onglet « Audiences »** à la place de « Chevauchement » et « Flux » : une page, « En commun » puis « Qui va où ». Il ne porte que sur les chaînes suivies et affichées, tout comme les trajets du rapport PDF et CSV.
+- **Chaînes retirées** : leurs données encore en base ne comptent plus dans les autres onglets ni dans le rapport (avant, elles comptaient sans filtre de langue) ; les journées passées de « Jour par jour » les gardent.
 - **Carte des migrations** animée, journée en cours comprise. Le diagramme de flux (Sankey) est supprimé.
 - **Paires** rangées sur le pourcentage affiché ; **« Chaîne par chaîne »** en un seul tableau.
 - **Retirés** : « Changements par viewer qui bouge » (médiane, maximum), la colonne « Souvent », « Partent surtout vers » et « Arrivent surtout de ».

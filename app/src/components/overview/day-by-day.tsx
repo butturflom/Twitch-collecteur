@@ -213,7 +213,7 @@ export function DayByDay({ today }: { today: TodayData }) {
       <p className="mt-2.5 max-w-[92ch] px-0.5 text-xs leading-relaxed text-dusk [&_b]:font-semibold [&_b]:text-muted-foreground">
         <b>Viewers</b> : le plus haut total relevé au même moment sur toutes tes chaînes suivies (un relevé toutes les 2 min) ; quelqu’un qui regarde deux lives compte deux fois.{" "}
         <b>Viewers actifs</b> : personnes distinctes qui ont écrit au moins un message, toutes chaînes ; estimées à ± 2,3 % pour les journées passées (≈), exactes pour aujourd’hui.
-        Les deux ne mesurent pas la même chose : ne les divise pas l’un par l’autre. Hachuré : aujourd’hui, pas fini. Ce bloc a sa propre durée, et ne suit ni la période ni le filtre de langue.
+        Les deux ne mesurent pas la même chose : ne les divise pas l’un par l’autre. Hachuré : aujourd’hui, pas fini. Ce bloc a sa propre durée, et ne suit ni la période ni le filtre de langue. Les journées passées gardent les chaînes suivies ces jours-là, même retirées depuis.
         {uniq && uniq.days > 1 && (
           <> Sur {uniq.days < days ? `les ${uniq.days} journées terminées disponibles` : `les ${uniq.days} dernières journées terminées`}, <b>≈ {fmt(uniq.net)} viewers actifs uniques</b> au total : une même personne n’y compte qu’une fois, les journées ne s’additionnent pas.</>
         )}

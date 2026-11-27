@@ -421,9 +421,10 @@ function Q(all){ // instantané filtré de la période ; all : tout le détail d
   const snaps=DB.snaps.filter(s=>s.t>=t0),events=DB.events.filter(e=>e.t>=t0);
   const clips=Object.values(DB.clips||{}).filter(k=>k.ts>=t0);
   const sw=Object.values(DB.switches||{}).filter(s=>s.d>=d0); // changements de stream comptés message par message (1.5)
-  if((cfg.lang||'*')!=='*'){const S=new Set(shown()),k=x=>S.has(x.c); // filtre Langue
-    return {t0,pres:pres.filter(k),mins:mins.filter(k),snaps:snaps.filter(k),events:events.filter(k),clips:clips.filter(k),sw:sw.filter(x=>S.has(x.a)&&S.has(x.b))}}
-  return {t0,pres,mins,snaps,events,clips,sw};
+  // Toujours restreint aux chaînes suivies et affichées (filtre Langue compris) : la base garde quelques jours les données
+  // d'une chaîne retirée, or les pages disent « tes chaînes ».
+  const S=new Set(shown()),k=x=>S.has(x.c);
+  return {t0,pres:pres.filter(k),mins:mins.filter(k),snaps:snaps.filter(k),events:events.filter(k),clips:clips.filter(k),sw:sw.filter(x=>S.has(x.a)&&S.has(x.b))};
 }
 function usersBy(pres,keyFn){const M=new Map();for(const p of pres){const k=keyFn(p);if(k==null)continue;let s=M.get(k);if(!s)M.set(k,s=new Set());s.add(p.u)}return M}
 // Paires de chaînes classées par ressemblance (communs ÷ réunion), pour que les petites coïncidences ne passent pas devant. Le chiffre
@@ -1923,13 +1924,14 @@ function activityData(q){
     liveNow:hasApi()&&liveData()?[...S].filter(c=>info[c]&&info[c].live).length:null,gapMs:gap>GAP_SHOWN?gap:0};
 }
 // Journée en cours, pour « Jour par jour » : ni la période ni le filtre Langue, comme les journées passées (fonction SQL
-// network_history). Viewers actifs exacts (empreintes distinctes), messages, chaînes avec des messages, pic simultané.
+// network_history), mais seulement les chaînes encore suivies. Viewers actifs exacts (empreintes distinctes), messages,
+// chaînes avec des messages, pic simultané.
 function todayData(){
-  const now=Date.now(),d=dayKey(now),t0=parisMidnight(now),users=new Set(),chans=new Set();let msgs=0;
-  for(const p of Object.values(DB.presence))if(p.d===d)users.add(p.u);
-  const add=m=>{if(m.t>=t0){msgs+=m.m;chans.add(m.c)}};
+  const now=Date.now(),d=dayKey(now),t0=parisMidnight(now),F=new Set(cfg.chans),users=new Set(),chans=new Set();let msgs=0;
+  for(const p of Object.values(DB.presence))if(p.d===d&&F.has(p.c))users.add(p.u);
+  const add=m=>{if(m.t>=t0&&F.has(m.c)){msgs+=m.m;chans.add(m.c)}};
   Object.values(DB.minutes).forEach(add);for(const c in curMin){const cm=curMin[c];if(cm)add(minuteRec(c,cm))}
-  const {peak,peakAt}=networkPeak(DB.snaps.filter(s=>s.t>=t0)),none=!users.size&&!chans.size;
+  const {peak,peakAt}=networkPeak(DB.snaps.filter(s=>s.t>=t0&&F.has(s.c))),none=!users.size&&!chans.size;
   return {d,at:now,peak,peakAt,actives:none?null:users.size,msgs:none?null:msgs,chans:none?null:chans.size};
 }
 // « En ce moment » : le direct, jamais la période. state : ok, noapi (pas d'API Twitch), off (collecteur hors ligne ou écoute
@@ -2286,9 +2288,6 @@ const ovKeep=(v,f)=>f==='multi'?v.chans.size>=2:f==='move'?v.moves>=1:f==='often
 // app/src/legacy/bridge.ts). Le filtre de viewers ne s'applique qu'à « En commun » ; il passe par setOverlapFilter() (gardé dans ce navigateur).
 function setOverlapFilter(f){cfg.ovFilter=f;saveCfg();render()}
 function renderAudiences(q){$('t-audiences').innerHTML='';renderOverlap(q);renderFlows(q)}
-// Restreint aux chaînes suivies et affichées : la base garde les données d'une chaîne retirée, or la page dit « tes chaînes suivies ».
-function followedQ(q){const S=new Set(shown()),k=x=>S.has(x.c);
-  return {...q,pres:q.pres.filter(k),events:q.events.filter(k),sw:(q.sw||[]).filter(x=>S.has(x.a)&&S.has(x.b))}}
 const AUD_PAIRS=7,AUD_MATRIX=7,AUD_MIN_ROW=20; // paires montrées, côté de la matrice, actifs minimum pour une part « ont changé »
 // Répartition des viewers actifs selon le nombre de chaînes où ils écrivent, sans le filtre. msgs : messages de chacun sur la période
 // (somme de presence.n), pour la part « un seul message » et la part parmi ceux qui ont écrit au moins 3 messages.
@@ -2303,7 +2302,6 @@ function spreadOf(pres,V){
 }
 // « En commun ». Paires : les AUD_PAIRS qui se ressemblent le plus (pairsOf), puis rangées sur le pourcentage affiché.
 function renderOverlap(q){
-  q=followedQ(q);
   const f=cfg.ovFilter||'all',{V}=moversOf(q.pres,q.sw),vs=[...V.values()],N=vs.length;
   const cnt={all:N,multi:0,move:0,often:0};for(const v of vs)for(const k of ['multi','move','often'])if(ovKeep(v,k))cnt[k]++;
   const pres=f==='all'?q.pres:q.pres.filter(p=>ovKeep(V.get(p.u),f));
@@ -2321,7 +2319,6 @@ const OV_TIPS={all:'Ont écrit au moins un message sur la période',multi:'Ont �
 
 // « Qui va où ». Sert aussi au rapport général et au CSV (lib/export-utils.ts).
 function renderFlows(q){
-  q=followedQ(q);
   const {flows}=flowsOf(q.pres,q.sw);
   const bal=new Map();for(const f of flows){bal.set(f.a,(bal.get(f.a)||{in:0,out:0}));bal.set(f.b,(bal.get(f.b)||{in:0,out:0}));bal.get(f.a).out+=f.n;bal.get(f.b).in+=f.n}
   const raids=q.events.filter(e=>e.type==='raid').sort((a,b)=>b.t-a.t);
@@ -2435,7 +2432,7 @@ function explainErr(src,raw,fallbackTitle){const m=String(raw==null?'':raw);let 
   }
   return [t,x,m,g]}
 function statusOf(){
-  const today=dayKey(Date.now()),users=new Set();for(const p of Object.values(DB.presence))if(p.d===today)users.add(p.u);
+  const today=dayKey(Date.now()),F=new Set(cfg.chans),users=new Set();for(const p of Object.values(DB.presence))if(p.d===today&&F.has(p.c))users.add(p.u);
   const facts=[['Chaînes suivies',fmt(cfg.chans.length)],['Viewers actifs aujourd\'hui',fmt(users.size)]];
   // temps d'écoute cumulé depuis le premier lancement : un état du relevé, pas un chiffre de la période
   if(DB.trackedMs)facts.push(['Temps d\'écoute au total',durJ(DB.trackedMs)]);
@@ -2560,7 +2557,8 @@ window.channelSticky = channelSticky
 async function channelsRhythm(days){
   if(!isCloud())return null;
   try{const rows=await sbReq('rpc/channels_rhythm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days})});
-    return (rows||[]).map(r=>({...who(r.c),nr:r.nr,nb:r.nb,recent:r.recent,base:r.base,sd:r.sd}))}
+    const F=new Set(cfg.chans); // les rollups gardent aussi les chaînes retirées depuis
+    return (rows||[]).filter(r=>F.has(r.c)).map(r=>({...who(r.c),nr:r.nr,nb:r.nb,recent:r.recent,base:r.base,sd:r.sd}))}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.channelsRhythm = channelsRhythm
 // Viewers uniques sur 7, 30 ou 90 jours (fonction SQL period_reach, esquisses HyperLogLog, voir schema.sql). null : pas de base Supabase

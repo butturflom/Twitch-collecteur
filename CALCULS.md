@@ -43,10 +43,12 @@ Du plus solide au plus fragile. Un chiffre vaut au mieux ce que vaut sa source l
 
 Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 
+**Chaînes comptées** (2.0.9) : tout ce qui est calculé depuis le détail gardé (tous les onglets, rapport exporté) ne porte que sur les chaînes suivies et affichées (filtre de langue compris). La base garde quelques jours les données d'une chaîne retirée : elles ne comptent plus. La journée en cours de « Jour par jour » porte sur les chaînes suivies, sans le filtre de langue ; ses journées passées (rollups) gardent les chaînes suivies ces jours-là.
+
 ### Vue d'ensemble
 | Chiffre | Formule | Source | Verdict |
 |---|---|---|---|
-| Viewers actifs uniques | empreintes distinctes, toutes chaînes | `presence` | ✅ (voir n° 2) |
+| Viewers actifs uniques | empreintes distinctes, chaînes suivies et affichées | `presence` | ✅ (voir n° 2) |
 | Messages | somme des messages par minute | `minutes` | ✅ même fenêtre que les actifs |
 | Actifs dans 2 chats ou plus | empreintes vues sur au moins 2 chaînes | `presence` | ✅ « chaînes suivies » à dire |
 | Abonnements et subs offerts | somme | `events` | ✅ |
@@ -68,7 +70,7 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Activité : pic de viewers simultanés | même somme par passage (une chaîne comptée une fois par `t`), puis maximum sur la période ; « Aujourd'hui » : depuis minuit à Paris | `snaps` | ✅ un minimum s'il manque des relevés |
 | Activité : chaînes passées en live | chaînes affichées avec au moins un relevé en live sur la période | `snaps` | ✅ |
 | Activité : couverture et trous | « partielle » si le début commun dépasse le début demandé de plus de 30 min (jamais sur « Tout ») ; trou d'écoute signalé au-delà de 15 min cumulées | `snaps`, `minutes`, `presence`, écoute | ⚠️ une panne de l'API seule n'est pas détectée |
-| Jour par jour : aujourd'hui (sans période ni filtre de langue) | actifs = empreintes distinctes ; messages = somme des minutes ; chaînes = celles qui ont des messages ; pic depuis minuit | `presence`, `minutes`, `snaps` | ✅ exact, journée incomplète |
+| Jour par jour : aujourd'hui (chaînes suivies, sans période ni filtre de langue) | actifs = empreintes distinctes ; messages = somme des minutes ; chaînes = celles qui ont des messages ; pic depuis minuit | `presence`, `minutes`, `snaps` | ✅ exact, journée incomplète |
 | Jeux du moment | somme des viewers en direct des chaînes suivies par jeu ; « Écrivent » : empreintes distinctes dont le dernier message sur ces chaînes a moins de 10 min | direct, `presence` | ✅ chaînes suivies, pas l'audience du jeu sur Twitch |
 | Streamers montants | gain = v − v30 ; classement par part = gain ÷ v30 ; v : dernier relevé, à l'heure T ; v30 : relevé du même live le plus proche de T − 30 min (± 4 min) ; live d'au moins 30 min, v30 ≥ 100, gain > 0 ; msg/min = messages des 5 dernières minutes ÷ 5 ; raid signalé s'il est reçu entre T − 30 min et maintenant | `snaps`, `minutes`, `events` | ✅ un raid fait monter d'un coup |
 | « En ce moment » : direct refusé | pas d'API ; collecteur hors ligne ou écoute arrêtée ; API en erreur ; dernier relevé de plus de 6 min alors que des chaînes sont en live | état du collecteur, `snaps` | ✅ un vieux relevé n'est pas montré comme le direct |
@@ -82,7 +84,7 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 - à l'exécution de `schema.sql`, seules les journées encore entières dans les relevés sont rattrapées. Une valeur enregistrée ne peut que monter (relevés arrivés en retard), jamais baisser.
 
 ### Audiences
-La page ne porte que sur les chaînes suivies et affichées (filtre de langue compris), comme les trajets du rapport PDF et CSV.
+La page ne porte que sur les chaînes suivies et affichées (voir « Chaînes comptées »), comme le rapport PDF et CSV : « 2 chaînes ou plus » y est le même nombre que « Actifs dans 2 chats ou plus » de la Vue d'ensemble.
 
 | Chiffre | Formule | Verdict |
 |---|---|---|
