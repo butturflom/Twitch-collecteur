@@ -388,3 +388,9 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à 
 Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
 
 - **Planètes plus en relief** : les reflets ne sont plus adoucis, les facettes se détachent mieux. Les photos très claires sont un peu plus blanches du côté éclairé.
+
+## Tableau de bord 2.0.15 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
+
+- **Planètes** : reflet des facettes éclairées réduit de moitié. Le relief reste, l’effet sur le blanchiment des photos claires est faible.

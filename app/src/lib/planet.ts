@@ -31,7 +31,7 @@ const HALF = 1.2 // demi-largeur de l'image, en rayons de planète (repris de pl
 // ajouté, qui les détache jusque sur les photos claires. La version aux reflets adoucis lissait trop le relief (retirée le 27/11).
 const DOSE = 0.82
 const REFLET_SEUIL = 0.82
-const REFLET_FORCE = 280
+const REFLET_FORCE = 140 // moitié du réglage d'origine (27/11) : moins de blanc sur les photos claires
 
 const hash = (s: string) => {
   let h = 2166136261
