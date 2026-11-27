@@ -18,13 +18,13 @@ type Opt = { key: string; label: string; on: boolean; count?: number }
 /** Les filtres qui ne sont pas à leur valeur d'origine : le menu en donne le nombre sur la rubrique Filtres. */
 function activeFilters(d: MapData): { id: string; label: string; clear: () => void }[] {
   const out: { id: string; label: string; clear: () => void }[] = []
-  if (d.live.on) out.push({ id: "live", label: "En live", clear: () => act("live", "all") })
+  if (!d.live.on) out.push({ id: "live", label: "Hors ligne comprises", clear: () => act("live", "live") })
   const lang = d.langs?.find((l) => l.on && l.key !== "*")
   if (lang) out.push({ id: "lang", label: lang.label, clear: () => act("lang", "*") })
   const game = d.games?.find((g) => g.on && g.key !== "*")
   if (game) out.push({ id: "game", label: game.label, clear: () => act("game", "*") })
   const min = d.mins?.find((m) => m.on && m.key !== "0")
-  if (min) out.push({ id: "min", label: `${min.label} viewers actifs`, clear: () => act("min", "0") })
+  if (min) out.push({ id: "min", label: `${min.label} viewers en direct`, clear: () => act("min", "0") })
   return out
 }
 
@@ -59,15 +59,14 @@ function Filtres({ d }: { d: MapData }) {
   const dirty = activeFilters(d).length > 0 || d.langs?.some((l) => l.on && l.key !== "*")
   return (
     <div className="flex flex-col gap-4">
-      <Choice label="Période" items={d.periods} onPick={(k) => act("period", k)} />
       <Choice
         label="Statut"
-        items={[{ key: "all", label: "Toutes", count: d.live.total, on: !d.live.on }, { key: "live", label: "En live", count: d.live.count, on: d.live.on }]}
+        items={[{ key: "live", label: "En direct", count: d.live.count, on: d.live.on }, { key: "all", label: "Avec les hors ligne", count: d.live.total, on: !d.live.on }]}
         onPick={(k) => act("live", k)}
       />
-      {d.langs && <Choice label="Langue" items={d.langs} onPick={(k) => act("lang", k)} hint="Les nombres comptent les chaînes qui ont des viewers actifs sur la période. La langue vaut aussi pour les autres onglets." />}
-      {d.games && <Choice label="Jeu principal" items={d.games} onPick={(k) => act("game", k)} hint="Le jeu le plus relevé de chaque chaîne pendant ses lives de la période : une chaîne qui change de jeu compte pour celui qu'elle a le plus joué." />}
-      {d.mins && <Choice label="Audience minimale" items={d.mins} onPick={(k) => act("min", k)} hint="Garde les chaînes qui ont au moins ce nombre de viewers actifs différents sur la période, pour alléger une carte chargée." />}
+      {d.langs && <Choice label="Langue" items={d.langs} onPick={(k) => act("lang", k)} hint="La langue vaut aussi pour les autres onglets." />}
+      {d.games && <Choice label="Jeu en cours" items={d.games} onPick={(k) => act("game", k)} hint="Le jeu du live en ce moment. Une chaîne hors ligne n'en a pas." />}
+      {d.mins && <Choice label="Audience minimale" items={d.mins} onPick={(k) => act("min", k)} hint="Garde les chaînes qui ont au moins ce nombre de viewers en direct, pour alléger une carte chargée." />}
       <button
         type="button"
         disabled={!dirty}
@@ -84,7 +83,7 @@ function Vue({ d, api, grp, close }: { d: MapData; api: MapApi | null; grp: numb
   const [q, setQ] = useState("")
   const shown = useMemo(() => (d.pick ?? []).filter((c) => !q.trim() || c.c.includes(q.trim().toLowerCase())), [d.pick, q])
   const modes: [MapData["view"], string, string, number | null][] = [
-    ["all", "Toutes les chaînes", "Toutes celles qui ont au moins un viewer actif sur la période.", null],
+    ["all", "Toutes les chaînes", "Toutes les chaînes suivies.", null],
     ["groups", "Groupes", "Chaînes d'au moins 5 viewers actifs, une couleur par groupe de chaînes qui partagent leurs viewers.", null],
     ["sel", "Ma sélection", "Seulement les chaînes que tu coches ci-dessous (au moins 2).", d.picked],
   ]

@@ -413,8 +413,8 @@ function commonStart(){
   return starts.length?Math.max(...starts):0;
 }
 const dataStart=()=>Math.max(periodStart(),commonStart());
-function Q(){ // instantané filtré de la période
-  const t0=dataStart(),d0=t0?dayKey(t0):'';
+function Q(all){ // instantané filtré de la période ; all : tout le détail disponible (la Carte, qui n'a pas de période)
+  const t0=all?commonStart():dataStart(),d0=t0?dayKey(t0):'';
   const pres=Object.values(DB.presence).filter(p=>p.d>=d0);
   const mins=Object.values(DB.minutes).filter(m=>m.t>=t0);
   for(const c in curMin){const cm=curMin[c];if(cm&&cm.mt>=t0)mins.push(minuteRec(c,cm))}
@@ -878,24 +878,23 @@ let radarRaf=0; // animation du balayage radar (une seule à la fois, arrêtée 
 const mapSeenEv=new Set(); // abonnements, bits et raids déjà montrés sur la carte (chacun une seule fois)
 const mapSeenPass=new Set(); // passages en direct d'un chat à l'autre déjà montrés (viewer|de|vers|jour)
 let mapViewChecked=false; // la vue « Ma sélection » est vérifiée une fois à l'ouverture (voir renderMap)
-let mapGlobeOn=false;delete cfg.mapGlobe;delete cfg.mapPause; // la pause non plus n'est pas gardée : une carte qui rouvre figée sans le dire paraît cassée (critique du 25/11/2026)
+let mapGlobeOn=false;delete cfg.mapGlobe;delete cfg.mapPause;delete cfg.mapLive;/* ancien réglage « En live », coupé par défaut : oublié, le direct est la règle */ // la pause non plus n'est pas gardée : une carte qui rouvre figée sans le dire paraît cassée (critique du 25/11/2026)
 // mode Globe (glisser = tourner l'univers en 3D) : gardé tant que la page reste ouverte, jamais d'une visite à l'autre (l'ancien réglage enregistré est oublié)
 const mapPassLog=[]; // les 5 derniers passages vus sur la carte (gardés quand la carte se redessine), affichés dans le menu
-let mapIntroKey='',mapIntroAt=-1e9; // période et langue du dernier tracé des liens à l'apparition (vidé à l'ouverture de l'onglet Carte), et son heure
+let mapIntroKey='',mapIntroAt=-1e9; // filtres et langue du dernier tracé des liens à l'apparition (vidé à l'ouverture de l'onglet Carte), et son heure
 // Vues « Toutes les chaînes » et « Ma sélection » : une seule couleur pour les ronds (violet de l'application) et pour les liens
 const MAP_COL='#8b7cff',MAP_LINK='#e6e1ff'; // liens : lavande presque blanche, pour ressortir sur le ciel violet
 // Menu de la carte : ouvert d'office sur ordinateur, fermé sur téléphone (il passe alors par-dessus la carte) ; choix gardé
 const mapSideOpen=()=>cfg.mapSide==null?(window.innerWidth||1200)>760:!!cfg.mapSide;
-// Actions du menu de la carte (React, app/src/components/map/) : menu replié, période, langue, vue, chaînes cochées, disposition
+// Actions du menu de la carte (React, app/src/components/map/) : menu replié, langue, vue, chaînes cochées, disposition
 function mapAction(a,v,on){
   if(a==='side'){cfg.mapSide=!mapSideOpen();saveCfg();render();return}
-  if(a==='period'){const b=$('period').querySelector(`[data-p="${v}"]`);if(b)b.click();return} // mêmes filtres que les autres onglets
   if(a==='lang'){cfg.lang=v;saveCfg();buildChanSel();render();return}
   if(a==='game'){cfg.mapGame=v;saveCfg();mapView.sel=null;render();return} // jeu principal (« * » : tous)
   if(a==='view'){cfg.mapMode=v;saveCfg();mapView.sel=null;render();return}
-  if(a==='live'){cfg.mapLive=v==='live';saveCfg();mapView.sel=null;render();return} // seulement les chaînes en live en ce moment
-  if(a==='min'){cfg.mapMin=+v||0;saveCfg();mapView.sel=null;render();return} // audience minimale (viewers actifs sur la période ; 0 : aucune)
-  if(a==='reset'){cfg.mapLive=false;cfg.mapGame='*';cfg.mapMin=0;cfg.lang='*';saveCfg();buildChanSel();mapView.sel=null;render();return} // tous les filtres d'un coup (la langue est commune à tous les onglets)
+  if(a==='live'){cfg.mapSleep=v!=='live';saveCfg();mapView.sel=null;render();return} // en direct seulement (défaut), ou hors ligne comprises
+  if(a==='min'){cfg.mapMin=+v||0;saveCfg();mapView.sel=null;render();return} // audience minimale (viewers en direct ; 0 : aucune)
+  if(a==='reset'){cfg.mapSleep=false;cfg.mapGame='*';cfg.mapMin=0;cfg.lang='*';saveCfg();buildChanSel();mapView.sel=null;render();return} // tous les filtres d'un coup (la langue est commune à tous les onglets)
   if(a==='pick'){const S=new Set(cfg.mapSel||[]);for(const c of [].concat(v))on?S.add(c):S.delete(c);cfg.mapSel=[...S];saveCfg();mapIntroKey='';render();return}
   if(a==='pins'){delete cfg.mapPins;saveCfg();mapView.touched=Date.now();render();return} // chaînes déplacées remises à leur place calculée
   if(a==='relayout'){delete cfg.mapPins;saveCfg();mapRelayout=true;[mapAng,mapKep,mapRing,mapOff,mapSysOff].forEach(m=>m.clear());/* orbites reprises au début */Object.assign(mapView,{k:1,tx:0,ty:0,rot:0,q:[1,0,0,0]});mapIntroKey='';mapView.touched=Date.now();render();return} // tout recalculé, vue d'ensemble, liens retracés
@@ -967,51 +966,55 @@ const TW_MESH=(()=>{const t=(1+Math.sqrt(5))/2,nz=v=>{const l=Math.hypot(...v);r
     return {v,n,col:tones[Math.min(4,Math.floor(l*5))]}})})();
 function renderMap(q){
   lastMap=Date.now();hideTip();cancelAnimationFrame(radarRaf);radarRaf=0;$('t-map').innerHTML='';
-  // Vues : « Toutes les chaînes » (vue principale : toutes les chaînes suivies qui ont au moins un viewer actif sur la
-  // période, sans groupes, liens d'une seule couleur) ; « Groupes » (chaînes d'au moins 5 viewers actifs, une couleur par
-  // groupe détecté) ; « Ma sélection » (seulement les chaînes cochées, quelle que soit la langue choisie).
+  // Règle des deux temps (26/11/2026). La planète dit le présent : par défaut seulement les chaînes en direct, taille =
+  // viewers en direct. Les liens et les groupes disent la relation : viewers actifs communs, sur tout le détail disponible
+  // (q = Q(true), sans période). Vues : « Toutes les chaînes » (liens d'une seule couleur) ; « Groupes » (chaînes d'au moins
+  // 5 viewers actifs, une couleur par groupe détecté) ; « Ma sélection » (les chaînes cochées, quelle que soit la langue).
   // la vue choisie est gardée d'une visite à l'autre ; mais « Ma sélection » sans au moins 2 chaînes encore suivies ouvrait une carte
   // vide (critique du 25/11/2026) : à l'ouverture, on revient alors à « Toutes ». Un clic volontaire sur « Ma sélection » n'est pas touché.
   if(!mapViewChecked){mapViewChecked=true;if(cfg.mapMode==='sel'&&(cfg.mapSel||[]).filter(c=>cfg.chans.includes(c)).length<2){cfg.mapMode='all';saveCfg()}}
   const view=['all','groups','sel'].includes(cfg.mapMode)?cfg.mapMode:'all',grouped=view==='groups',picked=new Set(cfg.mapSel||[]);
-  // Filtre « En live » : seulement les chaînes en live en ce moment (combinable avec chaque vue)
-  const liveOnly=!!cfg.mapLive,isLive=c=>!!(info[c]&&info[c].live);
+  // Les chaînes hors ligne ne sont montrées que sur demande (cfg.mapSleep), en petites planètes endormies
+  const showOff=!!cfg.mapSleep,isLive=c=>!!(info[c]&&info[c].live),liveV=c=>isLive(c)?Math.max(0,+info[c].v||0):0,vis=c=>showOff||isLive(c);
   const by=usersBy(q.pres,p=>p.c),pool=view==='sel'?cfg.chans.filter(c=>picked.has(c)):shown();
-  const activeAll0=pool.filter(c=>by.get(c)&&by.get(c).size>=(grouped?5:1));
-  // Filtre « Audience minimale » : seuil sur les viewers actifs de la période. On ne propose que les seuils qui laissent au moins 3 chaînes
+  // ce que la carte peut montrer : en direct (même sans viewer actif relevé, hors vue Groupes) ou avec assez de viewers actifs
+  const has=c=>grouped?!!by.get(c)&&by.get(c).size>=5:isLive(c)||!!by.get(c);
+  for(const c of cfg.chans)if(isLive(c)&&!by.has(c))by.set(c,new Set());
+  const base=pool.filter(has),activeAll0=base.filter(vis);
+  // Filtre « Audience minimale » : seuil sur les viewers en direct. On ne propose que les seuils qui laissent au moins 3 chaînes
   // (une carte en demande 3) et qui en écartent vraiment ; le seuil choisi reste affiché même s'il ne convient plus, pour pouvoir le quitter.
-  const minSel=[10,50,200].includes(cfg.mapMin)?cfg.mapMin:0,minN=t=>activeAll0.filter(c=>by.get(c).size>=t).length;
-  const minsPanel=[10,50,200].filter(t=>t===minSel||(minN(t)>=3&&minN(t)<activeAll0.length));
-  const activeAll=activeAll0.filter(c=>by.get(c).size>=minSel);
-  // Filtre « Jeu principal » : le jeu le plus relevé de chaque chaîne sur la période (relevés en live). On propose les 8 jeux les plus
-  // présents parmi les chaînes affichées ; un jeu qui n'existe plus sur la période (période changée) revient à « Tous » sans effacer le choix.
-  const gc=new Map();for(const s of q.snaps||[]){if(!s.live||!s.g)continue;const m=gc.get(s.c)||new Map();m.set(s.g,(m.get(s.g)||0)+1);gc.set(s.c,m)}
-  const mainGame=new Map([...gc].map(([c,m])=>[c,[...m].sort((a,b)=>b[1]-a[1])[0][0]]));
-  const gameN=new Map();for(const c of activeAll){const g=mainGame.get(c);if(g)gameN.set(g,(gameN.get(g)||0)+1)}
+  const minSel=[50,200,1000].includes(cfg.mapMin)?cfg.mapMin:0,minN=t=>activeAll0.filter(c=>liveV(c)>=t).length;
+  const minsPanel=[50,200,1000].filter(t=>t===minSel||(minN(t)>=3&&minN(t)<activeAll0.length));
+  const activeAll=activeAll0.filter(c=>liveV(c)>=minSel);
+  // Filtre « Jeu en cours » : le jeu du live en ce moment (une chaîne hors ligne n'en a pas). On propose les 8 jeux les plus
+  // présents parmi les chaînes affichées ; un jeu que plus personne ne joue revient à « Tous » sans effacer le choix.
+  const gameOf=c=>isLive(c)?info[c].g:null;
+  const gameN=new Map();for(const c of activeAll){const g=gameOf(c);if(g)gameN.set(g,(gameN.get(g)||0)+1)}
   const gamesTop=[...gameN].sort((a,b)=>b[1]-a[1]).slice(0,8),gameSel=gameN.has(cfg.mapGame)?cfg.mapGame:'*';
   const gamesPanel=gameN.size>1?[{key:'*',label:'Tous',count:activeAll.length,on:gameSel==='*'},...(gamesTop.some(([g])=>g===gameSel)||gameSel==='*'?gamesTop:[...gamesTop,[gameSel,gameN.get(gameSel)]]).map(([g,n])=>({key:g,label:g,count:n,on:g===gameSel}))]:null;
-  const active=activeAll.filter(c=>gameSel==='*'||mainGame.get(c)===gameSel),liveN=active.filter(isLive).length;
-  const nodes=active.filter(c=>!liveOnly||isLive(c)).map(c=>({id:c,size:by.get(c).size}));
-  // ---------- menu de gauche (React) : période, langue, vue, chaînes cochées, recherche, groupes ----------
-  // les effectifs par langue comptent les chaînes qui ont des viewers actifs sur la période (ce que la carte peut montrer), pas toutes les chaînes suivies
-  const lg=cfg.lang||'*',nl=k=>cfg.chans.filter(c=>inLang(c,k)&&by.get(c)&&by.get(c).size>=(grouped?5:1)).length,known=cfg.chans.some(c=>langOf(c));
-  const panel={open:mapSideOpen(),view,picked:picked.size,live:{on:liveOnly,count:liveN,total:active.length},
+  const passes=c=>liveV(c)>=minSel&&(gameSel==='*'||gameOf(c)===gameSel);
+  const active=activeAll.filter(passes),liveN=base.filter(c=>passes(c)&&isLive(c)).length;
+  const nodes=active.map(c=>({id:c,size:by.get(c).size}));
+  const since=q.t0?new Date(q.t0).toLocaleDateString('fr-FR',{day:'numeric',month:'long',timeZone:'Europe/Paris'}):'';
+  // ---------- menu de gauche (React) : langue, vue, chaînes cochées, recherche, groupes ----------
+  // les effectifs par langue comptent les chaînes que la carte peut montrer, pas toutes les chaînes suivies
+  const lg=cfg.lang||'*',nl=k=>cfg.chans.filter(c=>inLang(c,k)&&has(c)&&vis(c)).length,known=cfg.chans.some(c=>langOf(c));
+  const panel={open:mapSideOpen(),view,picked:picked.size,live:{on:!showOff,count:liveN,total:base.filter(passes).length},since,wake:false,
     mins:minsPanel.length?[{key:'0',label:'Toutes',count:activeAll0.length,on:minSel===0},...minsPanel.map(t=>({key:String(t),label:t+'+',count:minN(t),on:t===minSel}))]:null,
-    periods:[...$('period').children].map(b=>({key:b.dataset.p,label:b.textContent,on:b.classList.contains('on')})),
     langs:known?LANGS.filter(([k])=>k==='*'||k===lg||nl(k)).map(([k,label])=>({key:k,label,count:nl(k),on:k===lg})):null,
     games:gamesPanel,
     pick:view==='sel'?[...cfg.chans].sort((a,b)=>a.localeCompare(b)).map(c=>({...who(c),langs:langsOf(c),n:by.get(c)?by.get(c).size:0,on:picked.has(c)})):null,
     pins:Object.keys(cfg.mapPins||{}).length,empty:'',find:[],groups:null,solo:[],mount:null};
   const send=()=>window.dispatchEvent(new CustomEvent('legacy:map',{detail:panel}));
-  // pas assez de chaînes, même sans le filtre « En live » : ce message d'abord (ex. « Ma sélection » sans chaîne cochée),
-  // sinon c'est le filtre « En live » qui en laisse trop peu
+  // pas assez de chaînes : dire pourquoi (sélection vide, filtres trop serrés, personne en direct ou pas encore de données)
   const need=view==='sel'?2:3;
-  if(active.length<need){panel.empty=(gameSel!=='*'||minSel>0)&&activeAll0.length>=need?`Les filtres Jeu principal et Audience minimale ne laissent que ${active.length} chaîne${active.length>1?'s':''} : il en faut au moins ${need} pour une carte. Élargis-les dans le Menu, ou réinitialise les filtres.`
-      :view==='sel'?(picked.size?'Parmi les chaînes cochées, il en faut au moins 2 avec un viewer actif sur la période.':'Coche au moins 2 chaînes dans le Menu (rubrique « Vue », puis « Ma sélection ») pour les voir seules sur la carte.')
-      :grouped?'Il faut au moins 3 chaînes avec 5 viewers actifs ou plus sur la période. Le plus parlant : suivre 20 à 50 chaînes (onglet Par jeu → « Suivre le top 20 ») et laisser tourner plusieurs soirées.'
-      :'Il faut au moins 3 chaînes avec un viewer actif sur la période.';send();return}
-  if(nodes.length<need){panel.empty=liveN?`Seulement ${liveN} chaîne${liveN>1?'s':''} en live avec un viewer actif sur la période : il en faut au moins ${need} pour une carte. Choisis « Toutes » dans Statut pour voir aussi les chaînes hors live.`
-      :"Aucune chaîne de cette vue n'est en live en ce moment (avec un viewer actif sur la période). Choisis « Toutes » dans Statut pour voir aussi les chaînes hors live.";send();return}
+  if(nodes.length<need){const n=nodes.length;
+    if(view==='sel'&&picked.size<need)panel.empty='Coche au moins 2 chaînes dans le Menu (rubrique « Vue », puis « Ma sélection ») pour les voir seules sur la carte.';
+    else if((gameSel!=='*'||minSel>0)&&activeAll0.length>=need)panel.empty=`Les filtres Jeu en cours et Audience minimale ne laissent que ${n} chaîne${n>1?'s':''} : il en faut au moins ${need} pour une carte. Élargis-les dans le Menu, ou réinitialise les filtres.`;
+    else if(!showOff&&base.length>=need){panel.wake=true;panel.empty=(n?`Seulement ${n} chaîne${n>1?'s':''} en direct en ce moment`:"Aucune chaîne de cette vue n'est en direct en ce moment")+` : il en faut au moins ${need} pour une carte.`}
+    else panel.empty=grouped?'Il faut au moins 3 chaînes avec 5 viewers actifs ou plus. Le plus parlant : suivre 20 à 50 chaînes (onglet Par jeu → « Suivre le top 20 ») et laisser tourner plusieurs soirées.'
+      :`Il faut au moins ${need} chaînes en direct ou avec un viewer actif relevé.`;
+    send();return}
   const all=[];for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const A=by.get(nodes[i].id),B=by.get(nodes[j].id),s=sharedCount(A,B);if(s>=2)all.push({a:nodes[i].id,b:nodes[j].id,n:s,j:s/(A.size+B.size-s)})}
   const perNode=view==='sel'?6:4; // liens gardés par chaîne : les plus forts (un peu plus quand on a choisi peu de chaînes)
   const keep=new Set();for(const nd of nodes)all.filter(e=>e.a===nd.id||e.b===nd.id).sort((x,y)=>y.j-x.j).slice(0,perNode).forEach(e=>keep.add(e));
@@ -1044,11 +1047,10 @@ function renderMap(q){
   // ---------- positions de base (zoom 1), en pixels du cadre ----------
   // le cadre fait toute la place laissée par le menu, sur toute la hauteur de la fenêtre
   const {box,stage}=els,W=Math.max(box.clientWidth||900,300),H=Math.max(stage.clientHeight||600,360);
-  // Taille d'une icône = viewers actifs sur la période (racine, par rapport à la chaîne qui en a le plus sur la carte : la même
-  // mesure que l'étoile), dans un écart resserré pour que les planètes restent harmonieuses entre elles : de 15 à 24 px.
-  // Le live ne change plus la taille : il reste dans la fiche.
-  const rScale=Math.max(Math.min(1,W/900),.7),liveV=c=>{const I=info[c];return I&&I.live?Math.max(0,+I.v||0):0};
-  const liveR=()=>{const actV=c=>{const S=by.get(c);return S?S.size:0},mv=Math.max(1,...ids.map(actV));return ids.map(c=>{const v=actV(c);return (v?15+9*Math.sqrt(v/mv):11)*rScale})};
+  // Taille d'une planète = viewers en direct (racine, par rapport à la chaîne la plus regardée de la carte) : de 12 à 26 px
+  // de rayon. Hors ligne : plus petite que toute chaîne en direct, et éteinte (classe « asleep », voir draw).
+  const rScale=Math.max(Math.min(1,W/900),.7);
+  const liveR=()=>{const mv=Math.max(1,...ids.map(liveV));return ids.map(c=>(isLive(c)?12+14*Math.sqrt(liveV(c)/mv):8.5)*rScale)};
   const R=liveR();
   const LW=ids.map(c=>textWidth(c)),LWb=ids.map(c=>textWidth(c,600)); // largeur des noms (normal, gras)
   const B=layoutMap(nodes,edges,gl,R,LW,W,H,mapRelayout,view);mapRelayout=false;
@@ -1290,7 +1292,7 @@ function renderMap(q){
     const c=k==='n'?[lcol(e.a),lcol(e.b)]:k==='a'?HL:[HL[1],HL[0]];st[0].setAttribute('stop-color',c[0]);st[1].setAttribute('stop-color',c[1]);
     const lw=1+3.5*w;lines[i].setAttribute('stroke-width',lw.toFixed(2));cases[i].setAttribute('stroke-width',(lw+3).toFixed(2))};
   const TWR=mapTwR(W),LOGO=mapLogo(W); // rayon de la planète Twitch au centre (zoom 1) ; LOGO : place gardée libre autour d'elle
-  const HUD=`Carte · ${n} chaînes${view==='sel'?' · sélection':(({fr:' francophones',en:' anglophones',autre:' (autres langues)'})[cfg.lang]||'')+(grouped?' · groupes':'')}${gameSel!=='*'?' · '+gameSel:''}${liveOnly?' · en live':''} · ${({today:'aujourd’hui','7d':'7 jours','30d':'30 jours',all:'tout'})[period]||''}`,
+  const HUD=`Carte · ${n} chaînes${view==='sel'?' · sélection':(({fr:' francophones',en:' anglophones',autre:' (autres langues)'})[cfg.lang]||'')+(grouped?' · groupes':'')}${gameSel!=='*'?' · '+gameSel:''}${showOff?' · hors ligne comprises':' · en direct'}${since?' · liens depuis le '+since:''}`,
     hudW=textWidth(HUD,500,getComputedStyle(document.body).getPropertyValue('--sans'),12)+34+110+100; // incrustation en haut à gauche (+ l'activité et la rotation), évitée par les noms
   let hover=null,zOrder='';const S=new Array(n),LP=new Array(n).fill(null); // LP : place du nom choisie au dessin précédent ; zOrder : icônes de la plus au fond à la plus devant
 
@@ -1308,7 +1310,7 @@ function renderMap(q){
     if(tw)tw.setAttribute('transform',`translate(${Lg.x.toFixed(1)},${Lg.y.toFixed(1)}) scale(${(TWR*rk).toFixed(3)})`);
     twDraw();
     // face arrière du globe : icône plus petite (80 % tout au fond, 130 % tout devant : effet de profondeur adouci) et plus pâle ; dessinée derrière celles de devant
-    // de face, la taille ne dit que les viewers actifs ; l'effet de profondeur revient à mesure qu'on tourne le globe (20° pour tout)
+    // de face, la taille ne dit que les viewers en direct ; l'effet de profondeur revient à mesure qu'on tourne le globe (20° pour tout)
     const turn=Math.min(1,2*Math.acos(Math.min(1,Math.abs(mapView.q[0])))/(20*Math.PI/180));
     for(let i=0;i<n;i++){const {x,y}=toScreen(Pos(i)),z=DZ[i];S[i]={x,y,z,r:R[i]*rk*Math.pow(DP[i],.8*turn),al:z>=-.3?1:Math.max(.28,1+1.2*(z+.3)), /* le haut du plan incliné reste net ; seul le dos du globe tourné à la main pâlit */a:(Math.atan2(x-W/2,H/2-y)*180/Math.PI+360)%360}} // a : cap vu du centre du radar
     // de la plus au fond à la plus devant ; la planète Twitch (profondeur 0) entre celles de derrière et celles de devant
@@ -1340,7 +1342,7 @@ function renderMap(q){
       const src=planet(i)?S[starOf(i)]:Lg,A=(Math.atan2(src.y-y,src.x-x)*180/Math.PI).toFixed(1);
       p.pl.setAttribute('transform',`translate(${X} ${Y}) scale(${r.toFixed(2)})`);
       p.fac.setAttribute('transform',`rotate(${A})`);p.glo.setAttribute('transform',`rotate(${A})`);
-      G[i].style.opacity=((!F||F.s.has(ids[i])?1:.2)*S[i].al).toFixed(3);G[i].classList.toggle('sel',ids[i]===mapView.sel)});
+      G[i].style.opacity=((!F||F.s.has(ids[i])?1:.2)*S[i].al).toFixed(3);G[i].classList.toggle('sel',ids[i]===mapView.sel);G[i].classList.toggle('asleep',!isLive(ids[i]))});
     placeLabels(F);
   }
   // Noms : chacun à la première place libre autour de son rond (à droite, à gauche, dessous, dessus, en diagonale),
@@ -1580,7 +1582,7 @@ function renderMap(q){
   // - un vrai passage, à l'instant : quelqu'un qui écrivait chez A dans les 3 dernières heures écrit pour la première fois
   //   de la journée chez B ; une comète vive suit le trait de A vers B (un arc pâle et direct s'ils ne sont pas reliés), un
   //   reflet s'allume sur le bord de B, et le journal l'écrit (« PASSAGE · A → B », regroupé s'il en arrive plusieurs) ;
-  // - le trafic de la période : de petites lueurs glissent le long des traits, dans chaque sens, d'autant plus souvent
+  // - le trafic mesuré : de petites lueurs glissent le long des traits, dans chaque sens, d'autant plus souvent
   //   qu'il y a eu de passages mesurés dans ce sens (rejouées en continu, sans prétendre au moment ; arrêtées par la pause) ;
   // - quelqu'un qui écrit pour la première fois de la journée chez cette chaîne : un grain de lumière arrive en spirale
   //   et se fond dans la planète ;
@@ -1612,7 +1614,7 @@ function renderMap(q){
     if(actEl)actEl.textContent=total>=.5?` · ${fmt(total)} msg/min`:' · calme';
     return {ch,evs,passes};
   }
-  let act=readActivity(),actAt=performance.now(),Rt=liveR(),lastDraw=0; // Rt : taille visée de chaque icône (viewers actifs)
+  let act=readActivity(),actAt=performance.now(),Rt=liveR(),lastDraw=0; // Rt : taille visée de chaque icône (viewers en direct)
   // ---------- systèmes : les planètes tournent autour de leur étoile, les systèmes autour de Twitch ----------
   // Survoler une icône arrête toute la carte ; le système tenu à la main suit la souris. Les ceintures empêchent les
   // systèmes de se rattraper ; si deux se recouvrent quand même (déplacés à la main, cadre étroit), ils se contournent
@@ -1649,10 +1651,10 @@ function renderMap(q){
   // Balayage invisible (le faisceau n'est plus dessiné) : un tour toutes les 10 s. Quand il passe sur une chaîne,
   // un écho (anneau fin et pâle, à la couleur de son groupe) s'étend un peu et s'efface.
   const TURN=10000,ECHO=2200;
-  // Tracé à l'apparition : quand on ouvre l'onglet ou qu'on change de période ou de langue (pas aux rafraîchissements
+  // Tracé à l'apparition : quand on ouvre l'onglet ou qu'on change de filtre ou de langue (pas aux rafraîchissements
   // automatiques), les liens se dessinent du centre du radar vers l'extérieur, puis leur halo s'allume.
   // (un tracé en cours est repris si la carte se redessine pendant ce temps, par exemple une fois la police chargée)
-  const introKey=period+'|'+(cfg.lang||'*')+'|'+view+(liveOnly?'|live':'')+'|'+gameSel+'|'+(view==='sel'?[...picked].sort().join(','):''),introOn=introKey!==mapIntroKey||performance.now()-mapIntroAt<2600;mapIntroKey=introKey;if(introOn)mapIntroAt=performance.now();
+  const introKey=(cfg.lang||'*')+'|'+view+(showOff?'|off':'')+'|'+gameSel+'|'+(view==='sel'?[...picked].sort().join(','):''),introOn=introKey!==mapIntroKey||performance.now()-mapIntroAt<2600;mapIntroKey=introKey;if(introOn)mapIntroAt=performance.now();
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return api;
   let intro=null;
   if(introOn){const far=Math.hypot(W,H)/2;intro={t0:null,delay:EC.map(c=>Math.min(1,Math.hypot((c.ax+c.bx)/2-CX,(c.ay+c.by)/2-CY)/far)*.9)};
@@ -1756,7 +1758,7 @@ function renderMap(q){
     if(!svg.isConnected||tab!=='map'){radarRaf=0;return}
     const dt=Math.min((now-last)/1000,.1);last=now;
     if(now-actAt>10000){act=readActivity();actAt=now;schedule(now);Rt=liveR()}
-    for(let i=0;i<n;i++)R[i]+=(Rt[i]-R[i])*Math.min(1,dt*1.5); // la taille suit en douceur un changement de période ou de filtre
+    for(let i=0;i<n;i++)R[i]+=(Rt[i]-R[i])*Math.min(1,dt*1.5); // la taille suit en douceur les viewers en direct
     if(spin){spinGlobe(spin.x*dt,spin.y*dt);const k=Math.exp(-dt*2.6);spin.x*=k;spin.y*=k;if(Math.hypot(spin.x,spin.y)<.03)spin=null;touch()} // élan du globe
     // environ 30 images par seconde suffisent à une dérive lente. En pause, si rien ne bouge (ni survol, ni geste, ni élan, ni
     // intro, ni animation, ni taille qui se règle) et que l'état est celui de la dernière image, on ne repeint pas : mesuré avant
@@ -1771,7 +1773,7 @@ function renderMap(q){
       else if(p.dataset.on){p.setAttribute('stroke-opacity','0');p.dataset.on=''}}
     act.ch.forEach((c,i)=>{if(c.rate&&Math.random()<c.rate*dt)fire(i,now,Math.random()<c.pNew?'new':'msg')});
     for(let q=queue.length-1;q>=0;q--)if(queue[q].at<=now){const e=queue.splice(q,1)[0];(e.pass?mapSeenPass:mapSeenEv).add(e.key);fire(e.i,now,e.kind,e)}
-    // trafic de la période : lueurs le long des traits, dans chaque sens, au rythme des passages mesurés (arrêtées par la pause)
+    // trafic mesuré : lueurs le long des traits, dans chaque sens, au rythme des passages mesurés (arrêtées par la pause)
     if(!cfg.mapPause)for(let k=0;k<TA.length;k++){if(!TR[k])continue;TA[k]+=TR[k]*dt;if(TA[k]>=1){TA[k]-=1;glint(k>>1,k&1)}}
     // halos : plus vifs tant que le chat est animé (jusqu'à 0,7 pulsation par seconde) et un instant à chaque signal ;
     // la chaîne survolée ou choisie garde le halo plein du style
@@ -2374,7 +2376,7 @@ function render(){
   if(cfg.mode==='cloud'){const s=cloud.status;$('dot').className='dot'+(isCloud()&&collectorOnline()&&!cloud.err?' on':isCloud()&&(cloud.err||(s&&s.last_seen))?' err':'')}
   else $('dot').className='dot'+(running&&ws&&ws.readyState===1?' on':apiState&&apiState!=='ok'&&running?' err':'');
   if(tab==='settings'){renderSettings();return}
-  const q=Q();
+  const q=Q(tab==='map');
   // Anneau des planètes (lib/planet.ts) : les 3 chaînes qui ont le plus de viewers actifs dans la vue en cours ; sans anneau
   // quand il y a 3 chaînes ou moins (toutes en auraient un, il ne distinguerait plus rien). Calculé avant l'événement de l'onglet.
   {const by=usersBy(q.pres,p=>p.c);window.planetRing=new Set(by.size>3?[...by].sort((a,b)=>b[1].size-a[1].size).slice(0,3).map(x=>x[0]):[])}

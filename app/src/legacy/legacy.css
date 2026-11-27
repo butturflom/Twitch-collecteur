@@ -366,4 +366,7 @@ body.navopen .scrim{opacity:1;pointer-events:auto}
 .legacy .tiles>.card{flex-basis:9rem;padding:16px}
 
 }
-
+/* Carte : chaîne hors ligne, planète endormie (éteinte et sans halo) */
+.legacy .mapsvg g.mapn.asleep .pl{filter:saturate(.3) brightness(.55)}
+.legacy .mapsvg g.mapn.asleep .glow{visibility:hidden}
+.legacy .mapsvg g.mapn.asleep .sun{opacity:.35!important}

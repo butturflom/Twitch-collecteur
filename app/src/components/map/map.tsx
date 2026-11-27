@@ -29,7 +29,7 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
   const tab = "rounded-md px-2.5 py-1 text-xs font-medium text-dusk transition-colors duration-200 hover:text-zinc-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none data-[state=active]:bg-white/[.07] data-[state=active]:text-zinc-100"
   const list = "mt-2.5 list-disc space-y-1.5 ps-4 leading-relaxed marker:text-zinc-600 [&_b]:font-semibold [&_b]:text-zinc-100"
   const links = d.view === "sel" ? 6 : 4
-  const scope = (d.view === "all" ? "Toutes les chaînes suivies qui ont au moins un viewer actif sur la période" : d.view === "sel" ? "Seulement les chaînes cochées, quelle que soit la langue" : "Chaînes avec au moins 5 viewers actifs sur la période") + (d.live.on ? ", et seulement celles en live en ce moment" : "")
+  const scope = (d.view === "all" ? "Les chaînes suivies" : d.view === "sel" ? "Les chaînes cochées, quelle que soit la langue" : "Les chaînes avec au moins 5 viewers actifs") + (d.live.on ? " en direct en ce moment" : ", hors ligne comprises (planètes éteintes)")
   return (
     <div role="dialog" aria-label="Aide de la carte" className="absolute top-2.5 right-14 z-30 flex max-h-[calc(100%-20px)] w-[min(400px,calc(100%-76px))] flex-col rounded-xl border border-white/10 bg-zinc-950/90 p-3 text-xs text-zinc-300 shadow-2xl shadow-black/50 backdrop-blur-xl">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -45,8 +45,9 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
         <Tabs.Content value="lire" className="outline-none">
           <ul className={list}>
             <li>{scope}.</li>
-            <li><b>Un rond</b> est une chaîne ; sa <b>taille</b> dit ses viewers actifs sur la période. Le live s’affiche dans sa fiche. Au centre, la planète Twitch.</li>
-            <li>Les chaînes qui partagent leurs viewers forment un <b>système</b> : l’<b>étoile</b> (couronne dorée) est celle qui en a le plus, les autres tournent autour d’elle, d’autant plus près qu’elles ont de viewers en commun avec elle. Les chaînes sans groupe restent seules.</li>
+            <li><b>Une planète</b> est une chaîne ; sa <b>taille</b> dit ses viewers en direct. Hors ligne, elle est petite et éteinte. Au centre, la planète Twitch.</li>
+            <li><b>Traits, groupes et passages</b> ne disent pas l’instant : ils sont calculés sur tout le détail gardé{d.since && <>, <b>depuis le {d.since}</b></>}.</li>
+            <li>Les chaînes qui partagent leurs viewers forment un <b>système</b> : l’<b>étoile</b> (couronne dorée) est celle qui a le plus de viewers actifs (pas forcément la plus grosse planète), les autres tournent autour d’elle, d’autant plus près qu’elles ont de viewers en commun avec elle. Les chaînes sans groupe restent seules.</li>
             <li>Un <b>trait</b> relie deux chaînes qui partagent des viewers actifs (les {links} liens les plus forts de chaque chaîne). Plus il est épais, plus la part en commun est grande, jusqu’à 50 % et plus.</li>
             <li>Au repos, cette part est vue du côté de la plus petite des deux chaînes. Une chaîne choisie prend sa part à elle : le même chiffre que sur le trait, dans sa fiche et dans la bulle.</li>
             <li><b>Noms</b> : jusqu’à 30 chaînes, chacun s’affiche dès qu’il a la place (les étoiles d’abord) ; au-delà, seuls restent ceux des étoiles, de la chaîne choisie et de ses voisines.</li>
@@ -55,7 +56,7 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
         <Tabs.Content value="signaux" className="outline-none">
           <ul className={list}>
             <li><b>Comète</b> : quelqu’un qui écrivait chez une chaîne dans les 3 dernières heures vient d’écrire pour la première fois chez une autre. Le bandeau l’écrit (arc pâle si les deux ne sont pas reliées).</li>
-            <li><b>Lueurs le long d’un trait</b> : les passages mesurés sur la période, rejoués dans leur sens. Plus il y en a eu, plus elles sont nombreuses.</li>
+            <li><b>Lueurs le long d’un trait</b> : les passages mesurés{d.since && <> depuis le {d.since}</>}, rejoués dans leur sens. Plus il y en a eu, plus elles sont nombreuses.</li>
             <li><b>Pointe au milieu d’un trait</b> : le sens le plus fréquent, quand il domine nettement (au moins 60 % de 10 passages ou plus).</li>
             <li><b>Onde sur une planète</b> : son chat vient d’écrire. <b>Pastilles</b> : abonnements, subs offerts, bits et raids.</li>
             <li>Dans la fiche, le sens est écrit « 7 vers X · 3 depuis X » ; sous 10 passages, on ne dit pas de sens.</li>
@@ -86,11 +87,11 @@ function MapHelp({ d, onClose }: { d: MapData; onClose: () => void }) {
 }
 
 /** Légende, toujours visible sur ordinateur ; sur téléphone, repliée derrière « Comment lire la carte » pour ne pas couvrir la carte. */
-const LEGEND = (
+const legendItems = (since: string) => (
   <>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-2 rounded-full bg-zinc-300" /><i aria-hidden className="size-3 rounded-full bg-zinc-300" />taille = viewers actifs</span>
+    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-2 rounded-full bg-zinc-300" /><i aria-hidden className="size-3 rounded-full bg-zinc-300" />taille = viewers en direct</span>
     <span className="inline-flex items-center gap-1.5"><i aria-hidden className="size-3 rounded-full bg-[radial-gradient(circle,var(--star-core)_0_35%,var(--star-gold)_36%_60%,transparent_62%)]" />étoile = le plus de viewers actifs du système · plus près d’elle = plus de viewers en commun</span>
-    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-[2px] w-4 rounded-full bg-map-link" />10 %<i aria-hidden className="ms-1 h-[4.5px] w-4 rounded-full bg-map-link" />50 % et plus : part des viewers de la plus petite aussi vus chez l’autre</span>
+    <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-[2px] w-4 rounded-full bg-map-link" />10 %<i aria-hidden className="ms-1 h-[4.5px] w-4 rounded-full bg-map-link" />50 % et plus : part des viewers de la plus petite aussi vus chez l’autre{since && `, depuis le ${since}`}</span>
   </>
 )
 const helpH = "text-xs font-medium text-dusk"
@@ -98,17 +99,17 @@ const helpH = "text-xs font-medium text-dusk"
 const Kbd = ({ children }: { children: ReactNode }) => (
   <kbd className="rounded border border-white/15 bg-zinc-900 px-1 py-px font-mono text-[11px] text-zinc-200">{children}</kbd>
 )
-function Legend({ groups }: { groups: boolean }) {
+function Legend({ groups, since }: { groups: boolean; since: string }) {
   const grp = groups ? <span className="inline-flex items-center gap-1.5">couleur = groupe</span> : null
   const box = "rounded-xl border border-white/10 bg-zinc-950/75 px-3 py-1.5 text-xs text-zinc-300 backdrop-blur-sm"
   return (
     <>
       <div className={cn(box, "pointer-events-auto max-sm:hidden")}>
-        <p className="flex flex-wrap items-center justify-end gap-x-3.5 gap-y-1">{LEGEND}{grp}</p>
+        <p className="flex flex-wrap items-center justify-end gap-x-3.5 gap-y-1">{legendItems(since)}{grp}</p>
       </div>
       <details className={cn(box, "pointer-events-auto sm:hidden")}>
         <summary className="cursor-pointer list-none text-right text-zinc-200 [&::-webkit-details-marker]:hidden">Comment lire la carte</summary>
-        <div className="mt-1.5 flex flex-col gap-1">{LEGEND}{grp}</div>
+        <div className="mt-1.5 flex flex-col gap-1">{legendItems(since)}{grp}</div>
       </details>
     </>
   )
@@ -139,7 +140,7 @@ export function MapView() {
   // vue du moteur (globe, zoom, déplacement), lue par le fond en volume à chaque image ; sans re-rendu React
   const skyView = useRef<MapViewState | null>(null)
 
-  // à chaque nouvelle carte (période, vue, taille de la fenêtre…), le moteur est lancé dans les éléments de la page
+  // à chaque nouvelle carte (filtres, vue, taille de la fenêtre…), le moteur est lancé dans les éléments de la page
   useEffect(() => {
     if (!api) return
     const onKey = (e: KeyboardEvent) => {
@@ -245,7 +246,8 @@ export function MapView() {
             <div className="absolute top-2.5 right-2.5">{menuBtn}</div>
             <div className="flex flex-col items-center gap-3">
               <p className="max-w-md rounded-2xl border border-dashed border-white/15 bg-card px-5 py-6 text-center text-[13px] text-muted-foreground">{d.empty}</p>
-              {d.view === "sel" && <Button size="sm" className="h-8 text-xs" onClick={() => act("view", "all")}>Afficher toutes les chaînes</Button>}
+              {d.wake && <Button size="sm" className="h-8 text-xs" onClick={() => act("live", "all")}>Afficher aussi les hors ligne</Button>}
+              {d.view === "sel" && <Button size="sm" variant={d.wake ? "outline" : "default"} className="h-8 text-xs" onClick={() => act("view", "all")}>Afficher toutes les chaînes</Button>}
             </div>
           </div>
         ) : (
@@ -287,7 +289,7 @@ export function MapView() {
             </div>
             {help && <MapHelp d={d} onClose={() => setHelp(false)} />}
             <div data-maplegend className={cn("pointer-events-none absolute right-3 bottom-3 flex max-w-[min(720px,calc(100%-24px))] flex-col items-end gap-1.5", info && "hidden")}>
-              <Legend groups={!!d.groups} />
+              <Legend groups={!!d.groups} since={d.since} />
             </div>
             <p className="sr-only" aria-live="polite">{info ? `Fiche ${deC(info.c)} : ${info.sub}` : ""}</p>
             {info && (
