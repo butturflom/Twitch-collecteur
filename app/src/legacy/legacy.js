@@ -2140,7 +2140,7 @@ function renderChannel(q){
     analysed:wn,moods:MOODS.map(([key,label])=>({key,label,share:wn?md[key]/wn:null}))};
   const color=colorOf(c);
   // Raid recommandations : score = organic A→B × (1 + reciprocal B→A / total)
-  const raids=hasApi()?raidRecommendations(q,pres,shown(),c,info):null;
+  const raids=hasApi()?raidRecommendations(q,q.pres,shown(),c,info):null; // q.pres : les présences de toutes les chaînes, pour les communs avec la cible
   // Fallback: utiliser cfg.chans si shown() est vide (langues pas encore connues)
   const listFallback=liveFirst(shown().length?shown():cfg.chans);
   window.dispatchEvent(new CustomEvent('legacy:channel',{detail:{
@@ -2171,7 +2171,7 @@ function raidRecommendations(q,pres,shown,c,info){
   // Viewers actifs de la chaîne courante
   const activeUsers = new Map();
   for (const p of pres) {
-    if (!shown().includes(p.c)) continue;
+    if (!shown.includes(p.c)) continue;
     let s = activeUsers.get(p.c);
     if (!s) activeUsers.set(p.c, s = new Set());
     s.add(p.u);
@@ -2181,7 +2181,7 @@ function raidRecommendations(q,pres,shown,c,info){
   const totalA = usersA.size;
 
   const out = [];
-  for (const target of shown()) {
+  for (const target of shown) {
     if (target === c) continue;
     const usersB = activeUsers.get(target);
     if (!usersB || !usersB.size) continue;
