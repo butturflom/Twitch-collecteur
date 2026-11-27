@@ -15,7 +15,7 @@ Aujourd'hui, une seule personne : le propriétaire du projet, qui l'utilise pour
 Twitch Overlap se compose de deux parties :
 
 - **Le collecteur** (`collecteur.mjs`), un programme Node qui tourne en fond 24h/24 sur le PC Windows. Il écoute les chats, relève viewers, jeux, followers, clips, raids, subs et réglages du chat par l'API Twitch, et envoie des compteurs dans une base Supabase personnelle.
-- **Le tableau de bord** (`twitch-overlap.html`, construit depuis `app/`). Il lit cette base et la présente en onglets : Carte, Vue d'ensemble, Chevauchement, Flux, Rosters, Par chaîne, Par jeu, Chat, Réglages, rangés en quatre groupes (Observatoire, Analyse et flux, Exploration, Configuration). Une page d'accueil s'affiche une fois par navigateur.
+- **Le tableau de bord** (`twitch-overlap.html`, construit depuis `app/`). Il lit cette base et la présente en onglets : Carte, Vue d'ensemble, Audiences, Rosters, Par chaîne, Par jeu, Chat, Clip, Réglages, rangés en quatre groupes (Observatoire, Analyse et flux, Exploration, Configuration). Une page d'accueil s'affiche une fois par navigateur.
 
 Le projet réussit quand on peut répondre, à partir de ses propres données, à des questions qu'aucun site public ne pose : quelles chaînes partagent leurs viewers, comment l'audience circule de l'une à l'autre, ce que le chat dit vraiment de l'ambiance d'un live.
 

@@ -63,9 +63,15 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Communautés investies | part qui écrit chaque minute, puis messages pour 1 000 viewers ; au moins 10 min de live et 50 viewers en moyenne | `minutes`, `snaps` | ✅ |
 | Subs pour 1 000 viewers | subs de la période ÷ viewers moyens | `events`, `snaps` | ⚠️ grandit avec la durée de la période |
 | Rythme des chaînes | actifs par jour, 7 derniers jours contre les précédents ; écart de 15 % et hors variations | rollups | ✅ à partir de 14 journées |
-| Historique du réseau : audience | somme des moyennes des chaînes du jour | rollups | ⚠️ chaînes en live à des heures différentes |
-| Réseau : viewers actifs par jour (`actives` de `network_history`) | pseudos hachés distincts ayant écrit chez au moins une chaîne suivie ce jour-là (heure de Paris), estimés par HyperLogLog | esquisse `daily_hll`, ligne `*` | ✅ ± 2,3 % (1 écart type) ; vide sans esquisse ; aujourd'hui absent ; les jours ne s'additionnent pas ; silencieux invisibles |
+| Réseau : viewers actifs par jour (`actives` de `network_history`) | pseudos hachés distincts ayant écrit chez au moins une chaîne suivie ce jour-là (heure de Paris), estimés par HyperLogLog | esquisse `daily_hll`, ligne `*` | ✅ ± 2,3 % (1 écart type) ; vide sans esquisse ; aujourd'hui absent ; les jours ne s'additionnent pas ; silencieux invisibles. Le total « ≈ N uniques » sous « Jour par jour » réunit les dernières journées terminées (`period_reach`) |
 | Réseau : pic de viewers simultanés par jour (`peak`, `peakAt`) | somme des viewers de toutes les chaînes en live à chaque passage de relevés (même horodatage), puis plus grand total du jour et son heure (le premier si égalité) | `snaps` → `daily_network_rollup`, jamais purgé | ✅ voir les limites ci-dessous |
+| Activité : pic de viewers simultanés | même somme par passage (une chaîne comptée une fois par `t`), puis maximum sur la période ; « Aujourd'hui » : depuis minuit à Paris | `snaps` | ✅ un minimum s'il manque des relevés |
+| Activité : chaînes passées en live | chaînes affichées avec au moins un relevé en live sur la période | `snaps` | ✅ |
+| Activité : couverture et trous | « partielle » si le début commun dépasse le début demandé de plus de 30 min (jamais sur « Tout ») ; trou d'écoute signalé au-delà de 15 min cumulées | `snaps`, `minutes`, `presence`, écoute | ⚠️ une panne de l'API seule n'est pas détectée |
+| Jour par jour : aujourd'hui (sans période ni filtre de langue) | actifs = empreintes distinctes ; messages = somme des minutes ; chaînes = celles qui ont des messages ; pic depuis minuit | `presence`, `minutes`, `snaps` | ✅ exact, journée incomplète |
+| Jeux du moment | somme des viewers en direct des chaînes suivies par jeu ; « Écrivent » : empreintes distinctes dont le dernier message sur ces chaînes a moins de 10 min | direct, `presence` | ✅ chaînes suivies, pas l'audience du jeu sur Twitch |
+| Streamers montants | gain = v − v30 ; classement par part = gain ÷ v30 ; v : dernier relevé, à l'heure T ; v30 : relevé du même live le plus proche de T − 30 min (± 4 min) ; live d'au moins 30 min, v30 ≥ 100, gain > 0 ; msg/min = messages des 5 dernières minutes ÷ 5 ; raid signalé s'il est reçu entre T − 30 min et maintenant | `snaps`, `minutes`, `events` | ✅ un raid fait monter d'un coup |
+| « En ce moment » : direct refusé | pas d'API ; collecteur hors ligne ou écoute arrêtée ; API en erreur ; dernier relevé de plus de 6 min alors que des chaînes sont en live | état du collecteur, `snaps` | ✅ un vieux relevé n'est pas montré comme le direct |
 
 **Limites du pic réseau** (calcul ajouté le 27/11, `build_daily_network_peak`) :
 - un relevé toutes les 2 min environ : un pic plus bref passe entre deux ;
@@ -75,18 +81,24 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 - calculé la nuit pour la veille, seulement si les relevés du jour sont encore tous en base : vide avec `joursReleves` = 1, pour la première journée de collecte, et après une coupure assez longue pour qu'il ne reste aucun relevé d'avant le jour ;
 - à l'exécution de `schema.sql`, seules les journées encore entières dans les relevés sont rattrapées. Une valeur enregistrée ne peut que monter (relevés arrivés en retard), jamais baisser.
 
-### Chevauchement et Flux
+### Audiences
+La page ne porte que sur les chaînes suivies et affichées (filtre de langue compris), comme les trajets du rapport PDF et CSV.
+
 | Chiffre | Formule | Verdict |
 |---|---|---|
-| Sur combien de chaînes écrivent les gens (« 96 % ») | chaînes distinctes par empreinte | ✅ voir ci-dessous |
-| Matrice | communs ÷ actifs de la ligne | ✅ |
-| Changent de stream, souvent (3 fois ou plus) | compte du collecteur (`switches`) | ✅ |
-| Migrations, bilan par chaîne | personnes distinctes, une fois par trajet | ✅ |
+| Chiffre en tête, répartition 1 / 2 / 3 chaînes ou plus | empreintes présentes sur 1 chaîne ÷ empreintes ; sans le filtre de viewers | ✅ voir ci-dessous |
+| « N'ont écrit qu'un seul message » | empreintes dont la somme de `presence.n` sur la période vaut 1 ÷ total | ✅ |
+| « Au moins 3 messages » | (somme ≥ 3 et 1 chaîne) ÷ (somme ≥ 3) | ✅ |
+| Paires les plus proches | les 7 plus fortes en communs ÷ réunion (communs > 0), puis rangées sur le pourcentage affiché : communs ÷ actifs de la plus petite | ✅ |
+| Matrice | communs ÷ actifs de la ligne ; les 7 chaînes les plus actives après le filtre | ✅ pas toutes les chaînes |
+| Ont changé de stream, changent souvent (3 fois ou plus) | compte du collecteur (`switches`) | ✅ |
+| Chaîne par chaîne | chaînes avec un trajet ou au moins 20 actifs ; part = actifs avec 1 changement ou plus ÷ actifs (« — » sous 20) ; arrivées et départs = personnes distinctes par trajet, additionnées ; solde = arrivées − départs | ✅ quelqu'un sur deux trajets compte deux fois |
+| Carte des migrations : journées passées | rollup (`flows_by_day`) : viewers distincts du jour par trajet ; aujourd'hui exclu | ✅ les jours ne s'additionnent pas |
+| Carte des migrations : aujourd'hui | `flowsOf` sur les présences et `switches` du jour (Paris), 12 plus gros trajets ; délai médian estimé par les présences ; « raid » si un raid A vers B ce jour | ✅ journée incomplète |
+| Carte des migrations : points sur un arc | max(1, arrondi(5 × n ÷ plus gros trajet de toutes les journées)) | ✅ dit à l'écran : ce ne sont pas des personnes |
 | Raids reçus, viewers apportés | table des raids, doublons écartés | ✅ chaînes suivies seulement |
-| Carte des migrations (par jour) | rollup : viewers distincts du jour | ✅ |
-| Historique « Où vont », « D'où viennent » | somme des passages des rollups | ⚠️ des passages, pas des personnes : c'est dit à l'écran |
 
-**Le 96 %** : en base le 27/11, 95,4 % des viewers actifs n'ont écrit que chez une chaîne suivie. Mais 38 % n'ont écrit qu'un seul message, et ne pouvaient donc pas être sur deux chaînes. Parmi ceux qui ont écrit au moins 3 messages : 91 %. Libellé conseillé : « 9 viewers actifs sur 10 n'écrivent que chez une seule de tes chaînes ».
+**Part « sur une seule chaîne »** : en base le 27/11, 95,4 % des viewers actifs n'avaient écrit que chez une chaîne suivie. Mais 38 % n'avaient écrit qu'un seul message, et ne pouvaient donc pas être sur deux chaînes. Parmi ceux qui avaient écrit au moins 3 messages : 91 %. La page montre les trois.
 
 ### Par chaîne, Par jeu, Chat, Carte
 | Chiffre | Formule | Verdict |
@@ -98,6 +110,7 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Jeux streamés | tranches de 2 min | ✅ |
 | Avant et après un changement de jeu | 20 min de chaque côté | ⚠️ messages divisés par 20 même si le live vient de commencer |
 | Son univers | uniques sur 30 jours (esquisses) | ✅ |
+| Historique « Où vont », « D'où viennent » | somme des passages des rollups | ⚠️ des passages, pas des personnes : c'est dit à l'écran |
 | Fidélité du chat | 100 × (1 − partants distincts ÷ actifs), 200 actifs au moins ; journées anciennes : somme des trajets | ✅ n° 7 ; un départ après un raid compte aussi |
 | Recommandations de raid | personnes A→B × (1 + retour ÷ actifs de A), relatif à la première | ✅ dit à l'écran |
 | Par jeu : viewers moyens | moyenne par chaîne et par relevé | ⚠️ pas l'audience de la catégorie |
