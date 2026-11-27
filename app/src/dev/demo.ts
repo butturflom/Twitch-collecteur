@@ -1,9 +1,9 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { ClipTabData, ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
-declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData } }
+declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderClip?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData } }
 
 const CH: [string, string][] = [["etoiles", "#4d8dff"], ["xari", "#ff7a45"], ["gotaga", "#2fbf71"], ["kamet0", "#f5b83d"]]
 const MIN = 60000
@@ -18,6 +18,21 @@ function series(seed: number, base: number, now: number): [number, number | null
     pts.push([t, i > 150 && i < 165 && seed === 2 ? null : Math.max(0, Math.round(v))])
   }
   return pts
+}
+
+// bandeau des raids ; ?demo&raidsbande=2 : deux raids (pas de défilement), =0 : aucun (pas de bandeau), =anciens : aucun aujourd'hui
+function tickerDemo(): OverviewData["raids"] {
+  const m = new URLSearchParams(location.search).get("raidsbande")
+  const who = (c: string, color: string) => ({ c, color, img: "" })
+  const from = (name: string) => ({ ...who(name.toLowerCase(), "#9b8cff"), name })
+  const rows = [
+    { t: 1, from: from("ZeratoR"), to: who("etoiles", "#4d8dff"), n: 4120, ago: "12 min" },
+    { t: 2, from: from("Mynthos"), to: who("xari", "#ff7a45"), n: 980, ago: "48 min" },
+    { t: 3, from: from("JBzz"), to: who("gotaga", "#2fbf71"), n: 312, ago: "2 h 05" },
+    { t: 4, from: null, to: who("kamet0", "#f5b83d"), n: 87, ago: "3 h 40" },
+    { t: 5, from: from("Maghla"), to: who("etoiles", "#4d8dff"), n: 640, ago: "5 h 12" },
+  ]
+  return { older: m === "anciens", rows: m === "anciens" ? rows : rows.slice(0, m == null ? 5 : Number(m)) }
 }
 
 function demo(): OverviewData {
@@ -40,7 +55,7 @@ function demo(): OverviewData {
       ? { channels: 4, period: "today", pairMax: 25, pairMin: 10, pairs: [], flows: [], raid: null }
       : {
           channels: 4,
-          period: "all",
+          period: "today",
           pairMax: 25,
           pairMin: 10,
           pairs: [
@@ -55,11 +70,12 @@ function demo(): OverviewData {
           ],
           raid: { from: { ...who("zeratorr", "#9b8cff"), name: "ZeratoR" }, to: who("etoiles", "#4d8dff"), n: 4120, ago: "2 h 05", when: "mer. 19 nov. 23h58" },
         },
+    raids: tickerDemo(),
     channels: [
-      { ...who("etoiles", "#4d8dff"), langs: ["fr"], live: true, game: "Teamfight Tactics", title: "TFT avec la commu", viewers: 14520, uniq: 6210, msgs: 98432, recent: 412.6, wrote: 0.214 },
-      { ...who("xari", "#ff7a45"), langs: ["fr"], live: true, game: "Just Chatting", title: "On parle de tout", viewers: 6230, uniq: 4120, msgs: 71204, recent: 288.2, wrote: 0.383 },
-      { ...who("gotaga", "#2fbf71"), langs: ["fr"], live: false, game: "", title: "", viewers: null, uniq: 5870, msgs: 52310, recent: 0, wrote: null },
-      { ...who("kamet0", "#f5b83d"), langs: ["fr", "en"], live: false, game: "", title: "", viewers: null, uniq: 2232, msgs: 24172, recent: null, wrote: null },
+      { ...who("etoiles", "#4d8dff"), langs: ["fr"], live: true, game: "Teamfight Tactics", title: "TFT avec la commu", viewers: 14520, uniq: 6210, peak: 16204, msgs: 98432, recent: 412.6, wrote: 0.214 },
+      { ...who("xari", "#ff7a45"), langs: ["fr"], live: true, game: "Just Chatting", title: "On parle de tout", viewers: 6230, uniq: 4120, peak: 8300, msgs: 71204, recent: 288.2, wrote: 0.383 },
+      { ...who("gotaga", "#2fbf71"), langs: ["fr"], live: false, game: "", title: "", viewers: null, uniq: 5870, peak: 12100, msgs: 52310, recent: 0, wrote: null },
+      { ...who("kamet0", "#f5b83d"), langs: ["fr", "en"], live: false, game: "", title: "", viewers: null, uniq: 2232, peak: 3100, msgs: 24172, recent: null, wrote: null },
     ],
     hasApi: true,
     part: [
@@ -109,7 +125,7 @@ function many(d: OverviewData): OverviewData {
   const pad = <T,>(rows: T[], make: (i: number) => T) => [...rows, ...Array.from({ length: MANY - rows.length }, (_, k) => make(rows.length + k))]
   return {
     ...d,
-    channels: pad(d.channels, (i) => ({ ...extra(i), langs: ["fr"], live: false, game: "", title: "", viewers: null, uniq: 3000 - i * 80, msgs: 20000 - i * 500, recent: null, wrote: null })),
+    channels: pad(d.channels, (i) => ({ ...extra(i), langs: ["fr"], live: false, game: "", title: "", viewers: null, peak: 900 - i * 7, uniq: 3000 - i * 80, msgs: 20000 - i * 500, recent: null, wrote: null })),
     part: pad(d.part ?? [], (i) => ({ ...extra(i), limited: "", avgV: 4000 - i * 100, perMin: 0.03 - i * 0.0008, msgK: 20 - i * 0.5, uniq: 0.5, react: 0.4, inter: 0.1 })),
     followers: pad(d.followers, (i) => ({ ...extra(i), fol: 300000 - i * 8000, avgV: 3000 - i * 80, grow: 120 - i * 3 })),
     chartOf: { shown: 8, total: MANY },
@@ -129,12 +145,12 @@ function channelDemo(c: string): ChannelData {
     main: [
       { label: "Viewers actifs uniques", value: "6 210" },
       { label: "Messages", value: "98 432", hint: "61,3 msg/min en moyenne", trendLabel: "courbe par heure", trend: [8, 12, 9, 14, 22, 31, 27, 35, 41, 38, 46, 52] },
-      { label: "Viewers en moyenne", value: "13 900", hint: "pic : 16 204" },
+      { label: "Viewers max", value: "16 204", hint: "moyenne : 13 900" },
       { label: "Écrivent chaque minute", value: "3,1 %", hint: "29,6 msg/min pour 1\u00a0000 viewers" },
       { label: "Followers", value: "1 030 000", hint: "1,3 % en moyenne devant le live" },
     ],
     more: [
-      { label: "Interactions", value: "12 %", hint: "55 % de réactions · détail dans l'onglet Chat" },
+      { label: "Interactions", value: "12 %", hint: "55 % de réactions · détail plus bas" },
       { label: "Viewers actifs fidèles", value: "38 %", hint: "revenus sur 2 jours ou plus" },
       { label: "Messages du top 10 %", value: "47 %", hint: "concentration du chat" },
       { label: "Premiers messages", value: "812", hint: "nouveaux venus dans le chat" },
@@ -146,19 +162,7 @@ function channelDemo(c: string): ChannelData {
       { label: "Pub déclarée", value: "Non", hint: "mode lent 3 s" },
     ],
     hasApi: true,
-    moments: [
-      { ...who(c, color), t: now - 3 * 3600e3, when: "mer. 19 nov. 18h47", game: "Teamfight Tactics", m: 1820, score: 6.4, wave: 0.42, mood: "Hype", emote: "PogChamp", vod: "https://www.twitch.tv/" },
-      { ...who(c, color), t: now - 2 * 3600e3, when: "mer. 19 nov. 19h52", game: "Teamfight Tactics", m: 1204, score: 4.1, wave: 0.18, mood: "Rire", emote: "KEKW", vod: "" },
-      { ...who(c, color), t: now - 3600e3, when: "mer. 19 nov. 20h31", game: "Just Chatting", m: 960, score: 2.9, wave: 0.07, mood: "", emote: "", vod: "https://www.twitch.tv/" },
-    ],
-    clips: {
-      total: 41, exact: 33, comparable: 28, hitRate: 0.46, medianScore: 2.3,
-      rows: [
-        { ...who(c, color), id: "demo1", when: "mer. 19 nov. 18h47", exact: true, title: "LE TOP 1 LE PLUS IMPROBABLE DE L'HISTOIRE", views: 48210, m: 1820, score: 6.4, wave: 0.42 },
-        { ...who(c, color), id: "demo2", when: "mar. 18 nov. 22h10", exact: false, title: "Il rage quit en direct", views: 21044, m: 640, score: 2.1, wave: 0.12 },
-        { ...who(c, color), id: "demo3", when: "lun. 17 nov. 20h03", exact: true, title: "Le chat a deviné avant lui", views: 9812, m: 410, score: 1.2, wave: null },
-      ],
-    },
+    talk: talkDemo,
     switches: [
       { when: "mer. 19 nov. 20h15", from: "Teamfight Tactics", to: "Just Chatting", vB: 14800, vA: 12100, mB: 58.2, mA: 71.4 },
       { when: "mer. 19 nov. 18h02", from: "Just Chatting", to: "Teamfight Tactics", vB: 9200, vA: null, mB: 44.1, mA: null },
@@ -177,6 +181,42 @@ function channelDemo(c: string): ChannelData {
     viewerChart: spec([{ name: c, c, color, pts: series(i, 6000, now) }], { unit: " viewers" }),
     hourChart: { items: hours, color, unit: " messages" },
   }
+}
+
+function MOMENTS(c: string): ClipTabData["moments"] {
+  const color = (CH.find(([x]) => x === c) ?? CH[0])[1], now = Date.now()
+  const who = (x: string, col: string) => ({ c: x, color: col, img: "" })
+  return [
+      { ...who(c, color), t: now - 3 * 3600e3, when: "mer. 19 nov. 18h47", game: "Teamfight Tactics", m: 1820, score: 6.4, wave: 0.42, mood: "Hype", emote: "PogChamp", vod: "https://www.twitch.tv/" },
+      { ...who(c, color), t: now - 2 * 3600e3, when: "mer. 19 nov. 19h52", game: "Teamfight Tactics", m: 1204, score: 4.1, wave: 0.18, mood: "Rire", emote: "KEKW", vod: "" },
+      { ...who(c, color), t: now - 3600e3, when: "mer. 19 nov. 20h31", game: "Just Chatting", m: 960, score: 2.9, wave: 0.07, mood: "", emote: "", vod: "https://www.twitch.tv/" },
+    ]
+}
+function CLIPS(c: string): ClipTabData["clips"] {
+  const color = (CH.find(([x]) => x === c) ?? CH[0])[1]
+  const who = (x: string, col: string) => ({ c: x, color: col, img: "" })
+  return {
+      total: 41, exact: 33, comparable: 28, hitRate: 0.46, medianScore: 2.3,
+      rows: [
+        { ...who(c, color), id: "demo1", when: "mer. 19 nov. 18h47", exact: true, title: "LE TOP 1 LE PLUS IMPROBABLE DE L'HISTOIRE", views: 48210, m: 1820, score: 6.4, wave: 0.42 },
+        { ...who(c, color), id: "demo2", when: "mar. 18 nov. 22h10", exact: false, title: "Il rage quit en direct", views: 21044, m: 640, score: 2.1, wave: 0.12 },
+        { ...who(c, color), id: "demo3", when: "lun. 17 nov. 20h03", exact: true, title: "Le chat a deviné avant lui", views: 9812, m: 410, score: 1.2, wave: null },
+      ],
+    }
+}
+const talkDemo: ChannelData["talk"] = {
+  sorted: 58710, analysed: 61204,
+  parts: ([["re", "Réactions", "emote seule, « mdr », « GG »…", "#d95926", 0.38], ["va", "Vagues", "même message repris en chœur", "#e66767", 0.11], ["ad", "Vers le streamer", "questions, tutoiement, @", "#3987e5", 0.12], ["co", "Entre viewers", "réponses entre viewers", "#9085e9", 0.06], ["cm", "Commentaires", "4 mots ou plus", "#199e70", 0.17], ["ct", "Courts", "sans signal clair", "#6b6b75", 0.16]] as [string, string, string, string, number][])
+    .map(([key, label, desc, color, share]) => ({ key, label, desc, color, share })),
+  moods: [{ key: "rire", label: "Rire", share: 0.142 }, { key: "hype", label: "Hype", share: 0.087 }, { key: "negatif", label: "Négatif", share: 0.031 }, { key: "question", label: "Questions", share: 0.064 }],
+}
+
+// moments et clips d'une chaîne, ou de toutes (&demo=clip)
+function clipDemo(sel: string): ClipTabData {
+  const all = sel === "*"
+  const d = channelDemo(all ? CH[0][0] : sel)
+  const who = (x: string, col: string) => ({ c: x, color: col, img: "" })
+  return { all, ch: all ? null : d.ch, list: CH.map(([x, col], k) => ({ ...who(x, col), live: k < 2 })), moments: MOMENTS(all ? CH[1][0] : sel), clips: CLIPS(all ? CH[1][0] : sel) }
 }
 
 const MOODS: [string, string][] = [["Rire", "#4d8dff"], ["Hype", "#ff7a45"], ["Négatif", "#2fbf71"], ["Questions", "#f5b83d"]]
@@ -203,20 +243,17 @@ function chatDemo(sel: string): ChatData {
     moodRows: all ? CH.map(([x, col], k) => ({ ...who(x, col), n: [61204, 64110, 41020, 16006][k], moods: [[0.16, 0.11, 0.02, 0.05], [0.12, 0.06, 0.04, 0.09], [0.14, 0.09, 0.03, 0.04], [0.1, 0.05, 0.05, 0.07]][k], emote: ["PogChamp", "KEKW", "LUL", "Kappa"][k] })) : null,
     emotes: [["KEKW", 8210], ["PogChamp", 6120], ["LUL", 4380], ["Kappa", 2910], ["catJAM", 2105], ["OMEGALUL", 1802], ["monkaS", 1210]].map(([k, v]) => ({ k: k as string, v: v as number, share: (v as number) / 61204 })),
     words: [["gg", 3120], ["mdr", 2810], ["top", 1504], ["chat", 1320], ["bien", 1102], ["jeu", 980], ["trop", 912], ["encore", 640]].map(([k, v]) => ({ k: k as string, v: v as number })),
-    moments: channelDemo(all ? CH[1][0] : sel).moments,
-    clips: channelDemo(all ? CH[1][0] : sel).clips,
     moodChart: spec(MOODS.map(([name, c], k) => ({ name, c: "", color: c, pts: pctSeries(k, [14, 9, 3, 6][k]) })), { pct: true, yFloor: 10 }),
     kindChart: spec(KIND_LINES.map(([name, c], k) => ({ name, c: "", color: c, pts: pctSeries(k, [48, 18, 17][k]) })), { pct: true, yFloor: 10, height: 170 }),
   }
 }
 
-let discoverDemo: GameData["discover"] = { q: "", lang: "fr", status: "idle", error: "", game: "", streams: [] }
 function gameDemo(): GameData {
   const who = (x: string, col: string) => ({ c: x, color: col, img: "" })
   const W = CH.map(([x, col]) => who(x, col))
   const G = ["Teamfight Tactics", "Just Chatting", "League of Legends", "VALORANT"]
   return {
-    hasApi: true, canSearch: true, discover: discoverDemo,
+    hasApi: true,
     games: [
       { g: G[0], chans: [W[0], W[2]], air: "21 h 30", avgV: 13900, users: 9120, msgs: 141020, perUser: 15.5 },
       { g: G[1], chans: [W[1], W[0], W[3], W[2]], air: "14 h 05", avgV: 7400, users: 8410, msgs: 120400, perUser: 14.3 },
@@ -408,15 +445,11 @@ export function installDemo() {
       const sel = document.getElementById("chanSel") as HTMLSelectElement | null
       window.dispatchEvent(new CustomEvent("legacy:chat", { detail: chatDemo(sel?.value || "*") }))
     }
-    window.renderGame = () => window.dispatchEvent(new CustomEvent("legacy:game", { detail: gameDemo() }))
-    window.runDiscover = (q: string, lang: string) => {
-      discoverDemo = { q, lang, status: "loading", error: "", game: "", streams: [] }
-      window.renderGame?.(null)
-      setTimeout(() => {
-        discoverDemo = { q, lang, status: "done", error: "", game: q, streams: [["zerator", "ZeratoR", 21040], ["etoiles", "Etoiles", 14520], ["mynthos", "Mynthos", 3120], ["jbzz", "JBzz", 1840]].map(([c, name, v], k) => ({ c: c as string, color: ["#7c5cff", "#4d8dff", "#e66767", "#199e70"][k], img: "", name: name as string, title: `${q} en ranked, on monte !`, viewers: v as number, followed: c === "etoiles" })) }
-        window.renderGame?.(null)
-      }, 600)
+    window.renderClip = () => {
+      const sel = new URLSearchParams(location.search).get("chaine") ?? "*"
+      window.dispatchEvent(new CustomEvent("legacy:clip", { detail: clipDemo(sel) }))
     }
+    window.renderGame = () => window.dispatchEvent(new CustomEvent("legacy:game", { detail: gameDemo() }))
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
     // &byday=non : base pas à jour (pas de byDay, donc pas de carte) ; &byday=14 : 14 journées (3 par défaut)
@@ -464,8 +497,7 @@ export function installDemo() {
     const n = Number(new URLSearchParams(location.search).get("chaines"))
     if (t === "settings" && n > 0) window.addChanList?.(Array.from({ length: n }, (_, i) => `chaine_demo_${i + 1}`).join(" "))
     // ?demo=flows-map : onglet Flux, remplacé par le prototype C0 de la carte des migrations (voir App.tsx)
-    window.showTab?.(t === "flows-map" ? "flows" : t === "channel" || t === "chat" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
-    if (t === "game") window.runDiscover("VALORANT", "fr") // montre aussi les résultats de recherche
+    window.showTab?.(t === "flows-map" ? "flows" : t === "channel" || t === "chat" || t === "clip" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
     // ?demo&hover=0.4 : simule le survol du premier graphique à 40 % de sa largeur (pour vérifier l'infobulle)
     const hv = Number(new URLSearchParams(location.search).get("hover"))
     if (hv > 0) setTimeout(() => {

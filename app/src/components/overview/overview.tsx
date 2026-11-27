@@ -11,6 +11,7 @@ import { ChannelCard, ChannelRow } from "./channel-card"
 import { NetworkHistoryBlock } from "./network-history"
 import { RhythmBlock } from "./rhythm"
 import { Recoup } from "./recoup"
+import { RaidTicker } from "./raid-ticker"
 import { LineChart } from "@/components/charts/line-chart"
 import { ChannelCell, DataTable, Delta, Empty, Section, ShowMore, heat, muted, panel, type Col, Pending } from "./parts"
 import { ShareButton } from "@/components/share"
@@ -120,10 +121,11 @@ function Moderation({ rows, noDel }: { rows: ModRow[]; noDel: boolean }) {
 
 /**
  * Les chaînes : une carte entière pour chaque chaîne en live (ou dont l'état est inconnu, sans API Twitch), une ligne compacte
- * pour les chaînes hors ligne, qui n'ont rien « maintenant » à montrer. 8 cartes et 8 lignes visibles, le reste derrière un bouton.
+ * pour les chaînes hors ligne, qui n'ont rien « maintenant » à montrer. 8 cartes et 5 lignes visibles, le reste derrière un bouton.
  * Option « 2 premières hors ligne en cartes » : les 2 premières chaînes hors ligne s'affichent aussi en carte.
  */
 const CARDS = 8
+const ROWS = 5
 const ROWS_AS_CARDS_KEY = "to2-ov-rows-as-cards"
 function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
   const [openCards, setOpenCards] = useState(false)
@@ -139,7 +141,7 @@ function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
   const rowCards = rows.slice(0, rowsAsCardsCount)
   const rowLines = rows.slice(rowsAsCardsCount)
   const cutCards = cards.length > CARDS + 1 && !openCards
-  const rowLinesCut = rowLines.length > CARDS + 1 && !openRows
+  const rowLinesCut = rowLines.length > ROWS + 1 && !openRows
   // réglage de présentation, rare : une petite commande à droite du titre, pas un bouton posé dans le contenu
   const rowsToggle = (
     <button
@@ -182,10 +184,10 @@ function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
             {rowCards.map((ch) => <ChannelCard key={ch.c} ch={ch} />)}
           </div>
           <div className={cn(panel, "divide-y divide-white/5 overflow-hidden", rowCards.length > 0 ? "mt-3" : "")}>
-            {(rowLinesCut ? rowLines.slice(0, CARDS) : rowLines).map((ch) => <ChannelRow key={ch.c} ch={ch} />)}
+            {(rowLinesCut ? rowLines.slice(0, ROWS) : rowLines).map((ch) => <ChannelRow key={ch.c} ch={ch} />)}
           </div>
-          {rowLines.length > CARDS + 1 && (
-            <ShowMore className="mt-3" hidden={rowLines.length - CARDS} open={openRows} onToggle={() => setOpenRows((o) => !o)} noun={["chaîne hors ligne", "chaînes hors ligne"]} />
+          {rowLines.length > ROWS + 1 && (
+            <ShowMore className="mt-3" hidden={rowLines.length - ROWS} open={openRows} onToggle={() => setOpenRows((o) => !o)} noun={["chaîne hors ligne", "chaînes hors ligne"]} />
           )}
         </>
       )}
@@ -196,10 +198,10 @@ function ChannelGrid({ channels }: { channels: ChannelInfo[] }) {
             {cards.length === 0 && rowsToggle}
           </div>
           <div className={cn(panel, "divide-y divide-white/5 overflow-hidden")}>
-            {rows.map((ch) => <ChannelRow key={ch.c} ch={ch} />)}
+            {(rowLinesCut ? rows.slice(0, ROWS) : rows).map((ch) => <ChannelRow key={ch.c} ch={ch} />)}
           </div>
-          {rows.length > CARDS + 1 && (
-            <ShowMore className="mt-3" hidden={rows.length - CARDS} open={openRows} onToggle={() => setOpenRows((o) => !o)} noun={["chaîne hors ligne", "chaînes hors ligne"]} />
+          {rows.length > ROWS + 1 && (
+            <ShowMore className="mt-3" hidden={rows.length - ROWS} open={openRows} onToggle={() => setOpenRows((o) => !o)} noun={["chaîne hors ligne", "chaînes hors ligne"]} />
           )}
         </div>
       )}
@@ -276,11 +278,13 @@ export function Overview() {
 
       <JumpNav />
 
+      <RaidTicker d={d.raids} />
+
       {/* la page ouvre sur ce qu'aucun site public ne montre : les recoupements, puis l'activité de la même période */}
       <Recoup d={d.recoup} />
 
       {/* Titre enrichi avec la période, heures de données et badge de données incomplètes */}
-      <Section title={period?.label ? `${period.label} · ${period.range || "Activité"}` : "Activité sur la période"} badge={!d.hasApi || period?.range === "Pas encore de relevé" ? "Données incomplètes" : undefined}>
+      <Section title={period?.key === "today" ? (period.range.startsWith("Aujourd") ? period.range : period.label) : period?.label ? `${period.label} · ${period.range || "Activité"}` : "Activité sur la période"} badge={!d.hasApi || period?.range === "Pas encore de relevé" ? "Données incomplètes" : undefined}>
         <StatCardGroup className="bg-linear-to-b from-dome-crest/90 to-dome/85 shadow-console max-sm:[&>[data-slot=stat-card]]:basis-36">
           {d.kpis.map((k) => (
             <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="overlap" className="-my-1 inline-block py-1 underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
@@ -340,7 +344,7 @@ export function Overview() {
             )}
 
             {d.brand && (
-              <Section title="Avec ou sans pub déclarée" note={d.brand.length ? "Compare le chat d'une même chaîne quand le stream est déclaré « contenu de marque » (sponsorisé) et quand il ne l'est pas. Calculé sur les minutes où le chat a écrit." : undefined} action={<ShareButton title="Avec ou sans pub déclarée" kpis={[ { label: "Chaînes analysées", value: String(d.brand.length) }, { label: "Écarts pub", value: `${d.brand.length === 0 ? "-" : d.brand.map(r => r.with.msgK - r.without.msgK).filter(d => d !== 0).length}/${d.brand.length}` } ]} />}>
+              <Section title="Avec ou sans pub déclarée" note={d.brand.length ? (d.brandWide ? "Rien à comparer sur aujourd'hui : calculé sur tout le détail gardé. " : "") + "Compare le chat d'une même chaîne quand le stream est déclaré « contenu de marque » (sponsorisé) et quand il ne l'est pas. Calculé sur les minutes où le chat a écrit." : undefined} action={<ShareButton title="Avec ou sans pub déclarée" kpis={[ { label: "Chaînes analysées", value: String(d.brand.length) }, { label: "Écarts pub", value: `${d.brand.length === 0 ? "-" : d.brand.map(r => r.with.msgK - r.without.msgK).filter(d => d !== 0).length}/${d.brand.length}` } ]} />}>
                     {d.brand.length ? <Brand rows={d.brand} /> : <Empty>Pas encore de chaîne avec des lives à la fois avec et sans « contenu de marque » : la comparaison apparaît dès qu'une chaîne a eu les deux, avec au moins 15 minutes de chat de chaque côté.</Empty>}
                   </Section>
             )}

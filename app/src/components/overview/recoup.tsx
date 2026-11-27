@@ -15,7 +15,7 @@ function RecoupActions({ d }: { d: RecoupData }) {
   const hasRaid = d.raid != null
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
       <a href="#" data-goto="overlap" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
         <ExternalLink className="size-4" />
         Tout le chevauchement
@@ -100,7 +100,7 @@ function Column({ title, sub, children, className }: { title: string; sub: strin
  * lumineux que leur part commune est grande. C'est un résumé de la colonne « Paires les plus proches » (mêmes données, mêmes
  * chiffres dans la colonne) : décoratif pour la lecture, donc masqué aux lecteurs d'écran. Au plus 7 chaînes, sinon trop serré.
  */
-const CW = 300, CH = 168, CX = CW / 2, CY = 84, RX = 118, RY = 46
+const CW = 440, CH = 196, CX = CW / 2, CY = CH / 2, RX = 176, RY = 58
 function Constellation({ pairs }: { pairs: RecoupData["pairs"] }) {
   const nodes: Who[] = []
   const used: RecoupData["pairs"] = []
@@ -124,7 +124,7 @@ function Constellation({ pairs }: { pairs: RecoupData["pairs"] }) {
   }))
   const edges = [...used].sort((x, y) => x.share - y.share) // le plus fort en dernier : dessiné au-dessus
   return (
-    <div aria-hidden className="relative hidden h-[168px] w-[300px] shrink-0 md:block">
+    <div aria-hidden className="relative hidden h-[196px] w-[440px] shrink-0 md:block">
       <svg viewBox={`0 0 ${CW} ${CH}`} className="absolute inset-0 size-full">
         <ellipse cx={CX} cy={CY} rx={RX} ry={RY} fill="none" stroke="rgba(255,255,255,.08)" strokeDasharray="2 5" />
         <ellipse cx={CX} cy={CY} rx={RX * 0.55} ry={RY * 0.55} fill="none" stroke="rgba(255,255,255,.04)" strokeDasharray="2 5" />
@@ -137,7 +137,7 @@ function Constellation({ pairs }: { pairs: RecoupData["pairs"] }) {
         const q = pos.get(w.c)!, upper = q.y <= CY
         return (
           <span key={w.c} className="absolute" style={{ left: q.x, top: q.y, transform: "translate(-50%,-50%)" }}>
-            <ChannelAvatar {...w} size={26} />
+            <ChannelAvatar {...w} size={30} />
             <span className={cn("absolute left-1/2 max-w-[11ch] -translate-x-1/2 truncate text-[10.5px] leading-none text-muted-foreground", upper ? "bottom-full mb-2" : "top-full mt-2")}>{w.c}</span>
           </span>
         )
@@ -186,11 +186,9 @@ export function Recoup({ d }: { d: RecoupData }) {
       ) : (
         <div className={cn(panel, "overflow-hidden")}>
           <RecoupActions d={d} />
-          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-b border-border px-5 pt-5 pb-4">
-            <div className="min-w-0 flex-1 basis-80">
-              <Headline d={d} />
-            </div>
+          <div className="flex flex-col items-center gap-3 border-b border-border px-5 pt-3 pb-5 text-center">
             <Constellation pairs={d.pairs} />
+            <Headline d={d} />
           </div>
           <div className="grid lg:grid-cols-3 [&>*+*]:border-border max-lg:[&>*+*]:border-t lg:[&>*+*]:border-l">
             <Column title="Paires les plus proches" sub="Part de la première aussi vue chez la seconde">

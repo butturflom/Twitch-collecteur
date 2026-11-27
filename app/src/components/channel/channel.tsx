@@ -6,13 +6,13 @@ import { LineChart } from "@/components/charts/line-chart"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DataTable, Delta, Empty, MeterList, Section, panel, type Col } from "@/components/overview/parts"
-import { API_NOTE, CLIPS_NOTE, ChannelPicker, Clips, Hero, Kpis, Moments, NO_CLIPS, NO_MOMENTS, Two } from "@/components/shared/blocks"
+import { API_NOTE, ChannelPicker, ClipLink, Hero, KindBar, Kpis, Two } from "@/components/shared/blocks"
 import { fmt, fmt1, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { History } from "./history"
 import { MoreKpis } from "./more"
 import { ALSO_BASE_MIN, Universe } from "./universe"
-import { useChannelData, type SwitchRow } from "@/legacy/bridge"
+import { useChannelData, type ChannelData, type SwitchRow } from "@/legacy/bridge"
 
 // Copy raid command to clipboard and show feedback
 function copyRaidCommand(channelName: string) {
@@ -58,6 +58,31 @@ function RaidCopiedToast() {
   )
 }
 
+/** Types de messages et ambiance de la chaîne. La comparaison entre chaînes est dans l'onglet Chat. */
+function Talk({ t }: { t: ChannelData["talk"] }) {
+  return (
+    <Section className="mt-9" title="Types de messages et ambiance" note="Part des messages de la période. La comparaison entre chaînes est dans l'onglet Chat.">
+      {!t.parts && !t.analysed ? (
+        <Empty>Pas encore de messages triés sur cette période.</Empty>
+      ) : (
+        <div className={cn(panel, "space-y-4 p-[18px]")}>
+          {t.parts && <KindBar parts={t.parts} />}
+          {t.analysed > 0 && (
+            <dl className={cn("flex flex-wrap gap-x-8 gap-y-2", t.parts && "border-t border-white/10 pt-4")}>
+              {t.moods.map((m) => (
+                <div key={m.key}>
+                  <dt className="text-xs text-muted-foreground">{m.label}</dt>
+                  <dd className="font-mono text-[15px] font-medium tabular-nums">{pct(m.share)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      )}
+    </Section>
+  )
+}
+
 export function Channel() {
   const d = useChannelData()
   if (d === undefined) return null
@@ -83,26 +108,22 @@ export function Channel() {
           {!d.games ? (
             <Empty>{API_NOTE} pour savoir quels jeux sont streamés.</Empty>
           ) : d.games.length ? (
-            <div className={cn(panel, "px-4 py-2")}>
-              <MeterList rows={d.games.map((g) => ({ key: g.g, v: g.hours, label: g.g, right: fmt1(g.hours) + " h", color: d.ch.color }))} />
-            </div>
+            <ul className="flex flex-wrap gap-2">
+              {d.games.map((g) => (
+                <li key={g.g} className="inline-flex max-w-full items-center gap-2 rounded-full border border-input bg-secondary py-1 pr-2.5 pl-3 text-[12.5px] font-medium">
+                  <span className="truncate" title={g.g}>{g.g}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{fmt1(g.hours)} h</span>
+                </li>
+              ))}
+            </ul>
           ) : (
             <Empty>Pas encore de live relevé sur cette période.</Empty>
           )}
         </Section>
       </Two>
 
-      <Section className="mt-9" title="Moments à clipper" note="Pics de chat par rapport à la normale des 20 minutes d'avant. Le lien VOD ouvre la rediffusion 30 s avant. Détails dans l'onglet Chat.">
-        {d.moments.length ? <Moments rows={d.moments} /> : <Empty>{NO_MOMENTS}</Empty>}
-      </Section>
-
-      <Section
-        className="mt-9"
-        title="Clips et chat"
-        note={CLIPS_NOTE}
-      >
-        {d.clips ? <Clips d={d.clips} /> : <Empty>{NO_CLIPS}</Empty>}
-      </Section>
+      <Talk t={d.talk} />
+      <ClipLink chan={d.ch.c} className="mt-4" />
 
       <Section className="mt-9" title="Changements de jeu" note={d.switches?.length ? "Moyenne des 20 minutes avant le changement, comparée aux 20 minutes après." : undefined}>
         {!d.switches ? <Empty>{API_NOTE} pour repérer les changements de jeu.</Empty> : d.switches.length ? <Switches rows={d.switches} /> : <Empty>Aucun changement de jeu repéré sur cette période.</Empty>}

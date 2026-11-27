@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/app-header"
 import { Overview } from "@/components/overview/overview"
 import { Channel } from "@/components/channel/channel"
 import { Chat } from "@/components/chat/chat"
+import { Clip } from "@/components/clip/clip"
 import { Game } from "@/components/game/game"
 import { Overlap } from "@/components/overlap/overlap"
 import { Flows } from "@/components/flows/flows"
@@ -17,9 +18,10 @@ import { filtersHtml, loadLegacy, sectionsHtml, usePeriodInfo, type TabId } from
 
 const PAGES: Record<TabId, [string, string]> = {
   overview: ["Vue d'ensemble", "L'activité de toutes les chaînes suivies sur la période choisie."],
-  channel: ["Par chaîne", "Le détail d'une chaîne : audience, chat, clips, jeux et chaînes voisines."],
+  channel: ["Par chaîne", "Le détail d'une chaîne : audience, chat, jeux et chaînes voisines."],
   game: ["Par jeu", "Les catégories streamées, leur audience et l'effet d'un changement de jeu."],
-  chat: ["Chat", "Ambiance, types de messages, emotes et moments forts du chat."],
+  chat: ["Chat", "Ambiance, types de messages, emotes et mots du chat."],
+  clip: ["Clip", "Les moments forts du chat à clipper, et les clips déjà faits."],
   overlap: ["Chevauchement", "Les viewers actifs que les chaînes suivies ont en commun."],
   map: ["Carte", ""],
   flows: ["Flux", "Les viewers actifs qui passent d'une chaîne à l'autre, et les raids reçus."],
@@ -28,7 +30,7 @@ const PAGES: Record<TabId, [string, string]> = {
 }
 
 /** Onglets qui montrent le ciel étoilé (la Carte a le sien). Pour étendre le décor à d'autres pages, ajouter leur identifiant ici. */
-const SKY_TABS: TabId[] = ["overview", "channel", "game", "chat", "overlap", "flows", "settings", "rosters"]
+const SKY_TABS: TabId[] = ["overview", "channel", "game", "chat", "clip", "overlap", "flows", "settings", "rosters"]
 
 // Prototype C0 (carte des migrations), en mode démo seulement : ?demo=flows-map remplace l'onglet Flux par la page de test.
 // En production, import.meta.env.DEV vaut false : la condition disparaît au build, et l'import avec elle.
@@ -116,6 +118,7 @@ export default function App() {
           {tab === "overview" && <Overview />}
           {tab === "channel" && <Channel />}
           {tab === "chat" && <Chat />}
+          {tab === "clip" && <Clip />}
           {tab === "game" && <Game />}
           {tab === "overlap" && <Overlap />}
           {tab === "flows" && (FlowsMapDemo ? <Suspense fallback={null}><FlowsMapDemo /></Suspense> : <Flows />)}

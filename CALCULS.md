@@ -52,6 +52,8 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Abonnements et subs offerts | somme | `events` | ✅ |
 | Paires les plus proches | communs ÷ la plus petite ; classées par communs ÷ réunion ; 25 chaînes les plus actives, 10 communs au moins | `presence` | ✅ pas toutes les chaînes, c'est dit |
 | Trajets les plus fréquents | personnes distinctes par trajet ; délai médian estimé | `switches`, `presence` | ✅ |
+| Les chaînes : viewers max | plus haut relevé en live sur la période (2.0.8) | `snaps` | ✅ un relevé toutes les 2 min environ ; borné par la conservation des relevés |
+| Bandeau des raids | 15 derniers raids reçus par les chaînes suivies sur la période ; aucun aujourd'hui : les derniers gardés (2.0.8) | `raid_events` | ✅ chaînes suivies seulement |
 | Les chaînes : part qui écrit | actifs depuis le début du live ÷ viewers moyens du live | `presence`, `snaps` | ✅ |
 | Participation : « écrivent chaque minute » | auteurs par minute ÷ viewers moyens | `minutes`, `snaps` | ✅ pendant les lives seulement |
 | Participation : « actifs ÷ viewers » | actifs de la période ÷ viewers moyens | `presence`, `snaps` | ⚠️ peut dépasser 100 % sur plusieurs jours |
@@ -79,9 +81,9 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 ### Par chaîne, Par jeu, Chat, Carte
 | Chiffre | Formule | Verdict |
 |---|---|---|
-| Viewers en moyenne, pic | relevés en live | ✅ |
+| Viewers max, moyenne | relevés en live ; le max est mis en avant (2.0.8) | ✅ |
 | Messages par minute en moyenne | messages ÷ minutes avec au moins un message | ⚠️ le dire, ou ne prendre que les minutes de live |
-| Viewers actifs fidèles | vus 2 jours ou plus | ⚠️ presque vide avec 2 jours de présences |
+| Viewers actifs fidèles | vus 2 jours ou plus ; sur « Aujourd'hui », calculé sur tout le détail gardé, et c'est écrit (2.0.8) | ⚠️ presque vide avec 2 jours de présences |
 | Messages du top 10 % | part des 10 % les plus bavards | ✅ |
 | Jeux streamés | tranches de 2 min | ✅ |
 | Avant et après un changement de jeu | 20 min de chaque côté | ⚠️ messages divisés par 20 même si le live vient de commencer |

@@ -320,3 +320,19 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à re
 - **Plus de période sur la Carte** : les traits, les groupes, les étoiles et les passages portent sur tout le détail gardé ; la date de début est écrite dans le bandeau, la légende et l'aide.
 - **Filtres sur le direct** : « Jeu en cours » (le jeu du live) et « Audience minimale » (50, 200 ou 1 000 viewers en direct).
 - Moins de 3 chaînes en direct : la Carte le dit et propose d'afficher les hors ligne.
+
+## Tableau de bord 2.0.8 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à rejouer.
+
+- **« Aujourd'hui » par défaut.** Les blocs qui demandent plusieurs jours gardent leur échelle : historique, rythme, fidélité du chat, carte des migrations (toutes ses journées), « Viewers actifs fidèles » et « Avec ou sans pub » (tout le détail gardé, c'est écrit).
+- **Viewers max** : à la place des viewers dans les cartes et les lignes de « Les chaînes » et dans les indicateurs de « Par chaîne ».
+- **Bandeau des raids reçus** en tête de la Vue d'ensemble : pause au survol, au clavier ou au bouton, fixe si les mouvements sont réduits. Aucun raid aujourd'hui : les derniers relevés, et il le dit.
+- **Recoupements** : la constellation passe au-dessus de la phrase, centrée.
+- **Nouvel onglet Clip** : moments à clipper et clips, retirés de Chat et de Par chaîne (un lien y mène).
+- **Par chaîne** : types de messages et ambiance de la chaîne, jeux en pastilles.
+- **Chat** : les 3 emotes les plus utilisées en podium ; les tableaux chaîne par chaîne sont repliés.
+- **Vue d'ensemble** : 5 chaînes hors ligne affichées, le reste à dérouler (la liste entière s'affichait malgré le bouton).
+- **Par jeu** : « Trouver des streamers par catégorie » est retiré (l'ajout reste dans les Réglages).
+- **Réglages** : nombre de chaînes suivies et limite de 100 en grand, avec une jauge.
+- **Carte** : la légende quitte le dessin et passe dans l'aide (« ? », onglet « Lire »).
