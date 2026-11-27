@@ -1,5 +1,4 @@
 // Onglet « Vue d'ensemble », en React. Les chiffres viennent de l'ancien code (événement legacy:overview).
-import { StatCard, StatCardGroup } from "@/components/ui/stat-card"
 import { fmt, fmt1, pct } from "@/lib/format"
 import { useEffect, useState, type ReactNode } from "react"
 import { ChevronDown } from "lucide-react"
@@ -8,7 +7,9 @@ import { cn } from "@/lib/utils"
 import { useOverviewData, usePeriodInfo, type BrandRow, type ChannelInfo, type FollowerRow, type ModRow, type PartRow } from "@/legacy/bridge"
 import { Phase3Analysis } from "./phase3-analysis"
 import { ChannelCard, ChannelRow } from "./channel-card"
-import { NetworkHistoryBlock } from "./network-history"
+import { Activity } from "./activity"
+import { DayByDay } from "./day-by-day"
+import { LiveNow } from "./live-now"
 import { RhythmBlock } from "./rhythm"
 import { Recoup } from "./recoup"
 import { RaidTicker } from "./raid-ticker"
@@ -18,8 +19,6 @@ import { ShareButton } from "@/components/share"
 
 /** Deux graphiques côte à côte : le panneau prend toute la hauteur de la rangée, les axes restent alignés. */
 const PAIR = "flex flex-col [&>:last-child]:flex-1"
-/** L'indicateur qui mène à l'onglet Chevauchement. */
-const MULTI = "Actifs dans 2 chats ou plus"
 const maxOf = <T,>(a: T[], f: (x: T) => number | null) => Math.max(0, ...a.map((x) => f(x) ?? 0)) || 1
 const nf = (x: number | null, f: (n: number) => string) => (x != null && isFinite(x) ? f(x) : "—")
 const extraCount = (followers: FollowerRow[], brand: BrandRow[] | null, mod: { rows: ModRow[]; noDel: boolean } | null) =>
@@ -30,18 +29,19 @@ const extraCount = (followers: FollowerRow[], brand: BrandRow[] | null, mod: { r
  * défilement. Chaque saut vise la région dont le titre est donné ; un saut sans région sur la page (bloc vide, sans API) est omis.
  */
 const JUMPS: [string, string][] = [
-  ["Recoupements", "Recoupements"],
+  ["Activité", "Activité"],
+  ["En ce moment", "En ce moment"],
   ["Les chaînes", "Les chaînes"],
+  ["Recoupements", "Recoupements"],
   ["Messages par minute", "Courbes"],
   ["Participation du chat pendant les lives", "Participation"],
   ["Classements · audience et communautés", "Classements"],
   ["Rythme des chaînes", "Rythme"],
-  ["Historique du réseau", "Historique"],
 ]
 const regionOf = (title: string) => Array.from(document.querySelectorAll<HTMLElement>("[role=region]")).find((e) => e.getAttribute("aria-label") === title) ?? null
 function JumpNav() {
   const [titles, setTitles] = useState<string[]>([])
-  // les blocs de l'historique et du rythme se montent un peu après la page : on relit la liste quand le DOM change
+  // le bloc du rythme se monte un peu après la page : on relit la liste quand le DOM change
   useEffect(() => {
     const read = () => setTitles((old) => {
       const next = JUMPS.filter(([t]) => regionOf(t)).map(([t]) => t)
@@ -278,19 +278,11 @@ export function Overview() {
 
       <JumpNav />
 
+      {/* l'activité de la période, puis jour par jour, les raids, le direct et les chaînes */}
+      <Activity a={d.activity} kpis={d.kpis} period={period} hasApi={d.hasApi} />
+      <DayByDay today={d.today} />
       <RaidTicker d={d.raids} />
-
-      {/* la page ouvre sur ce qu'aucun site public ne montre : les recoupements, puis l'activité de la même période */}
-      <Recoup d={d.recoup} />
-
-      {/* Titre enrichi avec la période, heures de données et badge de données incomplètes */}
-      <Section title={period?.key === "today" ? (period.range.startsWith("Aujourd") ? period.range : period.label) : period?.label ? `${period.label} · ${period.range || "Activité"}` : "Activité sur la période"} badge={!d.hasApi || period?.range === "Pas encore de relevé" ? "Données incomplètes" : undefined}>
-        <StatCardGroup className="bg-linear-to-b from-dome-crest/90 to-dome/85 shadow-console max-sm:[&>[data-slot=stat-card]]:basis-36">
-          {d.kpis.map((k) => (
-            <StatCard key={k.label} variant="plain" className="px-[18px] py-4" label={k.label === MULTI ? <a href="#" data-goto="overlap" className="-my-1 inline-block py-1 underline decoration-dusk decoration-dotted underline-offset-[3px] hover:text-foreground">{k.label}</a> : k.label} value={k.value} hint={k.hint || undefined} trend={k.trend ?? undefined} trendLabel={k.trendLabel || undefined} />
-          ))}
-        </StatCardGroup>
-      </Section>
+      <LiveNow d={d.now} />
 
       <Section title="Les chaînes">
         {d.channels.length ? (
@@ -300,7 +292,9 @@ export function Overview() {
         )}
       </Section>
 
-      {/* le pouls : chat et audience au fil du temps, côte à côte (comme l'onglet Par chaîne), juste après les chaînes */}
+      <Recoup d={d.recoup} />
+
+      {/* le pouls : chat et audience au fil du temps, côte à côte (comme l'onglet Par chaîne) */}
       {d.viewerChart ? (
         <Two>
           <Section title="Messages par minute" className={PAIR}>
@@ -329,9 +323,7 @@ export function Overview() {
       {/* les classements (ex-Phase 3) : ce qu'on cherche en ouvrant la page, donc hors du repli, juste après la participation */}
       <Phase3Analysis />
 
-      {/* l'historique long vient après l'essentiel, replié : il redit l'activité sur d'autres échelles de temps */}
       <RhythmBlock />
-      <NetworkHistoryBlock />
 
       {(() => {
         const extraCnt = extraCount(d.followers, d.brand, d.mod)

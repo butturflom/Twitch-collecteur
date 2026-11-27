@@ -18,9 +18,9 @@ But : un seul passage qui produit build, diff et captures, pour que l'utilisateu
 3. **Captures.** Choisis les routes démo selon les fichiers modifiés (voir la ligne « Mode démo » de `app/CLAUDE.md`) :
    - `?demo` : Vue d'ensemble, Recoupements, Classements ;
    - `?demo=channel` : Par chaîne, avec `&histo=1` pour une seule journée, `&sticky=petit` pour un petit échantillon ;
-   - `?demo=flows` : Flux (Sankey et carte des migrations), `&byday=non` pour l'absence de données par jour ;
+   - `?demo=audiences` : Audiences (en commun et carte des migrations), `&byday=non` pour l'absence de journées passées ;
    - `?demo=map` : Carte ;
-   - `?demo=overlap`, `?demo=game`, `?demo=chat`, `?demo=settings` selon le besoin.
+   - `?demo=game`, `?demo=chat`, `?demo=settings` selon le besoin.
    **Les routes démo ne marchent que sur le serveur de développement, pas sur le fichier `twitch-overlap.html`** : `main.tsx` n'importe la démo que si `import.meta.env.DEV` est vrai, donc le build de production la laisse de côté (vérifié le 26/11 : les captures du fichier généré affichent une Vue d'ensemble vide).
    Démarre le serveur en arrière-plan, depuis le worktree : `npm run dev --prefix "<worktree>/app"` (port 5173 par défaut). Attends qu'il réponde, par exemple avec `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/` (doit renvoyer 200).
    Capture chaque route touchée avec Chrome headless :

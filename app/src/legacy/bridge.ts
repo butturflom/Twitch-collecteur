@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react"
 import legacySrc from "./legacy.js?raw"
 import legacyMarkup from "./legacy-markup.html?raw"
 
-export type TabId = "overview" | "channel" | "game" | "chat" | "clip" | "overlap" | "map" | "flows" | "settings" | "rosters"
+export type TabId = "overview" | "channel" | "game" | "chat" | "clip" | "audiences" | "map" | "settings" | "rosters"
 
 /** Une chaîne telle que l'affiche l'ancien code : couleur attribuée et photo de profil (ou ''). */
 export interface Who { c: string; color: string; img: string }
@@ -85,7 +85,60 @@ export interface RaidTickerData {
   rows: { t: number; from: (Who & { name: string }) | null; to: Who; n: number; ago: string }[]
 }
 
+/** Activité de la période (activityData dans legacy.js) : les chiffres « nombre annoncé » et ce que couvrent les relevés. */
+export interface ActivityData {
+  /** début et fin réellement couverts (ms) ; null sans aucun relevé */
+  from: number | null; to: number | null
+  /** les relevés détaillés commencent après le début de la période demandée : les chiffres ne la couvrent pas toute */
+  partial: boolean
+  /** jours demandés (null : « Tout ») */
+  asked: number | null
+  /** pic de viewers simultanés, toutes chaînes ensemble, et son heure (ms) */
+  peak: number | null; peakAt: number | null
+  /** chaînes passées en live sur la période (null : aucun relevé de l'API) */
+  lived: number | null
+  followed: number; filtered: boolean
+  /** chaînes en live en ce moment (null : direct inconnu) */
+  liveNow: number | null
+  /** temps où le collecteur n'a rien écouté sur la période (0 sous 15 min) */
+  gapMs: number
+}
+/** Journée en cours pour « Jour par jour » : toutes les chaînes, sans période ni filtre Langue. */
+export interface TodayData { d: string; at: number; peak: number | null; peakAt: number | null; actives: number | null; msgs: number | null; chans: number | null }
+export interface LiveGame {
+  g: string
+  /** les 4 chaînes les plus regardées sur ce jeu ; n : toutes */
+  chans: Who[]; n: number
+  viewers: number
+  /** viewers actifs distincts ayant écrit sur ces chaînes dans les 10 dernières minutes */
+  wrote: number
+}
+export interface RisingRow extends Who {
+  game: string; v: number; v30: number; gain: number; rate: number
+  /** messages par minute sur les 5 dernières minutes */
+  mpm: number
+  /** heure du dernier raid reçu pendant les 30 min comparées */
+  raidAt: number | null
+}
+/** « En ce moment » (liveNowData dans legacy.js) : le direct, jamais la période. */
+export interface LiveNowData {
+  state: "ok" | "noapi" | "off" | "stale" | "loading"
+  mode: "local" | "cloud"
+  /** dernier relevé de l'API (ms) ; seen : dernier signal du collecteur */
+  at: number | null; seen: number | null
+  followed: number; live: number
+  games: LiveGame[]
+  rising: RisingRow[]
+  /** chaînes qui remplissent les critères du classement ; young : en live depuis moins de 30 min */
+  eligible: number; young: number
+  /** des relevés remontent à 30 min */
+  history: boolean
+}
+
 export interface OverviewData {
+  activity: ActivityData
+  today: TodayData
+  now: LiveNowData
   kpis: Kpi[]
   channels: ChannelInfo[]
   recoup: RecoupData
@@ -192,19 +245,20 @@ export interface GameData {
   matrix: MatrixData | null
 }
 
+/** Onglet Audiences, partie « En commun » (renderOverlap dans legacy.js). Le filtre de viewers ne touche pas `spread`. */
 export interface OverlapData {
   filter: string
   filters: { key: string; label: string; tip: string; count: number }[]
   filterNote: { count: number; desc: string; share: number; total: number } | null
-  movers: {
-    move: number; often: number; multi: number; total: number; oftenAt: number; medianMoves: number; maxMoves: number
-    swStart: string // date (jj/mm/aaaa) depuis laquelle les changements sont comptés exactement, ou ''
-    rows: (Who & { n: number; m: number; o: number; to: (Who & { n: number }) | null; from: (Who & { n: number }) | null })[]
-    top: { id: string; moves: number; chans: number; path: (Who & { when: string })[]; more: number; span: string }[]
-  } | null
+  /** viewers actifs (total) répartis selon le nombre de chaînes où ils écrivent : one, two, more (3 ou plus). single : un seul
+   *  message ; talk3 : au moins 3 messages, dont talk3one sur une seule chaîne. chans : chaînes suivies (filtered : filtre Langue). */
+  spread: { total: number; one: number; two: number; more: number; single: number; talk3: number; talk3one: number; chans: number; filtered: boolean }
+  /** les chaînes qui ont le plus de viewers actifs (7 au plus) */
   matrix: MatrixData
+  /** nombre de chaînes qui ont des viewers actifs (la matrice n'en montre qu'une partie) */
+  chans: number
+  /** les paires les plus proches, rangées sur le pourcentage affiché (share) */
   pairs: { a: Who; b: Who; n: number; share: number; j: number }[]
-  dist: { k: number; v: number; share: number }[]
 }
 
 export interface FlowRoute {
@@ -213,12 +267,21 @@ export interface FlowRoute {
   raid?: boolean
 }
 
+/** Onglet Audiences, partie « Qui va où » (renderFlows dans legacy.js) ; sert aussi au rapport général et au CSV. */
 export interface FlowsData {
   total: number; routes: number; medianGap: string; raidCount: number; raidViewers: number
   flows: FlowRoute[]
-  balance: (Who & { in: number; out: number; net: number })[]
+  /** viewers actifs de la période ; ceux qui ont changé de stream au moins une fois (move) et oftenAt fois ou plus (often) */
+  actives: number; move: number; often: number; oftenAt: number
+  swStart: string // date (jj/mm/aaaa) depuis laquelle les changements sont comptés exactement, ou ''
+  /** chaîne par chaîne, par solde décroissant. m : part de ses viewers actifs qui ont changé de stream (null sous 20 actifs) */
+  rows: (Who & { n: number; m: number | null; in: number; out: number; net: number })[]
+  /** parcours les plus nomades (anonymes : début de l'empreinte) */
+  top: { id: string; moves: number; chans: number; path: (Who & { when: string })[]; more: number; span: string }[]
+  /** journée en cours pour la carte des migrations (jamais dans byDay) : les 12 plus gros trajets */
+  today: { d: string; routes: { a: Who; b: Who; n: number; gap: string; raid: boolean }[] }
   raids: { when: string; from: (Who & { name: string }) | null; to: Who; n: number }[]
-  /** Passages par jour et par paire (SQL flows_by_day). Absent si pas de base, base pas à jour ou erreur. Les viewers sont distincts
+  /** Passages des journées passées, par jour et par paire (SQL flows_by_day). Absent si pas de base, base pas à jour ou erreur. Les viewers sont distincts
    *  par jour et par paire : ils ne s'additionnent pas d'un jour à l'autre. `raid` est une borne haute ; organic + raid = passages. */
   byDay?: { d: string; a: Who; b: Who; viewers: number; passages: number; organic: number; raid: number }[]
 }
@@ -306,7 +369,8 @@ export interface RhythmRow extends Who { nr: number; nb: number; recent: number;
 export interface PeriodReach { from: string | null; to: string | null; days: number; net: number; chans: { c: string; n: number }[] }
 
 /** Historique du réseau entier lu dans les rollups quotidiens (Vue d'ensemble). */
-export interface NetworkDay { d: string; msgs: number; avg: number; chans: number }
+/** actives, peak, peakAt : absents (undefined) tant que schema.sql n'a pas été rejoué ; null : pas de calcul pour cette journée. */
+export interface NetworkDay { d: string; msgs: number; avg: number; chans: number; actives?: number | null; peak?: number | null; peakAt?: number | null }
 export interface NetworkTop extends Who { msgs: number; avg: number }
 export interface NetworkHistory { days: NetworkDay[]; top: NetworkTop[] }
 
@@ -427,15 +491,6 @@ export interface LegacyQuery {
   sw?: any[]
 }
 
-/** Force le recalcul des flux (appelé quand le composant Flows est monté mais n'a pas de données) */
-export function triggerFlowsRender() {
-  // Récupérer les données courantes du legacy et appeler renderFlows
-  if ((window as any).renderFlows && (window as any).getCurrentQuery) {
-    const queryObj: LegacyQuery = (window as any).getCurrentQuery()
-    ;(window as any).renderFlows(queryObj, "all")
-  }
-}
-
 export const useSettingsData = legacyStore<SettingsData>("legacy:settings")
 
 // « Ajouter un streamer » (barre latérale) : ouvre les Réglages puis place le curseur dans la recherche.
@@ -450,3 +505,15 @@ export function onFocusAdd(cb: () => void) {
   return () => void focusSubs.delete(run)
 }
 export const useMapData = legacyStore<MapData>("legacy:map")
+
+// Lien vers une partie d'une page (data-goto="audiences" data-part="raids") : la demande est gardée ici, car elle arrive
+// avant que la page soit affichée.
+let wantedPart = ""
+const partSubs = new Set<() => void>()
+window.addEventListener("legacy:goto-part", (e) => { wantedPart = (e as CustomEvent<string>).detail; partSubs.forEach((f) => f()) })
+export function onGotoPart(cb: (part: string) => void) {
+  const run = () => { if (wantedPart) { const p = wantedPart; wantedPart = ""; cb(p) } }
+  partSubs.add(run)
+  run()
+  return () => void partSubs.delete(run)
+}

@@ -153,7 +153,7 @@ export function StatCard({
       <div className="text-[0.8125rem]/[1.25rem] text-(color:--chatcn-fg-subtle) flex min-w-0 items-start gap-2 max-sm:min-h-10">
         <span className="max-sm:line-clamp-2 sm:truncate">{label}</span>
       </div>
-      <div className="flex min-w-0 items-end justify-between gap-3">
+      <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-3">
         {loading ? (
           <span aria-hidden="true" className={cn("bg-(color:--chatcn-fill) rounded-(--chatcn-radius-xs) block", size === "lg" ? "my-1.5 h-8 w-28" : "my-1 h-6 w-20")} />
         ) : (

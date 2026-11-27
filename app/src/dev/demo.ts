@@ -1,9 +1,9 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { ClipTabData, ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { PeriodInfo, ClipTabData,ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
-declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderClip?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData } }
+declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderClip?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData; periodInfo?: () => PeriodInfo } }
 
 const CH: [string, string][] = [["etoiles", "#4d8dff"], ["xari", "#ff7a45"], ["gotaga", "#2fbf71"], ["kamet0", "#f5b83d"]]
 const MIN = 60000
@@ -35,6 +35,61 @@ function tickerDemo(): OverviewData["raids"] {
   return { older: m === "anciens", rows: m === "anciens" ? rows : rows.slice(0, m == null ? 5 : Number(m)) }
 }
 
+// Direct fictif : [chaîne, couleur, jeu, viewers, viewers il y a 30 min (null : en live depuis moins de 30 min), msg/min, actifs sur 10 min]
+const LIVE: [string, string, string, number, number | null, number, number][] = [
+  ["etoiles", "#4d8dff", "Teamfight Tactics", 14520, 13100, 412, 1240], ["mirabelle_tv", "#ff7aa8", "League of Legends", 6900, 5600, 188, 610],
+  ["xari", "#ff7a45", "Just Chatting", 6230, 4800, 288, 900], ["zorvan", "#3fb6a8", "VALORANT", 4100, 4350, 96, 410],
+  ["lunaestra", "#e9b44c", "Just Chatting", 3800, 2300, 141, 520], ["orionlive", "#4f8df5", "Balatro", 2600, 2550, 54, 190],
+  ["velvetfox", "#b26cf0", "Minecraft", 1900, 2200, 47, 110], ["sablier", "#c07a52", "League of Legends", 1700, null, 61, 170],
+  ["nopalgames", "#5fbf5a", "Balatro", 1300, 980, 33, 90], ["tidou", "#53c3e0", "Just Chatting", 900, 610, 29, 80],
+  ["aurore_gg", "#f08a5d", "Elden Ring", 450, 460, 12, 40],
+]
+const FOLLOWED = LIVE.length + 3
+
+// « En ce moment ». &direct=vide : aucune chaîne en live ; =calme : personne ne monte ; =debut : moins de 30 min de relevés ;
+// =vieux : relevé trop vieux ; =arret : collecteur hors ligne ; =local : écoute à l'arrêt ; =noapi ; =chargement
+function liveDemo(): OverviewData["now"] {
+  const m = new URLSearchParams(location.search).get("direct")
+  const now = Date.now()
+  const who = (c: string, color: string) => ({ c, color, img: "" })
+  const base: OverviewData["now"] = { state: "ok", mode: "cloud", at: now - 40000, seen: now - 20000, followed: FOLLOWED, live: 0, games: [], rising: [], eligible: 0, young: 0, history: true }
+  if (m === "vide") return base
+  if (m === "vieux") return { ...base, state: "stale", at: now - 47 * MIN }
+  if (m === "arret") return { ...base, state: "off", at: now - 3 * 3600e3, seen: now - 3 * 3600e3 }
+  if (m === "local") return { ...base, state: "off", mode: "local", at: null, seen: null }
+  if (m === "noapi") return { ...base, state: "noapi", at: null }
+  if (m === "chargement") return { ...base, state: "loading", at: null }
+  const games = [...new Set(LIVE.map((x) => x[2]))].map((g) => {
+    const l = LIVE.filter((x) => x[2] === g).sort((a, b) => b[3] - a[3])
+    return { g, chans: l.slice(0, 4).map((x) => who(x[0], x[1])), n: l.length, viewers: l.reduce((s, x) => s + x[3], 0), wrote: l.reduce((s, x) => s + x[6], 0) }
+  }).sort((a, b) => b.viewers - a.viewers)
+  const old = LIVE.filter((x) => x[4] != null)
+  const rising = old.filter((x) => x[3] > x[4]!).map(([c, color, game, v, v30, mpm]) => ({ ...who(c, color), game, v, v30: v30!, gain: v - v30!, rate: v / v30! - 1, mpm, raidAt: c === "mirabelle_tv" ? now - 18 * MIN : null })).sort((a, b) => b.rate - a.rate)
+  const d = { ...base, live: LIVE.length, games, rising, eligible: old.length, young: LIVE.length - old.length }
+  if (m === "calme") return { ...d, rising: [] }
+  if (m === "debut") return { ...d, rising: [], eligible: 0, history: false }
+  return d
+}
+
+// Activité de la période choisie et journée en cours. &activite=partiel : relevés détaillés plus courts que la période (voir avec
+// « 7 jours ») ; =sansapi : pas de viewers ; =vide : aucun relevé
+function activityDemo(): Pick<OverviewData, "activity" | "today"> {
+  const m = new URLSearchParams(location.search).get("activite")
+  const key = document.querySelector<HTMLButtonElement>("#period button.on")?.dataset.p ?? "today"
+  const now = Date.now(), midnight = new Date().setHours(0, 0, 0, 0)
+  const asked = key === "today" ? 1 : key === "7d" ? 7 : key === "30d" ? 30 : null
+  const from = m === "partiel" ? (key === "today" ? midnight + 14 * 3600e3 : midnight - 86400000) : midnight - ((asked ?? 5) - 1) * 86400000
+  const direct = new URLSearchParams(location.search).get("direct")
+  const activity: OverviewData["activity"] = {
+    from, to: now, partial: m === "partiel" && key !== "all", asked, peak: key === "today" ? 48300 : 66400, peakAt: Math.max(midnight, now - 26 * MIN),
+    lived: 13, followed: FOLLOWED, filtered: false, liveNow: direct === "arret" || direct === "vieux" ? null : direct === "vide" ? 0 : LIVE.length, gapMs: m === "partiel" ? 95 * MIN : 0,
+  }
+  const today: OverviewData["today"] = { d: dayStr(0), at: now, peak: 48300, peakAt: Math.max(midnight, now - 26 * MIN), actives: 18432, msgs: 246118, chans: 13 }
+  if (m === "sansapi") return { activity: { ...activity, peak: null, peakAt: null, lived: null, liveNow: null }, today: { ...today, peak: null, peakAt: null } }
+  if (m === "vide") return { activity: { ...activity, from: null, to: null, peak: null, peakAt: null, lived: null, liveNow: null }, today: { ...today, peak: null, peakAt: null, actives: null, msgs: null, chans: null } }
+  return { activity, today }
+}
+
 function demo(): OverviewData {
   const now = Date.now()
   const who = (c: string, color: string) => ({ c, color, img: "" })
@@ -44,11 +99,13 @@ function demo(): OverviewData {
       gaps: k > 50 ? [] : [[now - 100 * MIN, now - 82 * MIN]], // une période sans écoute, pour la voir
     })
   return {
+    ...activityDemo(),
+    now: liveDemo(),
     kpis: [
       { label: "Viewers actifs uniques", value: "18 432", hint: "ont écrit au moins un message" },
-      { label: "Messages", value: "246 118", hint: "au total", trendLabel: "courbe par heure", trend: [12, 18, 15, 22, 30, 41, 38, 52, 47, 61, 58, 72] },
       { label: "Actifs dans 2 chats ou plus", value: "3 271", hint: "17,7 % du total" },
-      { label: "Abonnements et subs offerts", value: "1 284" },
+      { label: "Messages", value: "246 118", hint: "au total", trendLabel: "courbe par heure", trend: [12, 18, 15, 22, 30, 41, 38, 52, 47, 61, 58, 72] },
+      { label: "Abonnements et subs offerts", value: "1 284", hint: "annoncés dans le chat" },
     ],
     // ?demo&recoup=vide : bloc Recoupements sans données (état vide)
     recoup: new URLSearchParams(location.search).get("recoup") === "vide"
@@ -76,7 +133,9 @@ function demo(): OverviewData {
       { ...who("xari", "#ff7a45"), langs: ["fr"], live: true, game: "Just Chatting", title: "On parle de tout", viewers: 6230, uniq: 4120, peak: 8300, msgs: 71204, recent: 288.2, wrote: 0.383 },
       { ...who("gotaga", "#2fbf71"), langs: ["fr"], live: false, game: "", title: "", viewers: null, uniq: 5870, peak: 12100, msgs: 52310, recent: 0, wrote: null },
       { ...who("kamet0", "#f5b83d"), langs: ["fr", "en"], live: false, game: "", title: "", viewers: null, uniq: 2232, peak: 3100, msgs: 24172, recent: null, wrote: null },
-    ],
+      // les autres chaînes du direct fictif, pour que les cartes et « En ce moment » disent la même chose
+      ...LIVE.filter(([c]) => c !== "etoiles" && c !== "xari").map(([c, color, game, viewers, , mpm, w]) => ({ ...who(c, color), langs: ["fr"], live: true, game, title: "", viewers, uniq: w * 3, peak: Math.round(viewers * 1.12), msgs: mpm * 90, recent: mpm, wrote: 0.18 })),
+    ].sort((a, b) => Number(b.live) - Number(a.live) || (b.viewers ?? 0) - (a.viewers ?? 0)),
     hasApi: true,
     part: [
       { ...who("xari", "#ff7a45"), limited: "", avgV: 6100, perMin: 0.072, msgK: 47.2, uniq: 0.67, react: 0.41, inter: 0.22 },
@@ -265,71 +324,88 @@ function gameDemo(): GameData {
   }
 }
 
+// Onglet Audiences (?demo=audiences ; ?demo=overlap et ?demo=flows y mènent aussi) : huit chaînes, chiffres fictifs.
+// &aud=vide : aucune donnée ; &aud=calme : aucun trajet aujourd'hui ; &beaucoup : 30 chaînes dans « Chaîne par chaîne » ;
+// &byday=N journées passées (4 par défaut, 0 : aucune encore), &byday=non : base pas à jour.
+const AUD: [string, string][] = [...CH, ["mirabelle_tv", "#ff7aa8"], ["zorvan", "#3fb6a8"], ["velvetfox", "#b26cf0"], ["nopalgames", "#5fbf5a"]]
+const audWho = (i: number) => ({ c: AUD[i][0], color: AUD[i][1], img: "" })
+const audParam = () => new URLSearchParams(location.search).get("aud")
+const ACTIVES = [3120, 1980, 1410, 1150, 860, 790, 640, 520]
+// viewers actifs en commun par paire [chaîne, chaîne, personnes]
+const SHARED: [number, number, number][] = [[0, 1, 134], [0, 2, 22], [0, 3, 18], [0, 4, 31], [0, 5, 19], [0, 6, 9], [1, 2, 12], [1, 3, 25], [1, 4, 8], [1, 5, 6], [2, 3, 68], [2, 4, 7], [2, 6, 11], [3, 6, 7], [4, 5, 3], [5, 6, 26], [6, 7, 16]]
+const shared = (a: number, b: number) => SHARED.find(([x, y]) => (x === a && y === b) || (x === b && y === a))?.[2] ?? 0
+
 let overlapFilter = "all"
 function overlapDemo(): OverlapData {
-  const W = CH.map(([x, col]) => ({ c: x, color: col, img: "" }))
-  const k = { all: 1, multi: 0.177, move: 0.121, often: 0.043 }[overlapFilter] ?? 1
-  const sizes = [6210, 4120, 5870, 2232].map((n) => Math.round(n * k))
-  const R = [[0, 0.21, 0.12, 0.05], [0.31, 0, 0.09, 0.07], [0.13, 0.06, 0, 0.04], [0.14, 0.13, 0.1, 0]]
-  return {
+  const counts: Record<string, number> = { all: 12480, multi: 499, move: 412, often: 88 }
+  const k = counts[overlapFilter] / counts.all
+  // filtré, les parts montent (on ne garde que des viewers présents sur plusieurs chaînes)
+  const boost = overlapFilter === "all" ? 1 : 1 / Math.max(k * 6, 0.2)
+  const sizes = ACTIVES.map((n) => Math.max(1, Math.round(n * (overlapFilter === "all" ? 1 : k * 4))))
+  const share = (a: number, b: number) => Math.min(1, (shared(a, b) / ACTIVES[a]) * boost)
+  const top = [0, 1, 2, 3, 4, 5, 6]
+  const pairs = SHARED.map(([a, b]) => {
+    const [x, y] = ACTIVES[a] <= ACTIVES[b] ? [a, b] : [b, a]
+    return { a: audWho(x), b: audWho(y), n: shared(a, b), share: share(x, y), j: shared(a, b) / (ACTIVES[a] + ACTIVES[b] - shared(a, b)) }
+  }).sort((p, q) => q.j - p.j).slice(0, 7).sort((p, q) => q.share - p.share || q.n - p.n)
+  const d: OverlapData = {
     filter: overlapFilter,
-    filters: [["all", "Tous", 18432], ["multi", "Sur 2 chaînes ou plus", 3271], ["move", "Changent de stream", 2230], ["often", "Changent souvent", 802]].map(([key, label, count]) => ({ key: key as string, label: label as string, tip: "", count: count as number })),
-    filterNote: overlapFilter === "all" ? null : { count: Math.round(18432 * k), desc: "ont changé de stream au moins une fois", share: k, total: 18432 },
-    movers: {
-      move: 2230, often: 802, multi: 3271, total: 18432, oftenAt: 3, medianMoves: 2, maxMoves: 41, swStart: "05/11/2026",
-      rows: [
-        { ...W[1], n: 4120, m: 0.23, o: 0.09, to: { ...W[0], n: 612 }, from: { ...W[0], n: 540 } },
-        { ...W[0], n: 6210, m: 0.15, o: 0.05, to: { ...W[1], n: 540 }, from: { ...W[1], n: 612 } },
-        { ...W[3], n: 2232, m: 0.12, o: 0.04, to: { ...W[1], n: 120 }, from: { ...W[2], n: 98 } },
-        { ...W[2], n: 5870, m: 0.08, o: 0.02, to: { ...W[3], n: 98 }, from: null },
-      ],
-      top: [
-        { id: "a3f9c1", moves: 41, chans: 4, path: [0, 1, 0, 1, 2, 1, 0, 3, 1, 0, 1, 2, 0, 1].map((i, j) => ({ ...W[i], when: `mer. 19 nov. ${18 + Math.floor(j / 4)}h${String((j * 7) % 60).padStart(2, "0")}` })), more: 6, span: "mer. 19 nov. 18h00 → 23h41" },
-        { id: "07be44", moves: 18, chans: 3, path: [1, 0, 1, 2].map((i) => ({ ...W[i], when: "mer. 19 nov. 20h12" })), more: 0, span: "lun. 17 nov. 19h03 → mer. 19 nov. 22h10" },
-        { id: "c91d0a", moves: 9, chans: 2, path: [0, 1, 0].map((i) => ({ ...W[i], when: "mar. 18 nov. 21h40" })), more: 0, span: "mar. 18 nov. 21h40 → 23h02" },
-      ],
-    },
-    matrix: { rows: W.map((w, i) => ({ k: w.c, size: sizes[i], who: w, cells: W.map((_, j) => (i === j ? null : { r: R[i][j], n: Math.round(sizes[i] * R[i][j]) })) })) },
-    pairs: [[0, 1, 0.14, 1304], [0, 2, 0.07, 745], [1, 3, 0.06, 290], [0, 3, 0.04, 310], [2, 3, 0.03, 240], [1, 2, 0.03, 370]].map(([a, b, j, n]) => ({ a: W[a], b: W[b], j, share: j * 1.6, n })),
-    dist: [{ k: 1, v: 15161, share: 0.823 }, { k: 2, v: 2410, share: 0.131 }, { k: 3, v: 702, share: 0.038 }, { k: 4, v: 159, share: 0.009 }],
+    filters: [["all", "Tous"], ["multi", "Sur 2 chaînes ou plus"], ["move", "Ont changé de stream"], ["often", "Souvent (3 fois ou plus)"]].map(([key, label]) => ({ key, label, tip: "", count: counts[key] })),
+    filterNote: overlapFilter === "all" ? null : { count: counts[overlapFilter], desc: "ont changé de stream au moins une fois", share: k, total: counts.all },
+    spread: { total: 12480, one: 11981, two: 386, more: 113, single: 4742, talk3: 5600, talk3one: 5101, chans: AUD.length, filtered: false },
+    matrix: { rows: top.map((a) => ({ k: AUD[a][0], size: sizes[a], who: audWho(a), cells: top.map((b) => (a === b ? null : { r: share(a, b), n: shared(a, b) })) })) },
+    chans: AUD.length,
+    pairs,
   }
+  if (audParam() !== "vide") return d
+  return { ...d, filters: d.filters.map((x) => ({ ...x, count: 0 })), spread: { ...d.spread, total: 0, one: 0, two: 0, more: 0, single: 0, talk3: 0, talk3one: 0 }, matrix: { rows: [] }, chans: 0, pairs: [] }
 }
 
-// exportée pour le prototype C0 (dev/flows-map-demo.tsx, ?demo=flows-map)
-export function flowsDemo(): FlowsData {
-  const W = CH.map(([x, col]) => ({ c: x, color: col, img: "" }))
-  // ZéroTator -> Etoiles: 4120 (raid), Kamet0 -> Xari: 980 (raid)
-  // Autres flux sont organiques
-  return {
-    total: 2394, routes: 9, medianGap: "12 min", raidCount: 3, raidViewers: 5310,
-    flows: [[1, 0, 612, "8 min"], [0, 1, 540, "11 min"], [2, 3, 310, "25 min"], [0, 2, 288, "14 min"], [3, 1, 204, "6 min"], [1, 2, 160, "31 min"], [2, 0, 140, "18 min"], [3, 0, 92, "9 min"], [1, 3, 48, "42 min"]]
-      .map(([a, b, n, gap]) => ({ a: W[a as number], b: W[b as number], n: n as number, gap: gap as string, raid: (a === 1 && b === 0) || (a === 3 && b === 1) })),
-    balance: [{ ...W[3], in: 358, out: 296 }, { ...W[0], in: 1104, out: 1068 }, { ...W[1], in: 744, out: 820 }, { ...W[2], in: 448, out: 450 }]
-      .map((r) => ({ ...r, net: r.in - r.out })).sort((a, b) => b.net - a.net),
-    raids: [
-      { when: "mer. 19 nov. 23h58", from: { c: "zerator", color: "#8a8a93", img: "", name: "ZeratoR" }, to: W[0], n: 4120 },
-      { when: "mer. 19 nov. 22h31", from: { ...W[3], name: "Kamet0" }, to: W[1], n: 980 },
-      { when: "mar. 18 nov. 01h12", from: null, to: W[2], n: 210 },
-    ],
+const dayStr = (back: number) => {
+  const t = new Date(Date.now() - back * 86400000)
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`
+}
+// trajets d'une journée type : [de, vers, personnes, délai, raid]
+const ROUTES: [number, number, number, string, boolean][] = [[0, 4, 74, "8 min", false], [5, 3, 41, "7 min", false], [4, 0, 39, "13 min", false], [2, 0, 27, "2 min", true], [6, 7, 16, "19 min", false]]
+
+function flowsDemo(): FlowsData {
+  const route = ([a, b, n, gap, raid]: (typeof ROUTES)[number]) => ({ a: audWho(a), b: audWho(b), n, gap, raid })
+  // chaînes : [indice, actifs, part qui change, arrivées, départs]
+  const base: [number, number, number, number, number][] = [[4, 1980, 0.059, 74, 39], [3, 1150, 0.048, 41, 9], [6, 640, 0.031, 16, 5], [7, 520, 0.019, 7, 2], [0, 3120, 0.061, 66, 74], [1, 790, 0.028, 4, 16], [2, 860, 0.039, 3, 27], [5, 1410, 0.042, 12, 41]]
+  const rows: FlowsData["rows"] = base.map(([i, n, m, inn, out]) => ({ ...audWho(i), n, m, in: inn, out, net: inn - out }))
+  if (new URLSearchParams(location.search).has("beaucoup"))
+    for (let i = 0; i < 22; i++) {
+      const inn = (i * 7) % 11, out = (i * 5) % 9, n = 15 + ((i * 37) % 300)
+      rows.push({ c: `chaine${String(i).padStart(2, "0")}`, color: `hsl(${(i * 47) % 360} 60% 58%)`, img: "", n, m: n < 20 ? null : 0.01 + (i % 5) / 100, in: inn, out, net: inn - out })
+    }
+  rows.sort((a, b) => b.net - a.net || b.n - a.n)
+  const raid = (when: string, from: number, to: number, n: number) => ({ when, from: { ...audWho(from), name: AUD[from][0] }, to: audWho(to), n })
+  const path = (ids: number[]) => ids.map((i, j) => ({ ...audWho(i), when: `ven. 27 nov. ${18 + (j % 6)}h${String((j * 7) % 60).padStart(2, "0")}` }))
+  const d: FlowsData = {
+    total: 197, routes: 5, medianGap: "11 min",
+    actives: 12480, move: 412, often: 88, oftenAt: 3, swStart: "24/11/2026",
+    raidCount: 6, raidViewers: 2310,
+    flows: ROUTES.map(route),
+    rows,
+    top: Array.from({ length: 10 }, (_, i) => ({ id: ((0xa3f91c + i * 48271) % 0xffffff).toString(16).padStart(6, "0"), moves: 9 - Math.floor(i / 2), chans: 3 + (i % 2), path: path(i % 2 ? [0, 4, 0, 3, 5] : [5, 3, 5, 7]), more: i ? 0 : 6, span: "ven. 27 nov. 18h00 → 21h12" })),
+    today: { d: dayStr(0), routes: audParam() === "calme" ? [] : ROUTES.map(route) },
+    raids: [raid("ven. 27 nov. 21h22", 2, 0, 1120), raid("ven. 27 nov. 20h05", 6, 4, 540), raid("ven. 27 nov. 18h47", 7, 1, 210), raid("ven. 27 nov. 16h30", 5, 3, 260), raid("ven. 27 nov. 14h12", 3, 7, 120), raid("ven. 27 nov. 11h58", 1, 6, 60)],
   }
+  if (audParam() !== "vide") return d
+  return { ...d, total: 0, routes: 0, medianGap: "", actives: 0, move: 0, often: 0, swStart: "", raidCount: 0, raidViewers: 0, flows: [], rows: [], top: [], today: { d: dayStr(0), routes: [] }, raids: [] }
 }
 
-// Passages par jour et par paire (format de FlowsData.byDay, fictifs) : les n derniers jours, les paires de flowsDemo avec un poids
-// qui varie d'un jour à l'autre ; la paire « raid » (Etoiles > Xari) porte surtout des raids, l'une des autres un peu.
+// Journées passées (format de FlowsData.byDay, fictives) : les n jours avant aujourd'hui, avec des poids qui varient.
 function byDayDemo(nDays: number): NonNullable<FlowsData["byDay"]> {
-  const P = flowsDemo()
-  const raid = new Set(P.flows.filter((f) => f.raid).map((f) => f.a.c + ">" + f.b.c))
+  const more: [number, number, number, string, boolean][] = [...ROUTES, [3, 5, 22, "", false], [7, 2, 18, "", false]]
   const out: NonNullable<FlowsData["byDay"]> = []
-  for (let k = nDays - 1; k >= 0; k--) {
-    const dt = new Date(Date.now() - k * 86400000)
-    const d = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
-    P.flows.forEach((f, i) => {
-      const w = 0.04 + 0.06 * (1 + Math.sin(k * 1.7 + i * 2.3)) // 4 % à 16 % du total de la paire
-      const viewers = Math.round(f.n * w)
+  for (let k = nDays; k >= 1; k--) {
+    more.forEach(([a, b, n, , raid], i) => {
+      const viewers = Math.round(n * (1.1 + Math.sin(k * 1.7 + i * 2.3)))
       if (viewers < 3) return
       const passages = Math.round(viewers * 1.35)
-      const r = raid.has(f.a.c + ">" + f.b.c) ? Math.round(passages * 0.85) : i === 2 ? Math.round(passages * 0.12) : 0
-      out.push({ d, a: f.a, b: f.b, viewers, passages, organic: passages - r, raid: r })
+      const r = raid ? Math.round(passages * 0.85) : 0
+      out.push({ d: dayStr(k), a: audWho(a), b: audWho(b), viewers, passages, organic: passages - r, raid: r })
     })
   }
   return out
@@ -387,7 +463,7 @@ function rostersDemo(): RostersData {
 }
 
 // Historique : n jours agrégés fictifs (courbes qui montent avec un creux le week-end), pour voir la section « Historique » de Par chaîne
-export function historyDemo(c: string, n: number): ChannelHistory {
+function historyDemo(c: string, n: number): ChannelHistory {
   const k = Math.max(1, CH.findIndex(([x]) => x === c) + 1)
   const days = Array.from({ length: n }, (_, i) => {
     const t = new Date(Date.now() - (n - i) * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.35 : 1
@@ -421,14 +497,25 @@ function stickyDemo(c: string, n: number, mode: string | null): ChannelSticky {
   return { days, actives: days.reduce((s, d) => s + d.actives, 0), leavers: days.reduce((s, d) => s + d.leavers, 0), net: { n: 12, q1: 89.1, med: 93, q3: 96.3 } }
 }
 
-// Historique du réseau : n jours agrégés fictifs (creux en semaine, pics le week-end), pour voir « Historique du réseau » de la Vue d'ensemble
-function networkDemo(n: number): NetworkHistory {
-  const days = Array.from({ length: n }, (_, i) => {
-    const t = new Date(Date.now() - (n - i) * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.3 : 1
-    return { d: t.toLocaleDateString("sv-SE"), msgs: Math.round((2_100_000 + i * 14_000) * wk), avg: Math.round((520_000 + i * 2_600) * wk), chans: 78 + (i % 6) }
-  })
+// « Jour par jour » de la Vue d'ensemble : les journées passées fictives de network_history. Par défaut, peu de jours (4), le pic
+// connu seulement pour les 2 derniers. &histo=plein : toute la durée ; =1 : une journée ; =ancien : schema.sql pas rejoué (les clés
+// actives, peak, peakAt sont absentes) ; =trou : une journée sans agrégat au milieu ; =non : pas de base
+function historyDays(days: number) {
+  const m = new URLSearchParams(location.search).get("histo")
+  return m === "plein" ? days - 1 : m === "1" ? 1 : Math.min(days - 1, m === "trou" ? 5 : 4)
+}
+function networkDemo(days: number): NetworkHistory {
+  const m = new URLSearchParams(location.search).get("histo")
+  const n = historyDays(days)
+  const list = Array.from({ length: n }, (_, i) => {
+    const back = n - i, t = new Date(Date.now() - back * 86400000), wk = [0, 6].includes(t.getDay()) ? 1.2 : 1
+    const k = wk * (0.93 + 0.07 * Math.sin(i * 1.7))
+    const row = { d: dayStr(back), msgs: Math.round(402_000 * k), avg: Math.round(52_000 * k), chans: 11 + (i % 3) }
+    const full = m === "plein" || back <= 2
+    return m === "ancien" ? row : { ...row, actives: Math.round(24_100 * k), peak: full ? Math.round(61_200 * k) : null, peakAt: full ? t.setHours(21, 14) : null }
+  }).filter((_, i) => !(m === "trou" && i === 2))
   const who = (c: string, color: string, msgs: number, avg: number) => ({ c, color, img: "", msgs, avg })
-  return { days, top: [who("etoiles", "#4d8dff", 98432 * n, 14520), who("xari", "#ff7a45", 71204 * n, 6230), who("gotaga", "#2fbf71", 52310 * n, 5870), who("kamet0", "#f5b83d", 24172 * n, 2232)] }
+  return { days: list, top: [who("etoiles", "#4d8dff", 98432 * n, 14520), who("xari", "#ff7a45", 71204 * n, 6230), who("gotaga", "#2fbf71", 52310 * n, 5870), who("kamet0", "#f5b83d", 24172 * n, 2232)] }
 }
 
 export function installDemo() {
@@ -452,17 +539,21 @@ export function installDemo() {
     window.renderGame = () => window.dispatchEvent(new CustomEvent("legacy:game", { detail: gameDemo() }))
     window.renderOverlap = () => window.dispatchEvent(new CustomEvent("legacy:overlap", { detail: overlapDemo() }))
     window.setOverlapFilter = (f: string) => { overlapFilter = f; window.renderOverlap?.(null) }
-    // &byday=non : base pas à jour (pas de byDay, donc pas de carte) ; &byday=14 : 14 journées (3 par défaut)
     window.renderFlows = () => {
       const q = new URLSearchParams(location.search).get("byday")
       const d = flowsDemo()
-      if (q !== "non") d.byDay = byDayDemo(Math.max(1, Math.min(60, Number(q) || 3)))
+      if (q !== "non") d.byDay = audParam() === "vide" ? [] : byDayDemo(Math.max(0, Math.min(60, q == null ? 4 : Number(q) || 0)))
       window.dispatchEvent(new CustomEvent("legacy:flows", { detail: d }))
     }
     // &histo=non : base pas à jour ; &histo=1 : une seule journée agrégée
     const histo = () => new URLSearchParams(location.search).get("histo")
     window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
-    window.periodReach = async (chans, days) => (histo() === "non" ? null : reachDemo(chans, days))
+    window.periodReach = async (chans, days) => {
+      if (histo() === "non") return null
+      if (chans[0] !== "*") return reachDemo(chans, days)
+      const n = historyDays(days) // réseau entier : cohérent avec les journées de « Jour par jour »
+      return { from: dayStr(n), to: dayStr(1), days: n, net: Math.round(24_100 * (1 + Math.sqrt(n))), chans: [] }
+    }
     // &sticky=bas|haut : chaîne en bas ou en haut du classement de fidélité ; &sticky=peu : trop peu de viewers actifs (&histo=non couvre aussi la fidélité)
     const sticky = () => new URLSearchParams(location.search).get("sticky")
     // &rythme=vide : pas encore 14 journées ; &rythme=calme : aucune chaîne ne sort de son rythme ; &histo=non : base pas à jour
@@ -474,7 +565,16 @@ export function installDemo() {
       return m === "calme" ? [mk(0, 4000, 4100, 300), mk(1, 5200, 5000, 400)] : [mk(0, 4000, 5600, 350), mk(1, 5200, 3900, 420), mk(2, 6100, 6200, 500), mk(3, 90, 130, 60)]
     }
     window.channelSticky = async (c, days) => (histo() === "non" ? null : stickyDemo(c, histo() === "1" ? 1 : days, sticky()))
-    window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(histo() === "1" ? 1 : days))
+    window.networkHistory = async (days) => (histo() === "non" ? null : networkDemo(days))
+    // la ligne de période sous le titre vient de la base locale, vide en démo (« Pas encore de relevé ») : plage fictive
+    const realPeriod = window.periodInfo!
+    window.periodInfo = () => {
+      const p = realPeriod()
+      if (audParam() === "vide") return p
+      const days = p.key === "today" ? 1 : p.key === "7d" ? 7 : p.key === "30d" ? 30 : 5
+      const dm = (back: number) => new Date(Date.now() - back * 86400000).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+      return { ...p, range: days === 1 ? `Aujourd'hui, ${dm(0)}` : `Du ${dm(days - 1)} au ${dm(0)} (${days} jours)` }
+    }
     window.raidSuggestions = async () => {
       const m = new URLSearchParams(location.search).get("raids")
       if (m === "non") return null
@@ -496,8 +596,9 @@ export function installDemo() {
     // ?demo=settings&chaines=40 : ajoute des chaînes fictives pour voir la liste défiler
     const n = Number(new URLSearchParams(location.search).get("chaines"))
     if (t === "settings" && n > 0) window.addChanList?.(Array.from({ length: n }, (_, i) => `chaine_demo_${i + 1}`).join(" "))
-    // ?demo=flows-map : onglet Flux, remplacé par le prototype C0 de la carte des migrations (voir App.tsx)
-    window.showTab?.(t === "flows-map" ? "flows" : t === "channel" || t === "chat" || t === "clip" || t === "game" || t === "overlap" || t === "flows" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
+    // les anciennes adresses des onglets Chevauchement et Flux mènent à Audiences
+    const old = t === "overlap" || t === "flows" || t === "flows-map"
+    window.showTab?.(old || t === "audiences" ? "audiences" : t === "channel" || t === "chat" || t === "clip" || t === "game" || t === "rosters" || t === "settings" || t === "map" ? t : "overview")
     // ?demo&hover=0.4 : simule le survol du premier graphique à 40 % de sa largeur (pour vérifier l'infobulle)
     const hv = Number(new URLSearchParams(location.search).get("hover"))
     if (hv > 0) setTimeout(() => {

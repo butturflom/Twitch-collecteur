@@ -336,3 +336,16 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à re
 - **Par jeu** : « Trouver des streamers par catégorie » est retiré (l'ajout reste dans les Réglages).
 - **Réglages** : nombre de chaînes suivies et limite de 100 en grand, avec une jauge.
 - **Carte** : la légende quitte le dessin et passe dans l'aide (« ? », onglet « Lire »).
+
+## Tableau de bord 2.0.9 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejouer** : avant cela, les viewers actifs et le pic des journées passées affichent « — », et la page le dit.
+
+- **Onglet « Audiences »** à la place de « Chevauchement » et « Flux » : une page, « En commun » puis « Qui va où ». Il ne porte que sur les chaînes suivies et affichées, tout comme les trajets du rapport PDF et CSV.
+- **Chaînes retirées** : leurs données encore en base ne comptent plus dans les autres onglets ni dans le rapport (avant, elles comptaient sans filtre de langue) ; les journées passées de « Jour par jour » les gardent.
+- **Carte des migrations** animée, journée en cours comprise. Le diagramme de flux (Sankey) est supprimé.
+- **Paires** rangées sur le pourcentage affiché ; **« Chaîne par chaîne »** en un seul tableau.
+- **Retirés** : « Changements par viewer qui bouge » (médiane, maximum), la colonne « Souvent », « Partent surtout vers » et « Arrivent surtout de ».
+- **Vue d'ensemble** : l'activité de la période en tête (nombres annoncés par Twitch, puis le chat) ; « Jour par jour » (pic de viewers et viewers actifs séparés, 7, 30 ou 90 jours) remplace « Historique du réseau » ; bandeau des raids remonté ; « En ce moment » (« Les jeux du moment », « Les streamers montants ») au-dessus des chaînes.
+- **Retirés avec « Historique du réseau »** : l'audience moyenne cumulée et sa courbe, le total des messages sur 30 et 90 jours.
+- **Base** : nouvelle table `daily_network_rollup` (pic simultané par jour, non purgée) ; `network_history` renvoie aussi les viewers actifs, le pic et son heure. Le pic ne se remplit que si `joursReleves` vaut au moins 2.

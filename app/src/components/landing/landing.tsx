@@ -64,7 +64,7 @@ const PILLARS = [
   {
     title: "Ce que les stats publiques ne montrent pas",
     text: "Quels viewers actifs écrivent sur plusieurs chaînes, où ils vont quand un live se termine, et ce que le chat dit vraiment de l’ambiance. Les spectateurs silencieux ne sont pas visibles.",
-    where: "Dans l’app : Chevauchement, Flux, Chat.",
+    where: "Dans l’app : Audiences, Chat.",
   },
   {
     title: "Prépare tes raids, mesure ton audience",

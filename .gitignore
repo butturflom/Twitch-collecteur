@@ -58,3 +58,5 @@ clients/
 
 # Traces du serveur Playwright MCP (captures, journaux)
 .playwright-mcp/
+# prototypes jetables des chantiers
+maquettes/

@@ -444,3 +444,5 @@ body {
   .to2-ticker-on .to2-ticker-track { animation: none; }
   .to2-ticker-copy { display: none; }
 }
+/* Vue d’ensemble, « Jour par jour » : la journée en cours est hachurée. */
+.to2-hatch { background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px); }

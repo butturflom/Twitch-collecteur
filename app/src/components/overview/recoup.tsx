@@ -1,6 +1,6 @@
 // Bloc « Recoupements » de la Vue d'ensemble : ce qu'aucun site public ne montre, en aperçu.
 // Une phrase à retenir, puis trois colonnes séparées par des filets : paires les plus proches, trajets les plus
-// fréquents, dernier raid. Le détail reste dans les onglets Chevauchement et Flux (liens en pied de colonne).
+// fréquents, dernier raid. Le détail reste dans l'onglet Audiences (liens en tête du bloc).
 import type { ReactNode } from "react"
 import { ArrowRight, ExternalLink } from "lucide-react"
 import { ChannelAvatar } from "@/components/channel-avatar"
@@ -16,16 +16,16 @@ function RecoupActions({ d }: { d: RecoupData }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
-      <a href="#" data-goto="overlap" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
+      <a href="#" data-goto="audiences" data-part="commun" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
         <ExternalLink className="size-4" />
-        Tout le chevauchement
+        Tout ce qui est en commun
       </a>
-      <a href="#" data-goto="flows" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
+      <a href="#" data-goto="audiences" data-part="trajets" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
         <ExternalLink className="size-4" />
-        Tous les flux
+        Qui va où
       </a>
       {hasRaid && (
-        <a href="#" data-goto="flows" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
+        <a href="#" data-goto="audiences" data-part="raids" className="inline-flex items-center gap-1.5 rounded-md bg-dome-crest/10 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-dome-crest/20">
           <ExternalLink className="size-4" />
           Tous les raids
         </a>

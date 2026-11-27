@@ -1,4 +1,4 @@
-// Bandeau des raids reçus par les chaînes suivies, en tête de la Vue d'ensemble. Il défile à partir de 4 raids ; il se met en
+// Bandeau des raids reçus par les chaînes suivies, sous le bloc d'activité de la Vue d'ensemble. Il défile à partir de 4 raids ; il se met en
 // pause au survol, au clavier ou avec le bouton. Mouvements réduits ou pause : une liste fixe qu'on fait défiler soi-même.
 import { useState } from "react"
 import { ArrowRight, Pause, Play } from "lucide-react"
@@ -33,7 +33,7 @@ export function RaidTicker({ d }: { d: RaidTickerData }) {
   if (!d.rows.length) return null
   const moving = d.rows.length >= SCROLL_FROM
   return (
-    <div role="region" aria-label="Raids reçus" className={cn(panel, "mb-6 flex items-center gap-x-3 gap-y-1 py-2 pr-2 pl-4 max-sm:flex-wrap max-sm:justify-between")}>
+    <div role="region" aria-label="Raids reçus" className={cn(panel, "mt-9 flex items-center gap-x-3 gap-y-1 py-2 pr-2 pl-4 max-sm:flex-wrap max-sm:justify-between")}>
       <h2 className="shrink-0 text-[13px] font-semibold">
         Raids reçus
         {d.older && <span className="block text-[11px] font-normal text-dusk">les derniers, aucun aujourd'hui</span>}

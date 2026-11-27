@@ -1,4 +1,4 @@
-// Matrice de chevauchement (onglets Par jeu et Chevauchement) : chaque case = part des viewers actifs
+// Matrice de chevauchement (onglet Par jeu ; Audiences a la sienne, resserrée) : chaque case = part des viewers actifs
 // de la ligne qu'on a aussi vus chez la colonne, avec le nombre de personnes en dessous.
 import { ChannelAvatar } from "@/components/channel-avatar"
 import { Empty, heatFill, panel } from "@/components/overview/parts"

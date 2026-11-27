@@ -421,9 +421,10 @@ function Q(all){ // instantané filtré de la période ; all : tout le détail d
   const snaps=DB.snaps.filter(s=>s.t>=t0),events=DB.events.filter(e=>e.t>=t0);
   const clips=Object.values(DB.clips||{}).filter(k=>k.ts>=t0);
   const sw=Object.values(DB.switches||{}).filter(s=>s.d>=d0); // changements de stream comptés message par message (1.5)
-  if((cfg.lang||'*')!=='*'){const S=new Set(shown()),k=x=>S.has(x.c); // filtre Langue
-    return {t0,pres:pres.filter(k),mins:mins.filter(k),snaps:snaps.filter(k),events:events.filter(k),clips:clips.filter(k),sw:sw.filter(x=>S.has(x.a)&&S.has(x.b))}}
-  return {t0,pres,mins,snaps,events,clips,sw};
+  // Toujours restreint aux chaînes suivies et affichées (filtre Langue compris) : la base garde quelques jours les données
+  // d'une chaîne retirée, or les pages disent « tes chaînes ».
+  const S=new Set(shown()),k=x=>S.has(x.c);
+  return {t0,pres:pres.filter(k),mins:mins.filter(k),snaps:snaps.filter(k),events:events.filter(k),clips:clips.filter(k),sw:sw.filter(x=>S.has(x.a)&&S.has(x.b))};
 }
 function usersBy(pres,keyFn){const M=new Map();for(const p of pres){const k=keyFn(p);if(k==null)continue;let s=M.get(k);if(!s)M.set(k,s=new Set());s.add(p.u)}return M}
 // Paires de chaînes classées par ressemblance (communs ÷ réunion), pour que les petites coïncidences ne passent pas devant. Le chiffre
@@ -1035,7 +1036,7 @@ function renderMap(q){
   const lcol=c=>grouped?gcol.get(c):MAP_LINK;
   const n=nodes.length,ids=nodes.map(nd=>nd.id),idx=new Map(ids.map((c,i)=>[c,i]));
   const nb=ids.map(()=>new Set());for(const e of edges){nb[idx.get(e.a)].add(e.b);nb[idx.get(e.b)].add(e.a)} // voisins = liens tracés
-  // passages mesurés sur la période (même règle que l'onglet Flux : quelqu'un écrit chez A, puis chez B moins de 3 h après)
+  // passages mesurés sur la période (même règle que les migrations d'Audiences : quelqu'un écrit chez A, puis chez B moins de 3 h après)
   const pass=new Map();for(const f of flowsOf(q.pres,q.sw).flows)if(idx.has(f.a)&&idx.has(f.b))pass.set(f.a+'>'+f.b,f.n);
   const passN=(a,b)=>pass.get(a+'>'+b)||0;
   // sens dominant d'un trait (1 : de a vers b, −1 : de b vers a, 0 : aucun) : au moins 10 passages, dont 60 % dans un sens
@@ -1899,16 +1900,89 @@ function raidTickerData(q){
   return {older,rows:list.map(r=>({t:r.t,from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0,ago:ago(r.t)}))};
 }
 
+// Vue d'ensemble : activité de la période, journée en cours (« Jour par jour ») et direct (« En ce moment »).
+// Pic de viewers simultanés : les relevés d'un même passage du collecteur portent la même heure t. On additionne les viewers de
+// chaque passage (une chaîne comptée une fois, même relevée en double après une resynchronisation), puis on garde le plus grand
+// total ; à égalité, le plus ancien. Même règle que la fonction SQL build_daily_network_peak.
+function networkPeak(snaps){
+  const by=new Map();for(const s of snaps){if(!s.live)continue;let m=by.get(s.t);if(!m)by.set(s.t,m=new Map());m.set(s.c,s.v)}
+  let peak=null,peakAt=null;
+  for(const [t,m] of by){let v=0;for(const x of m.values())v+=x;if(peak==null||v>peak||(v===peak&&t<peakAt)){peak=v;peakAt=t}}
+  return {peak,peakAt};
+}
+// Activité de la période : les chiffres « nombre annoncé » et ce que les relevés couvrent vraiment. partial : la période demandée
+// commence plus de 30 min avant le début commun des relevés détaillés (rétention courte) : les chiffres ne la couvrent pas toute.
+const PARTIAL_MIN=30*MIN,GAP_SHOWN=15*MIN;
+function activityData(q){
+  const S=new Set(shown()),lived=new Set();for(const s of q.snaps)if(s.live&&S.has(s.c))lived.add(s.c);
+  const {peak,peakAt}=networkPeak(q.snaps),now=Date.now();
+  const last=Math.max(maxOf(q.snaps,s=>s.t),maxOf(q.mins,m=>m.t)),hasData=isFinite(last);
+  const gap=hasData?listenGaps([...S],q.t0).reduce((s,[a,b])=>s+b-a,0):0;
+  return {from:hasData&&q.t0?q.t0:null,to:hasData?(liveData()?now:last):null,
+    partial:hasData&&period!=='all'&&q.t0-periodStart()>PARTIAL_MIN,asked:period==='today'?1:period==='7d'?7:period==='30d'?30:null,
+    peak,peakAt,lived:q.snaps.length?lived.size:null,followed:S.size,filtered:(cfg.lang||'*')!=='*',
+    liveNow:hasApi()&&liveData()?[...S].filter(c=>info[c]&&info[c].live).length:null,gapMs:gap>GAP_SHOWN?gap:0};
+}
+// Journée en cours, pour « Jour par jour » : ni la période ni le filtre Langue, comme les journées passées (fonction SQL
+// network_history), mais seulement les chaînes encore suivies. Viewers actifs exacts (empreintes distinctes), messages,
+// chaînes avec des messages, pic simultané.
+function todayData(){
+  const now=Date.now(),d=dayKey(now),t0=parisMidnight(now),F=new Set(cfg.chans),users=new Set(),chans=new Set();let msgs=0;
+  for(const p of Object.values(DB.presence))if(p.d===d&&F.has(p.c))users.add(p.u);
+  const add=m=>{if(m.t>=t0&&F.has(m.c)){msgs+=m.m;chans.add(m.c)}};
+  Object.values(DB.minutes).forEach(add);for(const c in curMin){const cm=curMin[c];if(cm)add(minuteRec(c,cm))}
+  const {peak,peakAt}=networkPeak(DB.snaps.filter(s=>s.t>=t0&&F.has(s.c))),none=!users.size&&!chans.size;
+  return {d,at:now,peak,peakAt,actives:none?null:users.size,msgs:none?null:msgs,chans:none?null:chans.size};
+}
+// « En ce moment » : le direct, jamais la période. state : ok, noapi (pas d'API Twitch), off (collecteur hors ligne ou écoute
+// arrêtée), stale (relevé de l'API trop vieux ou en erreur), loading (premier chargement). Un vieux relevé n'est pas le direct.
+const LIVE_STALE=6*MIN,RISE_SPAN=30*MIN,RISE_TOL=4*MIN,RISE_MIN=100,WRITE_SPAN=10*MIN,MPM_SPAN=5*MIN;
+function liveNowData(){
+  const now=Date.now(),list=shown(),cl=cfg.mode==='cloud',st=cloud.status,seen=cl&&st&&st.last_seen?+st.last_seen:null;
+  let last=null;for(const s of DB.snaps)if(s.live&&(last==null||s.t>last))last=s.t;
+  const base={state:'ok',mode:cfg.mode,at:last,seen,followed:list.length,live:0,games:[],rising:[],eligible:0,young:0,history:false};
+  const waiting=isCloud()&&!st&&cloud.syncing;
+  if(!hasApi())return {...base,state:waiting?'loading':'noapi'};
+  if(!liveData())return {...base,state:waiting?'loading':'off'};
+  const api=cl?st&&st.api:apiState;
+  if(!cl&&!api)return {...base,state:'loading'}; // « Ce navigateur » : l'écoute vient de démarrer, Twitch n'a pas encore répondu
+  const live=list.filter(c=>info[c]&&info[c].live);
+  if((api&&api!=='ok')||(live.length&&(last==null||now-last>LIVE_STALE)))return {...base,state:'stale'};
+  const at=live.length?last:seen||now; // heure du dernier passage de l'API (sans chaîne en live : dernier signal du collecteur)
+  // jeux : viewers en direct cumulés des chaînes suivies ; « écrivent » : empreintes distinctes, dernier message dans les 10 min
+  const G=new Map(),gameOf=new Map();
+  for(const c of live){const g=info[c].g||UNKNOWN;gameOf.set(c,g);let o=G.get(g);if(!o)G.set(g,o={g,chans:[],viewers:0,users:new Set()});o.chans.push(c);o.viewers+=info[c].v||0}
+  for(const p of Object.values(DB.presence)){if(p.l<now-WRITE_SPAN)continue;const g=gameOf.get(p.c);if(g!=null)G.get(g).users.add(p.u)}
+  const games=[...G.values()].sort((a,b)=>b.viewers-a.viewers||b.chans.length-a.chans.length||a.g.localeCompare(b.g))
+    .map(o=>({g:o.g===UNKNOWN?'Jeu non précisé':o.g,chans:o.chans.sort((a,b)=>(info[b].v||0)-(info[a].v||0)).slice(0,4).map(who),n:o.chans.length,viewers:o.viewers,wrote:o.users.size}));
+  // streamers montants : viewers du dernier passage contre le relevé le plus proche d'il y a 30 min (à 4 min près), du même live
+  const ref=at-RISE_SPAN,before=new Map();let history=false;
+  for(const s of DB.snaps){if(s.t<=ref+RISE_TOL)history=true;if(!s.live||Math.abs(s.t-ref)>RISE_TOL)continue;const o=before.get(s.c);if(!o||Math.abs(s.t-ref)<Math.abs(o.t-ref))before.set(s.c,s)}
+  const recent=new Map(),addM=m=>{if(m.t>=now-MPM_SPAN)recent.set(m.c,(recent.get(m.c)||0)+m.m)};
+  Object.values(DB.minutes).forEach(addM);for(const c in curMin){const cm=curMin[c];if(cm)addM(minuteRec(c,cm))}
+  let young=0,eligible=0;const rising=[];
+  for(const c of live){const I=info[c];
+    if(I.since&&at-I.since<RISE_SPAN){young++;continue}
+    const p=before.get(c);if(!I.since||!p||p.t<I.since||p.v<RISE_MIN)continue;
+    eligible++;const gain=I.v-p.v;if(!(gain>0))continue;
+    let raidAt=null;for(const e of DB.events)if(e.type==='raid'&&e.c===c&&e.t>=ref&&e.t<=now&&(raidAt==null||e.t>raidAt))raidAt=e.t;
+    rising.push({...who(c),game:I.g&&I.g!==UNKNOWN?I.g:'',v:I.v,v30:p.v,gain,rate:gain/p.v,mpm:(recent.get(c)||0)/(MPM_SPAN/MIN),raidAt})}
+  rising.sort((a,b)=>b.rate-a.rate||b.gain-a.gain);
+  return {...base,at,live:live.length,games,rising,eligible,young,history};
+}
+
 // Vue d'ensemble : l'ancien code calcule, React affiche (événement « legacy:overview », voir app/src/legacy/bridge.ts).
 function renderOverview(q){
   const users=usersBy(q.pres,p=>p.c),allU=new Set(q.pres.map(p=>p.u)),now=Date.now();
   const msgs=q.mins.reduce((s,m)=>s+m.m,0);const {multi,flows}=flowsOf(q.pres,q.sw);
   const subs=q.events.filter(e=>e.type==='sub'||e.type==='gift').reduce((s,e)=>s+e.n,0);
   const tr=msgTrend(q.mins);
-  const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'toutes chaînes, ont écrit au moins un message'},
-    {label:'Messages',value:fmt(msgs),trend:tr.trend,trendLabel:tr.label,hint:'au total'},
+  // chiffres « dans le chat » du bloc d'activité (ceux « sur Twitch » viennent de activityData) ; le temps d'écoute ignore la
+  // période : il est dans le détail de la pilule d'état (statusOf)
+  const kpis=[{label:'Viewers actifs uniques',value:fmt(allU.size),hint:'ont écrit au moins un message'},
     {label:'Actifs dans 2 chats ou plus',value:fmt(multi),hint:allU.size?pct(multi/allU.size)+' du total':''},
-    {label:'Abonnements et subs offerts',value:fmt(subs)}]; // le temps d'écoute ignore la période : il est dans le détail de la pilule d'état (statusOf)
+    {label:'Messages',value:fmt(msgs),trend:tr.trend,trendLabel:tr.label,hint:'au total'},
+    {label:'Abonnements et subs offerts',value:fmt(subs),hint:'annoncés dans le chat'}];
   // viewers qui ont écrit depuis le début du live en cours (et pas sur toute la période choisie, qui peut faire 30 jours) :
   // on les compare à la moyenne des viewers depuis le début du live, et pas aux viewers du moment : sur un long live
   // (marathon de 24 h), l'audience tourne et chute en fin de live, et le rapport dépassait 100 %.
@@ -1934,7 +2008,7 @@ function renderOverview(q){
   // « avec ou sans pub » demande les deux côtés : une journée ne les donne presque jamais, on garde alors tout le détail
   let brand=brandData(q),brandWide=false;
   if(period==='today'&&brand&&!brand.length){brand=brandData(Q(true));brandWide=brand.length>0}
-  window.dispatchEvent(new CustomEvent('legacy:overview',{detail:{kpis,channels,recoup:recoupData(q,users,flows),hasApi:hasApi(),chartOf,part,followers:followersData(q),brand,brandWide,raids:raidTickerData(q),mod:modData(q),msgChart,viewerChart,topStreamers,investedCommunities}}));
+  window.dispatchEvent(new CustomEvent('legacy:overview',{detail:{kpis,channels,recoup:recoupData(q,users,flows),hasApi:hasApi(),chartOf,part,followers:followersData(q),brand,brandWide,raids:raidTickerData(q),mod:modData(q),msgChart,viewerChart,topStreamers,investedCommunities,activity:activityData(q),today:todayData(),now:liveNowData()}}));
 }
 
 // Onglet « Par chaîne » : l'ancien code calcule, React affiche (événement « legacy:channel », voir app/src/legacy/bridge.ts).
@@ -2102,7 +2176,7 @@ function raidRecommendations(q,pres,shown,c,info){
   }));
 }
 
-// Matrice de chevauchement (onglets Par jeu et Chevauchement) : pour chaque ligne a et colonne b,
+// Matrice de chevauchement (onglets Par jeu et Audiences) : pour chaque ligne a et colonne b,
 // part des viewers actifs de a qu'on a aussi vus chez b. photos : les clés sont des chaînes.
 function matrixData(keys,sets,photos=false){
   return {rows:keys.map(a=>{const A=sets.get(a);return {k:a,size:A.size,who:photos?who(a):null,
@@ -2189,18 +2263,18 @@ async function runAddSearch(text){
 // chaînes ajoutées en mode « Ce navigateur » mais pas encore suivies par le collecteur
 // « Ignorer » range ces chaînes dans localIgnored : la liste du mode « Ce navigateur » reste intacte.
 const pendingLocal=()=>isCloud()&&cloud.last?[...new Set(cfg.localChans||[])].filter(c=>/^[a-z0-9_]{2,25}$/.test(c)&&!cfg.chans.includes(c)&&!(cfg.localIgnored||[]).includes(c)):[];
-/* ---------- onglet Chevauchement : filtre des viewers qui bougent ----------
+/* ---------- onglet Audiences : « En commun » (legacy:overlap) et « Qui va où » (legacy:flows) ----------
    Un « changement de stream » = le message suivant d'une même personne (empreinte) arrive chez une autre chaîne, moins de
    3 h après. Depuis le collecteur 1.5, chaque passage est compté message par message (table switches), allers-retours
    compris. Avant, il n'y a que l'estimation tirée des présences (premier et dernier message de la journée sur chaque
    chaîne), qui ne voit pas les va-et-vient d'une même soirée. Pour chaque viewer, jour et sens, on garde le plus grand
    des deux : les jours d'avant la mise à jour gardent leur estimation, les suivants ont le compte exact. */
 const OV_OFTEN=3; // « changent souvent » : au moins 3 changements sur la période
-const OV_FILTERS=[['all','Tous'],['multi','Sur 2 chaînes ou plus'],['move','Changent de stream'],['often','Changent souvent']];
+const OV_FILTERS=[['all','Tous'],['multi','Sur 2 chaînes ou plus'],['move','Ont changé de stream'],['often',`Souvent (${OV_OFTEN} fois ou plus)`]];
 function moversOf(pres,sw=[]){
   const by=new Map();for(const p of pres){let a=by.get(p.u);if(!a)by.set(p.u,a=[]);a.push(p)}
   const T=new Map(),slot=(u,d,a,b)=>{const k=u+'|'+d+'|'+a+'|'+b;let o=T.get(k);if(!o)T.set(k,o={u,a,b,n:0});return o};
-  if(sw.length)for(const s of sw)slot(s.u,s.d,s.a,s.b).n+=s.n; // compte du collecteur, la même source que l'onglet Flux
+  if(sw.length)for(const s of sw)slot(s.u,s.d,s.a,s.b).n+=s.n; // compte du collecteur, la même source que les migrations
   else for(const [u,arr] of by){arr.sort((a,b)=>a.f-b.f); // sans lui : estimation d'après le premier et le dernier message
     for(let i=1;i<arr.length;i++){const a=arr[i-1],b=arr[i];if(a.c===b.c)continue;const gap=b.f-a.l;if(gap<-10*MIN||gap>3*HOUR)continue;slot(u,dayKey(b.f),a.c,b.c).n++}}
   for(const arr of by.values())arr.sort((a,b)=>a.f-b.f); // les parcours se lisent dans l'ordre
@@ -2210,50 +2284,41 @@ function moversOf(pres,sw=[]){
     const fk=o.a+'>'+o.b;let x=F.get(fk);if(!x)F.set(fk,x={a:o.a,b:o.b,users:new Set()});x.users.add(o.u)}
   return {V,flows:[...F.values()].map(x=>({a:x.a,b:x.b,n:x.users.size})).sort((x,y)=>y.n-x.n)}}
 const ovKeep=(v,f)=>f==='multi'?v.chans.size>=2:f==='move'?v.moves>=1:f==='often'?v.moves>=OV_OFTEN:true;
-// Onglet « Chevauchement » : l'ancien code calcule, React affiche (événement « legacy:overlap », voir app/src/legacy/bridge.ts).
-// Le filtre de viewers est choisi dans React et passe par setOverlapFilter() (gardé dans ce navigateur).
+// Onglet « Audiences » : l'ancien code calcule, React affiche (événements « legacy:overlap » et « legacy:flows », voir
+// app/src/legacy/bridge.ts). Le filtre de viewers ne s'applique qu'à « En commun » ; il passe par setOverlapFilter() (gardé dans ce navigateur).
 function setOverlapFilter(f){cfg.ovFilter=f;saveCfg();render()}
+function renderAudiences(q){$('t-audiences').innerHTML='';renderOverlap(q);renderFlows(q)}
+const AUD_PAIRS=7,AUD_MATRIX=7,AUD_MIN_ROW=20; // paires montrées, côté de la matrice, actifs minimum pour une part « ont changé »
+// Répartition des viewers actifs selon le nombre de chaînes où ils écrivent, sans le filtre. msgs : messages de chacun sur la période
+// (somme de presence.n), pour la part « un seul message » et la part parmi ceux qui ont écrit au moins 3 messages.
+function spreadOf(pres,V){
+  const msgs=new Map();for(const p of pres)msgs.set(p.u,(msgs.get(p.u)||0)+p.n);
+  const o={total:V.size,one:0,two:0,more:0,single:0,talk3:0,talk3one:0};
+  for(const v of V.values()){const k=v.chans.size,m=msgs.get(v.u);
+    if(k===1)o.one++;else if(k===2)o.two++;else o.more++;
+    if(m===1)o.single++;
+    if(m>=3){o.talk3++;if(k===1)o.talk3one++}}
+  return {...o,chans:shown().length,filtered:(cfg.lang||'*')!=='*'};
+}
+// « En commun ». Paires : les AUD_PAIRS qui se ressemblent le plus (pairsOf), puis rangées sur le pourcentage affiché.
 function renderOverlap(q){
-  $('t-overlap').innerHTML='';
-  const f=cfg.ovFilter||'all',{V,flows}=moversOf(q.pres,q.sw),vs=[...V.values()],N=vs.length;
+  const f=cfg.ovFilter||'all',{V}=moversOf(q.pres,q.sw),vs=[...V.values()],N=vs.length;
   const cnt={all:N,multi:0,move:0,often:0};for(const v of vs)for(const k of ['multi','move','often'])if(ovKeep(v,k))cnt[k]++;
   const pres=f==='all'?q.pres:q.pres.filter(p=>ovKeep(V.get(p.u),f));
   const by=usersBy(pres,p=>p.c),keys=shown().filter(c=>by.get(c)&&by.get(c).size);
   const OV_NOTE={multi:'écrivent sur au moins 2 chaînes suivies',move:'ont changé de stream au moins une fois',often:`ont changé de stream ${OV_OFTEN} fois ou plus`};
-  // ---------- viewers qui bougent ----------
-  const mv=vs.filter(v=>v.moves>=1);let movers=null;
-  if(mv.length){
-    // depuis quand les changements sont comptés exactement (premier jour présent dans la table switches)
-    const swDays=Object.values(DB.switches||{}).map(s=>s.d),swStart=swDays.length?swDays.reduce((a,b)=>a<b?a:b):'';
-    // chaîne par chaîne : part de ses viewers actifs qui bougent, et où ils vont / d'où ils viennent
-    const out=new Map(),inn=new Map();
-    for(const x of flows){if(!out.has(x.a)||out.get(x.a).n<x.n)out.set(x.a,x);if(!inn.has(x.b)||inn.get(x.b).n<x.n)inn.set(x.b,x)}
-    const allBy=usersBy(q.pres,p=>p.c),side=(x,k)=>x?{...who(x[k]),n:x.n}:null;
-    const rows=shown().filter(c=>allBy.get(c)&&allBy.get(c).size>=20).map(c=>{const S=allBy.get(c);let m=0,o=0;for(const u of S){const v=V.get(u);if(v.moves>=1)m++;if(v.moves>=OV_OFTEN)o++}
-      return {...who(c),n:S.size,m:m/S.size,o:o/S.size,to:side(out.get(c),'b'),from:side(inn.get(c),'a')}}).sort((a,b)=>b.m-a.m);
-    // les parcours les plus nomades (anonymes : seulement le début de l'empreinte)
-    const top=[...mv].sort((a,b)=>b.moves-a.moves||b.chans.size-a.chans.size).slice(0,10).map(v=>{
-      const st=[];for(const p of v.rows)if(!st.length||st[st.length-1].c!==p.c)st.push(p);
-      const f0=v.rows[0].f,l0=maxOf(v.rows,p=>p.l);
-      return {id:v.u.slice(0,6),moves:v.moves,chans:v.chans.size,path:st.slice(0,14).map(p=>({...who(p.c),when:dayLbl(p.f)+' '+hhmm(p.f)})),more:Math.max(0,st.length-14),
-        span:`${dayLbl(f0)} ${hhmm(f0)} → ${dayKey(f0)===dayKey(l0)?'':dayLbl(l0)+' '}${hhmm(l0)}`}});
-    movers={move:cnt.move,often:cnt.often,multi:cnt.multi,total:N,oftenAt:OV_OFTEN,medianMoves:median(mv.map(v=>v.moves)),maxMoves:maxOf(mv,v=>v.moves),
-      swStart:swStart?swStart.split('-').reverse().join('/'):'',rows,top}}
-  const pairs=pairsOf(by,keys);
-  const U=new Map();for(const p of pres){let s=U.get(p.u);if(!s)U.set(p.u,s=new Set());s.add(p.c)}
-  const dist=new Map();for(const s of U.values())dist.set(s.size,(dist.get(s.size)||0)+1);
+  const pairs=pairsOf(by,keys).filter(p=>p.n>0).slice(0,AUD_PAIRS).sort((x,y)=>y.share-x.share||y.n-x.n);
+  const top=[...keys].sort((a,b)=>by.get(b).size-by.get(a).size).slice(0,AUD_MATRIX);
   window.dispatchEvent(new CustomEvent('legacy:overlap',{detail:{
     filter:f,filters:OV_FILTERS.map(([k,l])=>({key:k,label:l,tip:OV_TIPS[k],count:cnt[k]})),
     filterNote:f!=='all'?{count:cnt[f],desc:OV_NOTE[f],share:cnt[f]/(N||1),total:N}:null,
-    movers,matrix:matrixData(keys,by,true),pairs:pairs.slice(0,15),
-    dist:[...dist].sort((a,b)=>a[0]-b[0]).map(([k,v])=>({k,v,share:v/U.size}))}}));
+    spread:spreadOf(q.pres,V),matrix:matrixData(top,by,true),chans:keys.length,pairs}}));
 }
 const OV_TIPS={all:'Ont écrit au moins un message sur la période',multi:'Ont écrit sur au moins 2 chaînes suivies',
   move:'Ont changé de stream au moins une fois (message suivant chez une autre chaîne, moins de 3 h après)',often:`Ont changé de stream ${OV_OFTEN} fois ou plus`};
 
-// Onglet « Flux » : l'ancien code calcule, React affiche (événement « legacy:flows », voir app/src/legacy/bridge.ts).
+// « Qui va où ». Sert aussi au rapport général et au CSV (lib/export-utils.ts).
 function renderFlows(q){
-  $('t-flows').innerHTML='';
   const {flows}=flowsOf(q.pres,q.sw);
   const bal=new Map();for(const f of flows){bal.set(f.a,(bal.get(f.a)||{in:0,out:0}));bal.set(f.b,(bal.get(f.b)||{in:0,out:0}));bal.get(f.a).out+=f.n;bal.get(f.b).in+=f.n}
   const raids=q.events.filter(e=>e.type==='raid').sort((a,b)=>b.t-a.t);
@@ -2261,17 +2326,34 @@ function renderFlows(q){
   const gaps=flows.flatMap(f=>f.gaps);
   // On ne sait pas quel passage vient d'un raid : le trajet qui en a connu un sur la période porte seulement un signe.
   const raidPairs=new Set(raids.map(r=>`${String(r.from||'').toLowerCase()}|${r.c}`));
+  // viewers actifs qui changent de stream
+  const {V}=moversOf(q.pres,q.sw),mv=[...V.values()].filter(v=>v.moves>=1);
+  // depuis quand les changements sont comptés exactement (premier jour présent dans la table switches)
+  const swDays=Object.values(DB.switches||{}).map(s=>s.d),swStart=swDays.length?swDays.reduce((a,b)=>a<b?a:b):'';
+  // chaîne par chaîne : part de ses viewers actifs qui ont changé de stream, arrivées et départs (personnes distinctes, une fois par trajet)
+  const by=usersBy(q.pres,p=>p.c);
+  const rows=shown().filter(c=>bal.has(c)||(by.get(c)&&by.get(c).size>=AUD_MIN_ROW)).map(c=>{
+    const S=by.get(c)||new Set(),o=bal.get(c)||{in:0,out:0};let m=0;for(const u of S)if(V.get(u).moves>=1)m++;
+    return {...who(c),n:S.size,m:S.size>=AUD_MIN_ROW?m/S.size:null,in:o.in,out:o.out,net:o.in-o.out}}).sort((a,b)=>b.net-a.net||b.n-a.n);
+  // les parcours les plus nomades (anonymes : seulement le début de l'empreinte)
+  const top=[...mv].sort((a,b)=>b.moves-a.moves||b.chans.size-a.chans.size).slice(0,10).map(v=>{
+    const st=[];for(const p of v.rows)if(!st.length||st[st.length-1].c!==p.c)st.push(p);
+    const f0=v.rows[0].f,l0=maxOf(v.rows,p=>p.l);
+    return {id:v.u.slice(0,6),moves:v.moves,chans:v.chans.size,path:st.slice(0,14).map(p=>({...who(p.c),when:dayLbl(p.f)+' '+hhmm(p.f)})),more:Math.max(0,st.length-14),
+      span:`${dayLbl(f0)} ${hhmm(f0)} → ${dayKey(f0)===dayKey(l0)?'':dayLbl(l0)+' '}${hhmm(l0)}`}});
 
   const detail={
     total:flows.reduce((s,f)=>s+f.n,0), routes:flows.length, medianGap:gaps.length?dur(median(gaps)):'',
+    actives:V.size,move:mv.length,often:mv.filter(v=>v.moves>=OV_OFTEN).length,oftenAt:OV_OFTEN,
+    swStart:swStart?swStart.split('-').reverse().join('/'):'',
     raidCount:raids.length,raidViewers:raids.reduce((s,r)=>s+(r.n||0),0),
     flows:flows.slice(0,20).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:f.gaps.length?dur(median(f.gaps)):'',raid:raidPairs.has(`${f.a}|${f.b}`)})),
-    balance:[...bal].map(([c,o])=>({...who(c),in:o.in,out:o.out,net:o.in-o.out})).sort((a,b)=>b.net-a.net),
+    rows,top,today:flowsToday(),
     raids:raids.slice(0,50).map(r=>({when:when(r.t),from:r.from?{...who(String(r.from).toLowerCase()),name:String(r.from)}:null,to:who(r.c),n:r.n||0}))};
-  // Passages par jour (chantier C1) : champ « byDay » ajouté à l'événement. Le Sankey reçoit d'abord, tout de suite et sans attendre, les
-  // mêmes données qu'avant ; la base est interrogée à part (résultat gardé 10 min : le rollup ne change que la nuit) et l'événement est
-  // réémis avec byDay à l'arrivée. Échec ou base pas à jour : pas de byDay, aucune erreur visible.
-  // le rollup n'a jamais le jour en cours : sur « Aujourd'hui », la carte des migrations garde toutes ses journées
+  // Passages des journées passées (chantier C1) : champ « byDay » ajouté à l'événement. La page reçoit d'abord, sans attendre, tout le
+  // reste ; la base est interrogée à part (résultat gardé 10 min : le rollup ne change que la nuit) et l'événement est réémis avec
+  // byDay à l'arrivée. Échec ou base pas à jour : pas de byDay, aucune erreur visible, la carte garde la journée en cours.
+  // Le rollup n'a jamais le jour en cours : sur « Aujourd'hui », la carte des migrations garde toutes ses journées.
   const fd0=dayKey((period!=='today'&&periodStart())||Date.now()-89*DAY),fd1=dayKey(Date.now()),fk=fd0+'|'+fd1,fc=flowsDayCache;
   const fresh=fc.key===fk&&Date.now()-fc.at<(fc.data?600000:120000);
   if(fresh&&fc.data)detail.byDay=flowsDayRows(fc.data);
@@ -2279,8 +2361,17 @@ function renderFlows(q){
   window.dispatchEvent(new CustomEvent('legacy:flows',{detail}));
   if(!fresh&&isCloud()&&fc.pending!==fk){fc.pending=fk;
     flowsByDay(fd0,fd1).then(rows=>{fc.pending=null;fc.key=fk;fc.at=Date.now();fc.data=rows;
-      const L=fc.last;if(rows&&tab==='flows'&&L&&L.fk===fk)window.dispatchEvent(new CustomEvent('legacy:flows',{detail:{...L.detail,byDay:flowsDayRows(rows)}}))
+      const L=fc.last;if(rows&&tab==='audiences'&&L&&L.fk===fk)window.dispatchEvent(new CustomEvent('legacy:flows',{detail:{...L.detail,byDay:flowsDayRows(rows)}}))
     }).catch(()=>{fc.pending=null})}
+}
+// Journée en cours pour la carte des migrations : le résumé de nuit ne l'a jamais. Même définition que lui (personnes distinctes par
+// trajet d'après « switches », les 12 plus gros trajets) ; le délai médian vient des présences. Indépendant du sélecteur de période.
+function flowsToday(){
+  const t0=parisMidnight(Date.now()),d=dayKey(Date.now()),S=new Set(shown());
+  const pres=Object.values(DB.presence).filter(p=>p.d===d&&S.has(p.c));
+  const sw=Object.values(DB.switches||{}).filter(s=>s.d===d&&S.has(s.a)&&S.has(s.b));
+  const raided=new Set(DB.events.filter(e=>e.type==='raid'&&e.t>=t0&&S.has(e.c)).map(e=>`${String(e.from||'').toLowerCase()}|${e.c}`));
+  return {d,routes:flowsOf(pres,sw).flows.slice(0,12).map(f=>({a:who(f.a),b:who(f.b),n:f.n,gap:f.gaps.length?dur(median(f.gaps)):'',raid:raided.has(`${f.a}|${f.b}`)}))};
 }
 // Passages par jour et par paire de chaînes (fonction SQL flows_by_day, voir schema.sql) : viewers distincts du jour, passages, part
 // organique et part raid (borne haute). null si pas de base Supabase, base pas à jour ou erreur : l'onglet garde son comportement actuel.
@@ -2290,8 +2381,8 @@ async function flowsByDay(d0,d1){
   try{const rows=await sbReq('rpc/flows_by_day',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:cfg.sbCode||'',d0,d1})});
     return (rows||[]).map(r=>({d:r.jour,a:who(r.source),b:who(r.cible),viewers:r.viewers,passages:r.passages,organic:r.organique,raid:r.raid}))}
   catch(e){return null}}
-// même filtre Langue que les autres données de l'onglet
-function flowsDayRows(rows){if((cfg.lang||'*')==='*')return rows;const S=new Set(shown());return rows.filter(r=>S.has(r.a.c)&&S.has(r.b.c))}
+// mêmes chaînes que le reste de la page (suivies et affichées) ; la journée en cours vient de flowsToday(), jamais du rollup
+function flowsDayRows(rows){const S=new Set(shown()),today=dayKey(Date.now());return rows.filter(r=>r.d!==today&&S.has(r.a.c)&&S.has(r.b.c))}
 // état de la connexion à l'API Twitch (aussi repris après « Générer le jeton »)
 const apiStatusLbl=()=>!apiReady()?'API non configurée.':apiState==='ok'?'API connectée.':apiState?'Erreur : '+apiState:'API configurée, test au prochain démarrage.';
 // Réglages : l'ancien code rassemble l'état, React affiche (événement « legacy:settings », voir app/src/legacy/bridge.ts)
@@ -2341,7 +2432,7 @@ function explainErr(src,raw,fallbackTitle){const m=String(raw==null?'':raw);let 
   }
   return [t,x,m,g]}
 function statusOf(){
-  const today=dayKey(Date.now()),users=new Set();for(const p of Object.values(DB.presence))if(p.d===today)users.add(p.u);
+  const today=dayKey(Date.now()),F=new Set(cfg.chans),users=new Set();for(const p of Object.values(DB.presence))if(p.d===today&&F.has(p.c))users.add(p.u);
   const facts=[['Chaînes suivies',fmt(cfg.chans.length)],['Viewers actifs aujourd\'hui',fmt(users.size)]];
   // temps d'écoute cumulé depuis le premier lancement : un état du relevé, pas un chiffre de la période
   if(DB.trackedMs)facts.push(['Temps d\'écoute au total',durJ(DB.trackedMs)]);
@@ -2392,7 +2483,7 @@ function render(){
   // quand il y a 3 chaînes ou moins (toutes en auraient un, il ne distinguerait plus rien). Calculé avant l'événement de l'onglet.
   {const by=usersBy(q.pres,p=>p.c);window.planetRing=new Set(by.size>3?[...by].sort((a,b)=>b[1].size-a[1].size).slice(0,3).map(x=>x[0]):[])}
   // 24/11/2026 : « rosters » manquait dans cette table : sur cet onglet, chaque rafraîchissement levait « is not a function ».
-  ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,clip:renderClip,overlap:renderOverlap,map:renderMap,flows:renderFlows,rosters:window.renderRosters})[tab](q);
+  ({overview:renderOverview,channel:renderChannel,game:renderGame,chat:renderChat,clip:renderClip,audiences:renderAudiences,map:renderMap,rosters:window.renderRosters})[tab](q);
 }
 
 // Onglet « Rosters » : pour chaque chaîne suivie, l'ensemble des viewers actifs (empreintes) de la période et ses messages.
@@ -2426,7 +2517,9 @@ $('chanSel').onchange=e=>{if(tab==='chat')selChat=e.target.value;else selChan=e.
 $('btnStart').onclick=start;$('btnStop').onclick=stop;
 document.body.addEventListener('click',e=>{
   const o=e.target.closest('[data-open]');if(o){selChan=o.dataset.open;buildChanSel();showTab('channel');return}
-  const g=e.target.closest('[data-goto]');if(g){e.preventDefault();showTab(g.dataset.goto);return}
+  const g=e.target.closest('[data-goto]');if(g){e.preventDefault();showTab(g.dataset.goto);
+    if(g.dataset.part)window.dispatchEvent(new CustomEvent('legacy:goto-part',{detail:g.dataset.part})); // partie de la page à montrer (Audiences)
+    return}
   const ch=e.target.closest('[data-chat]');if(ch){selChat=ch.dataset.chat;buildChanSel();render();return}
   const cl=e.target.closest('[data-clip]');if(cl){selClip=cl.dataset.clip;if(tab==='clip')render();else{showTab('clip');window.scrollTo(0,0)}return}
 });
@@ -2464,7 +2557,8 @@ window.channelSticky = channelSticky
 async function channelsRhythm(days){
   if(!isCloud())return null;
   try{const rows=await sbReq('rpc/channels_rhythm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days})});
-    return (rows||[]).map(r=>({...who(r.c),nr:r.nr,nb:r.nb,recent:r.recent,base:r.base,sd:r.sd}))}
+    const F=new Set(cfg.chans); // les rollups gardent aussi les chaînes retirées depuis
+    return (rows||[]).filter(r=>F.has(r.c)).map(r=>({...who(r.c),nr:r.nr,nb:r.nb,recent:r.recent,base:r.base,sd:r.sd}))}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.channelsRhythm = channelsRhythm
 // Viewers uniques sur 7, 30 ou 90 jours (fonction SQL period_reach, esquisses HyperLogLog, voir schema.sql). null : pas de base Supabase
