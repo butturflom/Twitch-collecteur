@@ -123,15 +123,15 @@ body.mapmode .legacy .wrap{padding-top:16px}
 .legacy .lbl{color:var(--mut);font-size:12px}
 .legacy .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-variant-numeric:tabular-nums;margin-top:4px}
 .legacy .trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Planète d'une chaîne dans l'ancien code (av() de legacy.js) : le style et le dessin sont globaux (.planet dans index.css, lib/planet.ts),
-   ici seulement la taille (--s) et les marges selon le contexte. Sous 20 px (légende, pastille de filtre) : ni initiale, ni halo, ni anneau. */
+/* Planète d'une chaîne dans l'ancien code (av() de legacy.js) : le style est global (.planet dans index.css), l'image vient de
+   lib/planet.ts ; ici seulement la taille (--s) et les marges selon le contexte. Sous 20 px (légende, pastille de filtre) : ni halo, ni anneau. */
 .legacy .av{--s:20px;margin:0 4px}
 .legacy .av.md{--s:30px}
 .legacy .av.xl{--s:56px}
 .legacy .av.lg{--s:40px}
 .legacy .chip .av{--s:18px;margin-left:-8px}
 .legacy .legend .av,.legacy .chip .av{box-shadow:0 0 0 1.5px var(--bg)}
-.legacy .legend .av>.pn-init,.legacy .legend .av>.pn-ring,.legacy .chip .av>.pn-init,.legacy .chip .av>.pn-ring{display:none}
+.legacy .legend .av>.pn-ring,.legacy .chip .av>.pn-ring{display:none}
 .legacy td.l .av{margin-right:8px}
 .legacy .mxh{display:flex;flex-direction:column;align-items:center;gap:8px}
 .legacy .mxh span,.legacy .mxr{text-transform:none;letter-spacing:0;font:500 12.5px var(--sans);color:var(--txt)}
@@ -240,10 +240,11 @@ body.mapmode .legacy .wrap{max-width:none;padding-bottom:0}
 .legacy .mapn{cursor:pointer;transition:opacity .15s}
 .legacy .mapn .h{fill:transparent}
 .legacy .mapn.sel .h{fill:var(--txt)}
-/* planète peinte de la chaîne, posée sur les facettes (planetSvg) : sans clic, sans liseré ni halo propres (la planète de la carte a le sien) */
-.legacy .mapn .pfo{overflow:visible;pointer-events:none}
-.legacy .mapn .pfo .planet{box-shadow:none}
-.legacy .mapn:hover .pfo{filter:brightness(1.18)}
+/* planète de la chaîne (planetSvg) : une image, sans clic (le rond .h les prend), éclaircie au survol ; anneau fin des plus fortes */
+.legacy .mapn .pn-img{pointer-events:none}
+.legacy .mapn:hover .pn-img{filter:brightness(1.12)}
+.legacy .mapn .pn-orb{fill:none;stroke:color-mix(in srgb,currentColor 45%,var(--c-ffffff));stroke-width:1.3px;stroke-linecap:round;stroke-opacity:.9;vector-effect:non-scaling-stroke;pointer-events:none}
+.legacy .mapn .pn-orb.pn-back{stroke-opacity:.5}
 .legacy .chart .mapl{fill:var(--txt);font:500 12px var(--sans);paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round;pointer-events:none;transition:opacity .15s}
 .legacy .chart .mapl.strong{font-weight:600;fill:var(--c-ffffff)}
 .legacy .chart .mapel{fill:var(--txt);font:600 11px var(--mono);paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round;pointer-events:none}
@@ -366,7 +367,7 @@ body.navopen .scrim{opacity:1;pointer-events:auto}
 .legacy .tiles>.card{flex-basis:9rem;padding:16px}
 
 }
-/* Carte : chaîne hors ligne, planète endormie (éteinte et sans halo) */
-.legacy .mapsvg g.mapn.asleep .pl{filter:saturate(.3) brightness(.55)}
+/* Carte : chaîne hors ligne, planète endormie (grise, éteinte et sans halo) */
+.legacy .mapsvg g.mapn.asleep .pl{filter:grayscale(1) brightness(.55)}
 .legacy .mapsvg g.mapn.asleep .glow{visibility:hidden}
 .legacy .mapsvg g.mapn.asleep .sun{opacity:.35!important}

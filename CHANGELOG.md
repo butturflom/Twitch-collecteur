@@ -373,3 +373,12 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à 
 
 - **« Recommandations de raid » hors direct** : le bloc dit qu’il ne calcule que pendant un direct, au lieu de « Pas assez de données ». Sans l’API Twitch, il le dit aussi.
 - **Boutons « Copier la commande de raid »** à la taille de leur texte, sous le nom de la chaîne cible, qui est reprise dans leur libellé pour les lecteurs d’écran.
+
+## Tableau de bord 2.0.13 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
+
+- **Nouvelles planètes** : la photo de profil de chaque chaîne remplit sa planète à facettes, sur la Carte comme dans les listes et les graphiques. La couleur de la chaîne reste au bord et en halo. Une chaîne hors ligne est grise et endormie ; sans photo, la planète garde sa couleur et son initiale.
+- Cinq formes, choisies d’après le nom de la chaîne. La lumière ne suit plus l’étoile du système.
+- La Carte est plus fluide à 100 planètes (mesure sur données fictives).
+- Les photos sont maintenant téléchargées depuis Twitch pour toutes les chaînes affichées.

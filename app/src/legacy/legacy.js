@@ -50,16 +50,18 @@ const colorOf=c=>{const i=shown().indexOf(c); // rang dans la liste affichée (f
   return i>=0&&i<8?PAL[i]:OTHER};
 /* ---------- photos de profil des streamers ----------
    Envoyées par le collecteur (1.4.1+) dans son statut, ou demandées à l'API Twitch si elle est configurée ici.
-   Gardées dans ce navigateur pour s'afficher tout de suite au prochain chargement. Sans photo : l'initiale sur la couleur de la chaîne. */
+   Gardées dans ce navigateur pour s'afficher tout de suite au prochain chargement. Elles sont collées sur la planète de la
+   chaîne ; sans photo : la planète à sa couleur, avec son initiale. */
 cfg.avatars=cfg.avatars||{};
-const setAvatar=(c,u)=>{if(c&&u&&/^https:\/\//.test(u)&&cfg.avatars[c]!==u){cfg.avatars[c]=u;saveCfg();return true}return false};
+const setAvatar=(c,u)=>{if(c&&u&&/^https:\/\//.test(u)&&cfg.avatars[c]!==u){cfg.avatars[c]=u;saveCfg();if(window.planetPhotoChanged)window.planetPhotoChanged(c);return true}return false};
 const avUrl=c=>(info[c]&&info[c].img)||cfg.avatars[c]||'';
-// Planète peinte de la chaîne (décision du 26/11 : elle remplace la photo de profil). « planet » : style global (index.css) ;
-// « av » : taille et marges dans le contexte de l'ancien code (legacy.css). Le dessin vient de lib/planet.ts (window.planetInner),
-// le même que ChannelAvatar en React. window.planetRing : les 3 chaînes les plus fortes de la vue, mis à jour par render().
+window.channelPhoto=avUrl; // lib/planet.ts : la photo des surfaces qui n'en reçoivent pas
+// Planète de la chaîne (27/11 : sa photo collée sur une planète à facettes). « planet » : style global (index.css) ;
+// « av » : taille et marges dans le contexte de l'ancien code (legacy.css). L'image vient de lib/planet.ts (window.planetInner),
+// la même que ChannelAvatar en React. window.planetRing : les 3 chaînes les plus fortes de la vue, mis à jour par render().
 const ringOf=c=>!!(window.planetRing&&window.planetRing.has(c));
 function av(c,size=''){const cl='planet av'+(size?' '+size:'');
-  return `<span class="${cl}" aria-hidden="true" style="--c:${colorOf(c)}">${window.planetInner?window.planetInner(c,ringOf(c)):esc((c||'?')[0].toUpperCase())}</span>`}
+  return `<span class="${cl}" aria-hidden="true" style="--c:${colorOf(c)}">${window.planetInner?window.planetInner(c,ringOf(c),colorOf(c),avUrl(c)):esc((c||'?')[0].toUpperCase())}</span>`}
 const avTried=new Set();
 async function loadAvatars(extra=[]){
   if(!apiReady())return;const need=[...new Set(cfg.chans.concat(extra))].filter(c=>!cfg.avatars[c]&&!avTried.has(c));if(!need.length)return;need.forEach(c=>avTried.add(c));
@@ -921,46 +923,12 @@ function glowStops(from,peak,cols,k=5,n=10){
   return h}
 function textWidth(s,weight=500,family=getComputedStyle(document.body).fontFamily,size=12){const c=measureCtx||(measureCtx=document.createElement('canvas').getContext('2d'));
   c.font=`${weight} ${size}px ${family}`;return c.measureText(s).width}
-// ---------- Planètes : faites comme la planète Twitch ----------
-// Chaque planète est faite comme la planète Twitch : une sphère en facettes (la même découpe pour toutes, PL_FACETS), en
-// cinq tons de la couleur de la chaîne, plus claire du côté de la lumière ; et posée dessus, comme le logo sur la planète
-// Twitch, la planète peinte de la chaîne (lib/planet.ts : motif propre à son nom, initiale, anneau des chaînes les plus
-// fortes), la même que partout ailleurs. Le moteur tourne les facettes et le reflet vers la vraie source de lumière
-// (son étoile, ou la planète Twitch) à chaque image ; la planète peinte reste droite.
-const plRng=seed=>()=>{seed=(seed+0x6d2b79f5)|0;let t=Math.imul(seed^(seed>>>15),1|seed);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296};
-const plN=v=>+v.toFixed(3);
-const plMix=(a,b,t)=>{const A=[1,3,5].map(i=>parseInt(a.slice(i,i+2),16)),B=[1,3,5].map(i=>parseInt(b.slice(i,i+2),16));return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')};
-// Triangles d'une sphère vue de face (rayon 1) : anneaux de points (NR anneaux régulièrement espacés sur la sphère, donc
-// serrés vers le bord à l'écran ; step points de plus à chaque anneau, un peu décalés au hasard), reliés en triangles :
-// environ step × NR² facettes. Graine fixe : toujours les mêmes facettes.
-function sphereTris(seed,NR,step=6){
-  const TAU=2*Math.PI,rs=plRng(seed),rings=[[{x:0,y:0}]],out=[];
-  for(let i=1;i<=NR;i++){const a=i/NR*Math.PI/2,m=step*i,ring=[];
-    for(let k=0;k<m;k++){const t=(k+.5*(i%2)+(rs()-.5)*.35)/m*TAU,aa=i===NR?a:a+(rs()-.5)*.12,rho=Math.sin(aa)*(i===NR?1.04:1);ring.push({x:Math.cos(t)*rho,y:Math.sin(t)*rho})}
-    rings.push(ring)}
-  for(let i=1;i<rings.length;i++){const P=rings[i-1],Q=rings[i],na=P.length,nb=Q.length;let a=0,b=0;
-    while(a<na||b<nb){let tri;
-      if(b<nb&&(a>=na||(b+1)/nb<=(a+1)/na)){tri=[P[a%na],Q[b%nb],Q[(b+1)%nb]];b++}else{tri=[P[a%na],Q[b%nb],P[(a+1)%na]];a++}
-      if(tri[0]!==tri[2])out.push(tri)}}
-  return out}
-// Facettes regroupées par ton (de l'ombre à la lumière) pour une lumière venant de la droite, un peu devant : un chemin
-// par ton, le même pour toutes les planètes (défini une fois dans PLANET_DEFS, repris par <use> avec les couleurs de la
-// chaîne). Facettes de la découpe commune des planètes, ombrées selon cette lumière.
-const PL_TONE_PATHS=(()=>{const L=[.62,0,.78],Ln=Math.hypot(...L),P=['','','','',''];
-  for(const t of sphereTris(0xfa0e7,5,8)){const x=(t[0].x+t[1].x+t[2].x)/3,y=(t[0].y+t[1].y+t[2].y)/3,z=Math.sqrt(Math.max(0,1-x*x-y*y)),l=Math.max(0,(x*L[0]+y*L[1]+z*L[2])/Ln);
-    P[Math.min(4,Math.floor(l*5.2))]+='M'+t.map(p=>plN(p.x)+' '+plN(p.y)).join('L')+'Z'}
-  return P})();
-// Cinq tons d'une couleur, comme les violets de la planète Twitch : trois plus sombres, la couleur, une plus claire
-const planetTones=col=>[plMix(col,'#05030f',.68),plMix(col,'#05030f',.45),plMix(col,'#05030f',.22),col,plMix(col,'#ffffff',.35)];
-const PLANET_DEFS=PL_TONE_PATHS.map((d,k)=>`<path id="plt${k}" d="${d}" stroke-width=".012" stroke-linejoin="round"/>`).join(''); // facettes communes, par ton
-// La planète d'une chaîne, pour un rayon 1 (placée, mise à l'échelle et éclairée par le moteur à chaque image).
-// col : sa couleur (colorOf, la même que pour les autres surfaces : planetColor(c, colorOf(c)) en donne la même valeur).
-// La planète peinte est du HTML (window.planetInner) : un foreignObject de 100 × 100 réduit à .0132 pour couvrir un
-// rayon de .66, comme l'ancien médaillon. Il ne reçoit aucun clic (le rond .h et les facettes les prennent).
-function planetSvg(c,col){const T=planetTones(col);
-  return `<g class="pl"><g class="fac">${T.map((t,k)=>`<use href="#plt${k}" fill="${t}" stroke="${t}"/>`).join('')}</g>` // facettes, tournées vers la lumière
-    +`<g class="glo"><ellipse cx=".55" cy="0" rx=".1" ry=".2" fill="#fff" fill-opacity=".75"/></g>` // reflet, tourné vers la lumière
-    +`<g transform="translate(-.66 -.66) scale(.0132)"><foreignObject class="pfo" width="100" height="100"><span class="planet" aria-hidden="true" style="--c:${col};--s:100px">${window.planetInner?window.planetInner(c,ringOf(c)):''}</span></foreignObject></g></g>`}
+// ---------- Planètes des chaînes ----------
+// La planète d'une chaîne, pour un rayon 1 (placée et mise à l'échelle par le moteur à chaque image) : une seule image, la photo
+// de la chaîne collée sur une planète à facettes (lib/planet.ts, la même que partout ailleurs), et l'anneau des chaînes les plus
+// fortes. Sa lumière est peinte dans l'image (elle ne suit plus l'étoile du système). col : sa couleur (colorOf). L'image ne
+// reçoit aucun clic : le rond .h les prend. Quand la composition arrive, lib/planet.ts remplace l'image seule, sans redessiner la Carte.
+function planetSvg(c,col){return `<g class="pl">${window.planetSvgBody?window.planetSvgBody(c,col,avUrl(c),ringOf(c)):`<circle r="1" fill="${col}"/>`}</g>`}
 // Planète Twitch en globe low-poly : icosphère de 320 facettes en cinq violets (rayon 1), posée dans l'univers. Elle est
 // éclairée d'en haut à gauche et de face (TW_L, vue de départ), avec une faible lumière d'appoint de l'autre côté (TW_FL)
 // pour que sa face cachée garde ses facettes. L'éclairage est fixe dans l'univers : quand on fait tourner le globe, on la
@@ -1250,21 +1218,22 @@ function renderMap(q){
     +`<circle r="1" fill="none" stroke="#d6c2ff" stroke-opacity=".38" stroke-width=".022"/></g>`;
   // ---------- éléments SVG, créés une fois puis déplacés à chaque zoom ----------
   const shareOf=e=>e.n/Math.max(1,Math.min(by.get(e.a).size,by.get(e.b).size)),wAbs=sh=>Math.min(1,sh/.5);
+  const chanCols=[...new Set(ids.map(colorOf))]; // couleurs de chaîne présentes (halos des planètes)
   box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" height="${H}" tabindex="0" class="mapsvg" role="img" aria-label="Carte des chaînes selon leurs viewers actifs communs"><defs>`
-    +PLANET_DEFS // facettes des planètes (communes à toutes)
     // liens : dégradé de la couleur d'une chaîne à celle de l'autre, et halo flou (un seul flou pour tous les halos)
     +edges.map((e,i)=>`<linearGradient id="mapg${i}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${lcol(e.a)}"/><stop offset="1" stop-color="${lcol(e.b)}"/></linearGradient>`).join('')
     +`<filter id="mapblur" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><feGaussianBlur stdDeviation="4"/></filter>`
     // couronne des étoiles : lumière chaude qui déborde autour de l'icône et s'éteint en douceur
     +'<radialGradient id="mapsun">'+glowStops(.38,.24,['#fff3d1','#ffc46b','#f97316'],7.5)+'</radialGradient>'
-    +'<radialGradient id="mapglow">'+glowStops(.35,.16,['#d8b4fe','#a855f7','#5b21b6'],5)+'</radialGradient>'
+    // halo ambiant de chaque planète, très faible, à la couleur exacte de sa chaîne (un dégradé par couleur)
+    +chanCols.map((c,k)=>`<radialGradient id="mapglow${k}">${glowStops(.35,.16,[c,c,c],5)}</radialGradient>`).join('')
     +'<radialGradient id="mapdot"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#e6e1ff" stop-opacity="0"/></radialGradient>'
     +twDefs+'</defs>'
     +'<g class="meg" filter="url(#mapblur)">'+edges.map((e,i)=>`<path stroke="url(#mapg${i})"/>`).join('')+'</g>'
     +'<g class="mec" fill="none" stroke="#020202" stroke-width="1.2">'+edges.map(()=>'<path/>').join('')+'</g>'
     +'<g class="me">'+edges.map((e,i)=>`<path stroke="url(#mapg${i})"/>`).join('')+'</g>'
     +'<g class="mar" fill="none" stroke="'+MAP_LINK+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><!-- chevrons directionnels supprimés --></g><g class="mel"></g><g class="mfx"></g><g class="mn">'+twG
-    +nodes.map((nd,i)=>{const col=gcol.get(nd.id);return `<g data-n="${esc(nd.id)}" class="mapn${isStar[i]?' star':''}">${isStar[i]?'<circle class="sun" fill="url(#mapsun)"/><circle class="crown" fill="none" stroke="#ffc46b" stroke-width="1.6" stroke-opacity=".9"/>':'<circle class="glow" fill="url(#mapglow)"/>'}<circle class="ping" stroke="${col}" style="color:${col}"/><circle class="h"/>`
+    +nodes.map((nd,i)=>{const col=gcol.get(nd.id);return `<g data-n="${esc(nd.id)}" class="mapn${isStar[i]?' star':''}">${isStar[i]?'<circle class="sun" fill="url(#mapsun)"/><circle class="crown" fill="none" stroke="#ffc46b" stroke-width="1.6" stroke-opacity=".9"/>':`<circle class="glow" fill="url(#mapglow${chanCols.indexOf(colorOf(nd.id))})"/>`}<circle class="ping" stroke="${col}" style="color:${col}"/><circle class="h"/>`
       +planetSvg(nd.id,colorOf(nd.id))+'</g>'}).join('')
     +'</g><g class="ml">'+ids.map(c=>`<g class="mlg" visibility="hidden"><rect class="lp"/><text class="mapl" text-anchor="middle">${esc(c)}</text></g>`).join('')+'</g><g class="mtop"></g></svg>';
   const svg=box.querySelector('svg'),lines=[...svg.querySelectorAll('.me path')],cases=[...svg.querySelectorAll('.mec path')],halos=[...svg.querySelectorAll('.meg path')],grads=edges.map((e,i)=>svg.querySelector('#mapg'+i)),G=[...svg.querySelectorAll('g.mapn')],T=[...svg.querySelectorAll('.ml text')],LG=[...svg.querySelectorAll('.ml .mlg')],LR=[...svg.querySelectorAll('.ml rect')],elab=svg.querySelector('.mel'),twEl=svg.querySelector('.tw'),arrows=[...svg.querySelectorAll('.mar path')];
@@ -1280,7 +1249,7 @@ function renderMap(q){
     setA(twGloss,{cx:n3(hx),cy:n3(hy),transform:`rotate(${(Math.atan2(hy,hx)*180/Math.PI+90).toFixed(1)} ${n3(hx)} ${n3(hy)})`,'fill-opacity':(.75*Math.max(0,Math.min(1,(L[2]+.2)/.6))*Math.min(1,hzn*1.4)).toFixed(3)});
     const A=P([0,0,1]),U=P([1,0,0]),V=P([0,1,0]);
     setA(twLogo,{transform:`matrix(${n3(U[0])} ${n3(U[1])} ${n3(V[0])} ${n3(V[1])} ${n3(A[0]*.98)} ${n3(A[1]*.98)})`,opacity:Math.max(0,Math.min(1,(A[2]-.12)/.25)).toFixed(3)})};
-  const parts=G.map(g=>({glow:g.querySelector('.glow'),sun:g.querySelector('.sun'),crown:g.querySelector('.crown'),ping:g.querySelector('.ping'),h:g.querySelector('.h'),pl:g.querySelector('.pl'),fac:g.querySelector('.fac'),glo:g.querySelector('.glo')}));
+  const parts=G.map(g=>({glow:g.querySelector('.glow'),sun:g.querySelector('.sun'),crown:g.querySelector('.crown'),ping:g.querySelector('.ping'),h:g.querySelector('.h'),pl:g.querySelector('.pl')}));
   const setA=(e,o)=>{if(e)for(const k in o)e.setAttribute(k,o[k])};
   // Liens courbes, bombés vers l'extérieur du radar (moins de croisements au centre). EC : extrémités et point de contrôle
   // à l'écran ; EB : opacités du trait et du halo selon la mise en avant (l'activité en direct ne les touche plus : les
@@ -1346,12 +1315,7 @@ function renderMap(q){
     parts.forEach((p,i)=>{const {x,y,r}=S[i],X=x.toFixed(1),Y=y.toFixed(1);
       setA(p.sun,{cx:X,cy:Y,r:(r*2.4+6).toFixed(1)});setA(p.crown,{cx:X,cy:Y,r:(r+3.5).toFixed(1)});setA(p.glow,{cx:X,cy:Y,r:(r*1.55+10).toFixed(1)});
       setA(p.h,{cx:X,cy:Y,r:(r+4.5).toFixed(1)});
-      // Planète (faite comme la planète Twitch) : placée et mise à l'échelle d'un coup. Sa lumière vient de son étoile (une
-      // chaîne seule, ou une étoile : de la planète Twitch, au centre de l'univers) : les facettes et le reflet tournent vers
-      // elle ; la planète peinte reste droite.
-      const src=planet(i)?S[starOf(i)]:Lg,A=(Math.atan2(src.y-y,src.x-x)*180/Math.PI).toFixed(1);
-      p.pl.setAttribute('transform',`translate(${X} ${Y}) scale(${r.toFixed(2)})`);
-      p.fac.setAttribute('transform',`rotate(${A})`);p.glo.setAttribute('transform',`rotate(${A})`);
+      p.pl.setAttribute('transform',`translate(${X} ${Y}) scale(${r.toFixed(2)})`); // planète : placée et mise à l'échelle d'un coup
       G[i].style.opacity=((!F||F.s.has(ids[i])?1:.2)*S[i].al).toFixed(3);G[i].classList.toggle('sel',ids[i]===mapView.sel);G[i].classList.toggle('asleep',!isLive(ids[i]))});
     placeLabels(F);
   }

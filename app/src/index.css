@@ -38,8 +38,6 @@
   --star-core: #fff3d1;
   --map-veil: rgba(9, 9, 11, 0.34);
   --map-veil-gradient: radial-gradient(ellipse 60% 65% at 50% 50%, var(--map-veil), rgba(9, 9, 11, 0.16) 55%, rgba(9, 9, 11, 0) 85%);
-  /* Planètes des chaînes : le noir bleuté des ombres et des creux (relief, motif, contour de l'initiale). */
-  --planet-night: #05041a;
   --accent: #27272a;
   --accent-foreground: #f4f4f5;
   --destructive: #f2636f;
@@ -324,8 +322,8 @@ body {
 .legacy .radar-hud i { width: 6px; height: 6px; background: var(--primary); box-shadow: 0 0 0 3px var(--rgb-139-124-255-16), 0 0 6px var(--rgb-139-124-255-50); }
 .legacy .radar-hud .act, .legacy .radar-hud .cap { color: var(--c-d4d4d8); }
 
-/* Nœuds : halo violet dessous (.glow) ; planète (.pl : faite comme la planète Twitch, sphère en facettes aux tons de la
-   chaîne, avec posée dessus sa planète peinte, dessinée par le moteur). */
+/* Nœuds : halo ambiant à la couleur de la chaîne dessous (.glow) ; planète (.pl : une image, sa photo collée sur une planète
+   à facettes, lib/planet.ts). */
 .legacy .mapn .glow { pointer-events: none; }
 .legacy .mapn .glow { transition: opacity 0.2s; }
 .legacy .mapn { transition: opacity 0.2s ease; }
@@ -391,35 +389,18 @@ body {
   .landing-orbit { transform-box: view-box; transform-origin: center; animation: landing-orbit 240s linear infinite; }
 }
 
-/* Planète peinte d'une chaîne (lib/planet.ts ; ChannelAvatar en React, av() dans legacy.js). Taille : --s ; couleur : --c (celle de la chaîne).
-   Corps : dégradé radial de sa couleur (lumière en haut à gauche, ombre en bas à droite, comme les planètes de la Carte), motif peint par-dessus,
-   relief léger (::after), initiale au centre. Atmosphère : lueur ambiante très faible, constante (règle des deux niveaux de lueur). Sous 20 px
-   (data-xs, ou contexte de l'ancien code) : ni halo ni initiale ni anneau. L'anneau fin ne marque que les chaînes les plus fortes de la vue. */
+/* Planète d'une chaîne (lib/planet.ts ; ChannelAvatar en React, av() dans legacy.js). Taille : --s (diamètre de la planète) ;
+   couleur : --c (celle de la chaîne). Une seule image : sa photo collée sur une planète à facettes, relief et liseré de sa couleur
+   compris. Atmosphère : lueur ambiante très faible, constante (règle des deux niveaux de lueur). Sous 20 px (data-xs, ou contexte de
+   l'ancien code) : ni halo ni anneau. L'anneau fin ne marque que les chaînes les plus fortes de la vue. */
 .planet {
   --s: 20px; --pc: var(--c, var(--primary));
   position: relative; isolation: isolate; display: inline-block; flex: none; width: var(--s); height: var(--s); border-radius: 50%; vertical-align: middle;
   box-shadow: 0 0 0 1.5px var(--background), 0 0 calc(var(--s) * 0.5) color-mix(in srgb, var(--pc) 24%, transparent);
 }
 .planet[data-xs] { box-shadow: 0 0 0 1.5px var(--background); }
-.planet::after {
-  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: 50%; pointer-events: none;
-  background:
-    radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--foreground) 16%, transparent), transparent 46%),
-    radial-gradient(circle at 72% 78%, transparent 42%, color-mix(in srgb, var(--planet-night) 42%, transparent) 100%);
-}
-.planet > .pn-body {
-  position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
-  background: radial-gradient(circle at 34% 28%, color-mix(in srgb, var(--pc) 72%, var(--foreground)), var(--pc) 44%, color-mix(in srgb, var(--pc) 58%, var(--planet-night)) 100%);
-}
-.planet .pn-light { fill: var(--foreground); }
-.planet .pn-dark { fill: var(--planet-night); }
-.planet .pn-line { fill: none; stroke: var(--foreground); }
-.planet > .pn-init {
-  position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; pointer-events: none;
-  font: 600 calc(var(--s) * 0.46) / 1 var(--font-sans); color: var(--primary-foreground);
-  text-shadow: 0 1px 2px color-mix(in srgb, var(--planet-night) 75%, transparent), 0 0 5px color-mix(in srgb, var(--planet-night) 55%, transparent);
-}
-.planet[data-xs] > .pn-init { display: none; }
+/* le cadre de l'image fait 1,2 rayon (lib/planet.ts) : elle déborde de 10 % de chaque côté, la place du relief */
+.planet > .pn-img { position: absolute; left: -10%; top: -10%; z-index: 1; width: 120%; height: 120%; max-width: none; pointer-events: none; }
 .planet > .pn-ring {
   position: absolute; left: 50%; top: 50%; z-index: 0; width: 140%; height: 140%; overflow: visible; pointer-events: none;
   transform: translate(-50%, -50%) rotate(-18deg);
