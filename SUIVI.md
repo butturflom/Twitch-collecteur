@@ -21,7 +21,7 @@
 
 **2.0.12 (27/11)** : l’utilisateur confirme que « Par chaîne » marche chez lui. Bloc raid : message propre hors direct et sans API, boutons de copie à la taille de leur texte. Restent à contrôler : lives du soir ajoutés par le calcul de nuit (lecture seule, le 28/11) et début et fin d’un live réel (utilisateur). Avant un premier client : `CLOUD_OPTIONAL`, `schema.sql` sur base neuve. Vu à 390 px : barres du bloc raid très courtes (téléphone hors usage).
 
-**R5, prototype des planètes (27/11)** : page autonome `.claude/worktrees/r5-planetes/app/src/dev/planetes/planetes-proto.html` (non versionnée : ne pas supprimer ce worktree avant le choix). Trois pistes low-poly rendues avec Blender local, sous les critères de poids et de fluidité. **Choix de l'utilisateur (27/11)** : piste **B**, et la photo de profil **remplit la planète** (collée dessus, plus de pin's). Trois dosages livrés dans le prototype (B1 à plat, B2 enroulée, B3 teintée), couleur de la chaîne au bord et en halo, sans décalage de teinte ; Twitch autorise la lecture de ses photos (CORS). **Choix de l'utilisateur (27/11) : B2 adouci** (reflets moins forts). Intégration dans la Carte et les avatars : sur « lance ». À l'intégration : étaler la composition des photos (environ 0,5 s bloquantes pour 100). Rien n'est intégré. R6 (fiche à collectionner) vient après.
+**R5 livré (27/11, tableau de bord 2.0.13, PR #92)** : planètes de la piste B, composition « B2 adouci » (choix de l'utilisateur) : la photo de profil remplit la planète, sur la Carte et dans les avatars ; 5 formes (la sixième, à anneau, écartée : confusion avec l'anneau des 3 chaînes les plus fortes) ; halo à la couleur de la chaîne. Vérifié sur données et photos fictives, et 4 avatars par défaut de Twitch : **à regarder sur les vraies données** (photos de streamers, fluidité, lisibilité à 16 et 20 px). Au-delà des 8 premières chaînes, liseré et halo restent gris (couleurs existantes). Prototype dans le worktree `r5-planetes` (non versionné). Prochain : R6 (fiche à collectionner), sur « lance ».
 
 **Deux constats du 26/11 au soir (lecture seule en base)** : (1) la liste suivie est à **100 chaînes sur 100** ; (2) `raid_events` contient **47 doublons** sur 365 lignes (même paire, même nombre de viewers, souvent à 1 ms), entre le 23/11 et le 25/11 à 16 h 07, aucun ensuite, cause non cherchée. Le bloc des raids les écarte à l'affichage, mais la part « raid » des passages (`daily_switches_rollup`, Flux et carte des migrations) additionne les viewers des raids : elle peut être **surestimée sur ces jours-là**. Rien n'a été modifié en base.
 
@@ -126,6 +126,7 @@
 | #75 | `calculs-corriges` | R1 corr : calculs corrigés (2.0.5) | fusionnée le 27/11 |
 | #76 | `fidelite-partants` | Fidélité du chat : partants distincts (2.0.6, appliquée en base) | fusionnée le 27/11 |
 | #78 | `carte-direct` | Carte en direct (2.0.7) | fusionnée le 27/11 |
+| #92 | `planetes-integration` | R5 : planètes avec photo (2.0.13) | fusionnée le 27/11 |
 
 Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24, puis #23 : c'est fait. La règle actuelle des fusions est au §4 (autorisation permanente du 26/11).
 

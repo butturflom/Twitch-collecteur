@@ -121,19 +121,13 @@ Confirmé ensuite (27/11) : sur la Carte, les hors ligne sont masqués ; « jeux
 | R2 (**livré le 27/11, 2.0.8**, 1 session Sonnet 5.5) | « Aujourd'hui » par défaut, rangement rapide, légende dans l'aide, bandeau des raids, constellation centrée au-dessus du texte, viewers max | `legacy.js`, `legacy-markup.html`, `overview/`, `chat/`, `channel/`, `game/`, `map/map.tsx`, onglet Clip | Sonnet 5.5, medium | `/verifier` | Un bloc vide sur « Aujourd'hui » garde sa période |
 | R3 (**livré le 27/11, 2.0.9, PR #81**) | Onglet Audiences, activité jour par jour en haut, bloc « En ce moment » au-dessus de « Les chaînes » | `overlap/`, `flows/`, `overview/`, `app-sidebar.tsx`, `legacy.js` | Opus 5.5 high (maquette), puis Sonnet 5.5 high | Prototype choisi, `/verifier` | Page illisible : deux sections repliables |
 | R4 (**livré le 27/11, 2.0.10**) | Résumé du live du jour | `schema.sql`, `legacy.js`, `channel/` | Sonnet 5.5, high | SQL en transaction annulée, `/verifier` | Début ou fin faux sur un live réel |
-| R5 (**prototype livré le 27/11, piste à choisir**) | Prototype planètes Blender en images (remplace E1) : A Facettes, B Terrasses, C Éclats | `app/src/dev/planetes/` (worktree `r5-planetes`, non versionné) | Opus 5.5, high ; Blender 5.3 local, sans crédit | Au plus 500 Ko par piste, au moins 55 i/s à 100 planètes, `file://`, 40 px | Saccades ou poids excessif : planètes actuelles |
+| R5 (**livré le 27/11, 2.0.13, PR #92**) | Planètes Blender en images (remplace E1), piste B « B2 adouci », photo qui remplit la planète | `lib/planet.ts`, `legacy.js`, `channel-avatar.tsx` | Prototype Opus 5.5 high, intégration Sonnet 5.5 high ; Blender local, sans crédit | Au moins 55 i/s à 100 planètes (tenu en médiane), `file://` | Saccades ou photos illisibles : planètes précédentes |
 | R6 (1 à 2 sessions) | Prototype fiche à collectionner, après R5 | page de démo | Opus 5.5 high puis Sonnet 5.5 high | Choix de l'utilisateur | Fiche moins lisible que le tableau |
 | Ensuite | Podium, remplissage du Chat, mascotte, carte des jeux | | | | |
 
 R0 à R4 : 8 à 9 sessions, 2 avec Opus. R5 et R6 : 2 à 4 sessions de plus, et des crédits Higgsfield.
 
-**R5 intégration (sur « lance », M, Sonnet 5.5 high)** : source = `gabarit.html`, `planetes.py` et `rendus/` du prototype (composition B2 adouci, `REFLET_B2 = .08`, `GENOU_B2 = .82`). À faire :
-- `planetSvg` et `av()` (`legacy.js`) : un seul `<image>` par planète, tiré d'un cache ; plus de médaillon ni d'initiale sauf photo manquante.
-- Photos composées dans un canvas (`crossOrigin="anonymous"`, CORS autorisé par Twitch), par petits lots (environ 0,5 s bloquantes pour 100 d'un coup).
-- Images intégrées au build (environ 205 Ko), forme choisie d'après le nom ; couleur de la chaîne exacte au bord et en halo ; endormie grise.
-- `lib/planet.ts`, `channel-avatar.tsx`, `DESIGN.md` (« Avatar-planète »), version et `CHANGELOG.md`.
-- Pertes connues : lumière orientée vers l'étoile du système ; planète Twitch fixe, sauf à garder le globe actuel (`TW_MESH`).
-- Vérification : `/verifier`, Carte dense dans un vrai navigateur, vraies photos. Abandon : saccades, ou photos moins lisibles qu'en avatar rond (alors planètes actuelles).
+**R5 intégré (27/11)** : détail dans `SUIVI.md` §0 et `DESIGN.md` (« Avatar-planète »). Reste à juger sur les vraies photos. Si elles se lisent mal : retour aux planètes précédentes.
 
 ### Plan précédent
 
@@ -406,3 +400,4 @@ Critère de réussite : on reconnaît la chaîne sans lire son nom à 40 px, et 
 | R1 bis · Carte en direct | 1 | 1 | Sonnet 5.5, dans la session | La Carte dit le présent (2.0.7) ; E3 du chantier E est fait au passage. À juger sur les vraies données |
 | R3 · Audiences et Vue d'ensemble | 2 | 1, coupée une fois par la limite de 5 h | 1 agent Opus 5.5 (maquette), 5 agents Sonnet 5.5 (SQL, Audiences, Vue d'ensemble, documentation, correction), environ 1,7 million de tokens d'agents | 2.0.9 : un onglet au lieu de deux, activité par jour avec viewers et actifs séparés, « En ce moment ». À juger sur les vraies données. Découverts au passage : chaînes retirées encore comptées (corrigé), `schema.sql` en échec sur base neuve (noté) |
 | R5 · Prototype des planètes | 1 à 2 | 1 | 1 agent Opus 5.5 high en deux passes, environ 570 000 tokens d'agent, aucun crédit Higgsfield | Trois pistes sous les critères, B retenue ; puis photo qui remplit la planète (B1, B2, B3), 126 à 205 Ko, fluidité au moins égale aux planètes actuelles. Photo peu utile à 22 px. Application inchangée |
+| R5 · Intégration des planètes | 1 (M) | 1 | 1 agent Sonnet 5.5 high, environ 360 000 tokens d'agent, aucun crédit | Estimation tenue. 100 planètes : 18 à 21 i/s avant, 83 après (médiane, photos fictives) ; 5e centile à 33 à 41 i/s |
