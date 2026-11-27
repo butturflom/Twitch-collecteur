@@ -284,3 +284,11 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à re
 - **Réglages, « Elles ont raidé tes chaînes »** : les chaînes non suivies qui ont envoyé des raids aux chaînes suivies sur 30 jours, classées par viewers envoyés, avec le nombre de raids, les chaînes visées et un bouton « Ajouter ». Il faut au moins 2 raids ou 20 viewers. Demande la base Supabase du collecteur.
 - Un même raid enregistré deux fois à moins d'une minute n'est compté qu'une fois dans ce bloc.
 - À 100 chaînes, la page le dit et rappelle d'en retirer une avant d'ajouter.
+
+## Tableau de bord 2.0.4 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
+
+- **Les raids s’affichent de nouveau** avec la source « Collecteur 24h/24 » : « Dernier raid » de la Vue d’ensemble, Flux, Par chaîne et communautés investies. Le tableau les cherchait dans la table `events`, alors que le collecteur les écrit dans `raid_events`.
+- Les raids encore en base sur 60 jours sont rechargés au premier lancement. Un même raid enregistré deux fois à moins d’une minute n’est compté qu’une fois.
+- Flux : « Organiques » et « Raids » deviennent « Sans raid » et « Trajets raidés ». Ces deux chiffres comptent des migrations, pas des viewers de raid, et un trajet qui a connu un raid sur la période y est rangé en entier.
