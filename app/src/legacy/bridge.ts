@@ -188,12 +188,44 @@ export interface RaidRecommendation {
   organicAB: number
 }
 export interface ChannelHead extends Who { langs: string[]; live: boolean | null; game: string; title: string; viewers: number | null; since: string }
+/** Un live (relevés consécutifs d'une chaîne), calculé par l'ancien code ou lu dans la base (channel_lives). Heures déjà mises en forme (Paris). */
+export interface LiveRun {
+  /** premier et dernier relevé en live (ms) */
+  s: number; e: number
+  /** jour du début ; début et fin avec « hier » ou la date si ce n'est pas aujourd'hui ; heures seules pour la liste */
+  day: string; start: string; end: string; startH: string; endH: string
+  startKnown: boolean; endKnown: boolean; ongoing: boolean
+  /** durée entre les deux relevés, « » pour un seul relevé */
+  dur: string
+  peak: number | null; peakAt: string; avg: number | null
+  /** minimum après les 10 premières minutes ; null si le live est trop court */
+  min: number | null
+  /** hours : null pour les lives lus dans la base */
+  games: { g: string; hours: number | null }[]
+}
+export interface LiveToday {
+  /** les lives qui touchent aujourd'hui, du plus récent au plus ancien */
+  today: LiveRun[]
+  /** tous lives du jour confondus, s'il y en a plusieurs */
+  total: { peak: number; avg: number } | null
+  /** aucun live aujourd'hui : le dernier encore dans les relevés gardés */
+  last: LiveRun | null
+  /** aucun relevé ni période d'écoute aujourd'hui, toutes chaînes confondues */
+  noData: boolean
+  /** base Supabase : l'historique des lives peut être demandé */
+  cloud: boolean
+  /** live en cours : début annoncé par Twitch */
+  twitchStart: string
+}
 export interface ChannelData {
   ch: ChannelHead
   list: (Who & { live: boolean })[]
   main: Kpi[]
   more: Kpi[]
   hasApi: boolean
+  live: LiveToday | null // null : pas d'API Twitch
+  /** période « Aujourd'hui » : les viewers max et les jeux sont dans le bloc du live, pas répétés plus bas */
+  gamesInLive: boolean
   /** types de messages (sorted : messages triés) et ambiance (analysed : messages analysés) de la chaîne */
   talk: {
     sorted: number; parts: { key: string; label: string; desc: string; color: string; share: number }[] | null
@@ -380,6 +412,8 @@ declare global {
     networkHistory?: (days: number) => Promise<NetworkHistory | null>
     periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>
     channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>
+    /** null : fonction SQL absente (base pas à jour) ; liste vide en mode local */
+    channelLives?: (c: string, days: number) => Promise<LiveRun[] | null>
     channelSticky?: (c: string, days: number) => Promise<ChannelSticky | null>
     channelsRhythm?: (days: number) => Promise<RhythmRow[] | null>
     raidSuggestions?: () => Promise<RaidSuggestions | null>

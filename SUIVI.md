@@ -15,6 +15,8 @@
 **R2 livré (27/11, 2.0.8, PR #79 fusionnée)** : « Aujourd'hui » par défaut, viewers max, bandeau des raids, constellation centrée, onglet Clip, rangement de Par chaîne, Chat, Par jeu, Réglages, légende de la Carte dans l'aide. Vérifié en démo et avec le vrai code sur une base locale fictive : **à regarder sur les vraies données** (écrans après minuit, bandeau, carte des migrations sur « Aujourd'hui »). « Avec ou sans pub » replié sur tout le détail : pas testé avec des données. **Reste hors plan** : le bloc « En ce moment ». Prochain : R3 (onglet Audiences), maquette avec Opus.
 **R3 livré (27/11, tableau de bord 2.0.9, PR #81 fusionnée)** : onglet « Audiences » (Chevauchement et Flux réunis, diagramme supprimé) ; Vue d'ensemble avec activité en tête, « Jour par jour » et « En ce moment » (jeux du moment, « Les streamers montants ») ; seules les chaînes suivies comptent. Vérifié en démo, sur des données fictives et en base mémoire : **à regarder sur les vraies données**. **Base à jour le 27/11 au soir** (migration `r3_actifs_et_pic_par_jour`, sur « applique » ; relevés conservés 3 jours) : actifs du 24 au 26/11, pic des 25 et 26/11, fonctions identiques à `schema.sql`, aucune alerte de sécurité nouvelle. Constat noté dans `IDEES.md` : sur une base neuve, `schema.sql` échoue (à corriger avant le premier client). Prochain : R4 (résumé du live du jour).
 
+**R4 livré (27/11, tableau de bord 2.0.10)** : bloc « Live du jour » en tête de « Par chaîne » (viewers max et son heure, début, fin, moyenne, minimum après 10 min, jeux) ; lives précédents repliés ; ce qui n’est pas observé est écrit. Historique en base : table `lives`, `build_lives`, `channel_lives` (environ 0,75 Mo par mois à 100 chaînes). Vérifié en démo, sur base fictive et en base mémoire. **`schema.sql` pas encore appliqué en base** : sur « applique », et vite, car les relevés sont purgés après 2 à 3 jours (les lives plus anciens sont perdus). Avec `joursReleves` à 1 ou 2, une nuit sans calcul fait aussi perdre des lives. **À regarder sur les vraies données** (début et fin d’un vrai live). Prochain : R5 (prototype des planètes), devis avant génération.
+
 **Deux constats du 26/11 au soir (lecture seule en base)** : (1) la liste suivie est à **100 chaînes sur 100** ; (2) `raid_events` contient **47 doublons** sur 365 lignes (même paire, même nombre de viewers, souvent à 1 ms), entre le 23/11 et le 25/11 à 16 h 07, aucun ensuite, cause non cherchée. Le bloc des raids les écarte à l'affichage, mais la part « raid » des passages (`daily_switches_rollup`, Flux et carte des migrations) additionne les viewers des raids : elle peut être **surestimée sur ces jours-là**. Rien n'a été modifié en base.
 
 **Ajout de streamer réparé (26/11, tableau de bord 2.0.1, PR #70 fusionnée)** : la recherche des Réglages ne partait jamais et l'API n'avait plus de champs de saisie (panneau incomplet depuis le portage React). Le **chantier F est livré** (2.0.2, PR #71 fusionnée) : liste entière filtrable, retrait confirmé, ajout en bloc, résultats avec viewers et langue. **Sans bouton** : changement de mode local / nuage, reprise des chaînes locales, collage d'un jeton. **Chantier G livré** (2.0.3, PR #72 fusionnée) : bloc « Elles ont raidé tes chaînes ». À vérifier par l'utilisateur : recherche avec la vraie API, retrait sur la vraie base.
@@ -182,12 +184,16 @@ Ce qui attend aujourd'hui l'utilisateur est dans le §0.
 
 Ce qui compte : un modèle par type de tâche, un effort par difficulté, un chantier à la fois.
 
+L'effort suit la difficulté et le risque de chaque tâche, pas seulement le modèle (demande de l'utilisateur, 27/11). On part du niveau le plus bas raisonnable, on ne monte que si le résultat ne suffit pas, et chaque choix est annoncé en une ligne avec sa raison. Un fork garde l'effort de la session.
+
 | Tâche | Modèle | Effort |
 |---|---|---|
-| Lire, chercher, répondre, petite retouche (un texte, une valeur) | Haiku 5.5 | low ou medium |
-| Modifier du code, corriger un bug, écrire une fonction | Sonnet 5.5 | medium ou high |
+| Lire, chercher, répondre, petite retouche (un texte, une valeur) | Haiku 5.5 | low |
+| La même chose sur plusieurs fichiers, mise à jour de documents | Haiku 5.5 | medium |
+| Code cadré : affichage, rangement, démo | Sonnet 5.5 | medium |
+| Code risqué : calculs, `schema.sql`, `legacy.js`, moteur de la Carte | Sonnet 5.5 | high |
 | Décider d'un design, critiquer une page, refactoriser un gros fichier | Opus 5.5 | high |
-| Problème difficile resté sans solution | Opus 5.5 | xhigh ; max seulement en dernier recours |
+| Problème resté sans solution après un essai | Opus 5.5 | xhigh ; max seulement en dernier recours |
 
 **Ce qui coûte le plus cher ici**
 - L'effort `max` : beaucoup de réflexion à chaque réponse.

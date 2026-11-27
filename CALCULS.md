@@ -105,11 +105,11 @@ La page ne porte que sur les chaînes suivies et affichées (voir « Chaînes co
 ### Par chaîne, Par jeu, Chat, Carte
 | Chiffre | Formule | Verdict |
 |---|---|---|
-| Viewers max, moyenne | relevés en live ; le max est mis en avant (2.0.8) | ✅ |
+| Viewers max, moyenne | relevés en live de la période ; le max est mis en avant (2.0.8). Sur « Aujourd’hui », remplacés par « Live du jour » (2.0.10) | ✅ |
 | Messages par minute en moyenne | messages ÷ minutes avec au moins un message | ⚠️ le dire, ou ne prendre que les minutes de live |
 | Viewers actifs fidèles | vus 2 jours ou plus ; sur « Aujourd'hui », calculé sur tout le détail gardé, et c'est écrit (2.0.8) | ⚠️ presque vide avec 2 jours de présences |
 | Messages du top 10 % | part des 10 % les plus bavards | ✅ |
-| Jeux streamés | tranches de 2 min | ✅ |
+| Jeux streamés | tranches de 2 min ; sur « Aujourd’hui », les jeux sont dans « Live du jour » | ✅ |
 | Avant et après un changement de jeu | 20 min de chaque côté | ⚠️ messages divisés par 20 même si le live vient de commencer |
 | Son univers | uniques sur 30 jours (esquisses) | ✅ |
 | Historique « Où vont », « D'où viennent » | somme des passages des rollups | ⚠️ des passages, pas des personnes : c'est dit à l'écran |
@@ -122,6 +122,25 @@ La page ne porte que sur les chaînes suivies et affichées (voir « Chaînes co
 | Comparaison : viewers moyens | moyenne des moyennes quotidiennes | ⚠️ un jour court pèse autant qu'un long |
 | Carte : taille | viewers en direct (nombre annoncé par Twitch, relu toutes les 10 s) ; rayon = racine, par rapport à la chaîne la plus regardée de la carte ; hors ligne : taille fixe (2.0.7) | ✅ rafraîchi au rythme des relevés du collecteur (2 min) |
 | Carte : liens, groupes, étoile, passages | viewers actifs de tout le détail gardé, depuis le début commun (sans période) ; liens choisis par ressemblance, épaisseur = communs ÷ la plus petite (2.0.7) | ⚠️ la profondeur dépend de la rétention de `config.json` |
+
+### Live du jour (Par chaîne, 2.0.10)
+
+Calculé sur tous les relevés gardés dans le navigateur (`snaps`, un toutes les 2 min environ), jamais sur la période choisie. Le code (`liveRuns` dans `legacy.js`) et la fonction SQL `build_lives` (historique) suivent la même définition : les changer ensemble.
+
+| Chiffre | Formule | Verdict |
+|---|---|---|
+| Un live | relevés `live=1` consécutifs d’une chaîne ; coupé par un relevé `live=0` ou un trou de plus de 10 min | ⚠️ une coupure Twitch de quelques minutes fait deux lives ; un trou du collecteur aussi |
+| Début | premier relevé en live. **Observé** seulement si le relevé précédent n’est pas en live et que le collecteur tournait juste avant : chat de la chaîne écouté sans interruption depuis 10 min (`ecoute`), ou relevé précédent hors ligne et un relevé (n’importe quelle chaîne) de moins de 10 min. Sinon « Premier relevé » | ✅ à environ 2 min ; 10 au pire après un raté |
+| Fin | dernier relevé en live. **Observée** si un relevé `live=0` suit à 10 min près ; « En direct » si le dernier relevé a moins de 10 min ; sinon « fin non observée » | ✅ |
+| Durée | fin − début ; « au moins » si l’un des deux n’est pas observé | ✅ |
+| Viewers max, heure | plus haut relevé du live ; premier passage à ce nombre | ✅ un pic entre deux relevés échappe |
+| Viewers moyens | moyenne de tous les relevés du live | ✅ |
+| Minimum | plus bas relevé à partir de début + 10 min (le live se remplit) ; « — » avant | ⚠️ début non observé : les 10 premières minutes relevées sont écartées |
+| Jeux, heures | tranches de 2 min par jeu, dans l’ordre du live | ✅ pas de durée dans l’historique |
+| Total de plusieurs lives | maximum et moyenne de tous leurs relevés | ✅ |
+| Lives précédents | fonction SQL `channel_lives`, 30 jours ; ceux qui chevauchent un live déjà affiché ne sont pas répétés | ⚠️ calculés chaque nuit ; rien avant la création de la table hormis les relevés alors en base |
+
+Limites : le début observé peut être faux si l’API Twitch était en panne alors que le chat était écouté. « Twitch annonce … » est l’heure de début donnée par Twitch pour le live en cours, à titre de repère. Un live plus long que la conservation des relevés (`joursReleves`) perd son début dans le bloc du jour.
 
 ## 4. Décisions prises le 27/11
 

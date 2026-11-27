@@ -215,6 +215,25 @@ create table if not exists daily_network_rollup (
   peak_at bigint not null                   -- heure de ce passage (ms)
 );
 
+-- Historique des lives (27/11/2026, « résumé du live ») : une ligne par live et par chaîne, calculée depuis « snaps » (purgés après
+-- quelques jours) par build_lives. Jamais purgée, comme les daily_* : environ 0,75 Mo par mois à 100 chaînes (≈ 250 octets par live,
+-- index compris, mesuré avec un live par chaîne et par jour), soit 9 Mo par an. Aucune donnée de viewer.
+create table if not exists lives (
+  c text not null,                          -- chaîne
+  s bigint not null,                        -- premier relevé en live (ms)
+  e bigint not null,                        -- dernier relevé en live (ms)
+  n int not null,                           -- nombre de relevés comptés
+  vsum bigint not null,                     -- somme de leurs viewers (permet de prolonger la moyenne sans les anciens relevés)
+  avg_v int not null,                       -- viewers moyens (arrondis)
+  peak int not null,                        -- pic de viewers
+  peak_at bigint not null,                  -- premier relevé au pic (ms)
+  min_v int,                                -- minimum à partir de s + 10 min ; null si aucun relevé aussi tard
+  games text[] not null,                    -- jeux distincts, dans l'ordre d'apparition
+  start_known boolean not null,             -- début observé (voir build_lives)
+  end_known boolean not null,               -- fin observée
+  primary key (c, s)
+);
+
 -- Rosters (listes de chaînes groupées)
 create table if not exists rosters (
   id bigserial primary key,
@@ -513,8 +532,97 @@ from (select (to_timestamp(min(t) / 1000.0) at time zone 'Europe/Paris')::date a
 cross join lateral generate_series(0, (now() at time zone 'Europe/Paris')::date - m.d0 - 1) as i
 where not exists (select 1 from daily_network_rollup r where r.d = to_char(m.d0 + i, 'YYYY-MM-DD'));
 
+-- Construit « lives » depuis tous les relevés encore en base (27/11/2026). Sans notion de jour : un live qui passe minuit reste un seul.
+-- DÉFINITION (le tableau de bord calcule la même chose de son côté : garder les deux alignés)
+--   live       : relevés live=1 consécutifs d'une chaîne ; coupé par un relevé live=0 ou un trou de plus de 10 minutes.
+--   début observé : le relevé précédent de la chaîne n'est pas live=1 (sinon c'est un trou en plein live), ET l'une des deux preuves
+--                que le collecteur tournait juste avant s (liveRuns, dans app/src/legacy/legacy.js, applique les mêmes) :
+--                a. il écoutait le chat de la chaîne sans interruption de s - 10 min à s - 1 min (table « ecoute »), et les relevés en
+--                   base remontent à plus de 10 minutes avant s (au bord de la purge, un long live paraîtrait commencer là) ;
+--                b. le relevé précédent de la chaîne est live=0 et un relevé (de n'importe quelle chaîne) date de moins de 10 min.
+--                Le live=0 seul ne prouve rien : écrit à la fin du live précédent (et au démarrage du collecteur), il peut dater de
+--                plusieurs jours, et le collecteur a pu s'arrêter ensuite. S'il a été purgé, la preuve « a » suffit.
+--                Limites : API Twitch en panne alors que le chat est écouté, ou chaîne retirée puis remise pendant son live (b).
+--   fin observée : un relevé live=0 de la chaîne suit e à 10 minutes près.
+-- REJOUABLE, sans doublon, et un live déjà connu n'est jamais remplacé par une version tronquée par le ménage :
+--   le calcul remplace les lignes qu'il couvre en entier avec au moins autant de relevés (live qui a continué, relevés arrivés en
+--   retard) ; sinon (début déjà purgé) il ne fait qu'ajouter à la ligne connue les relevés postérieurs à sa fin.
+-- Lancée par run_daily_overlap_rollup (chaque nuit). Avec joursReleves = 1 ou 2, des nuits sans calcul font perdre des lives.
+create or replace function build_lives() returns void
+language plpgsql set search_path = public, pg_catalog as $$
+declare
+  dix constant bigint := 600000;            -- 10 minutes en ms
+  r record; o record; x record;
+  oldest bigint := (select min(t) from snaps);
+  nb int; kn bigint; inside boolean; ksk boolean; kek boolean; starts bigint[];
+begin
+  if not pg_try_advisory_xact_lock(hashtext('lives')) then return; end if;
+  for r in
+    with polls as (select q.t, lag(q.t) over (order by q.t) as pt from (select distinct t from snaps) q),
+    a as (select c, t, live, v, g, lag(live) over w as pl, lag(t) over w as pt, lead(live) over w as nl, lead(t) over w as nt
+          from snaps window w as (partition by c order by t)),
+    b as (select a.*, count(*) filter (where a.pl is distinct from 1 or a.t - a.pt > dix) over (partition by a.c order by a.t) as grp
+          from a where a.live = 1),
+    m as (select b.*, min(b.t) over (partition by b.c, b.grp) as s0 from b),
+    seg as (select c, s0 as s, max(t) as e, count(*)::int as n, sum(v)::bigint as vsum, max(v) as peak,
+                   (array_agg(t order by v desc, t))[1] as peak_at, min(v) filter (where t >= s0 + dix) as min_v,
+                   (array_agg(pl order by t))[1] as pl, (array_agg(nl order by t desc))[1] as nl, (array_agg(nt order by t desc))[1] as nt
+            from m group by c, s0),
+    gm as (select y.c, y.s0 as s, array_agg(y.g order by y.f, y.g) as games
+           from (select c, s0, g, min(t) as f from m group by c, s0, g) y group by y.c, y.s0)
+    select seg.*, gm.games,
+           seg.pl is distinct from 1 and (
+             (oldest < seg.s - dix and exists (select 1 from ecoute h where h.c = seg.c and h.s <= seg.s - dix and h.e >= seg.s - 60000))
+             or coalesce(seg.pl = 0 and seg.s - polls.pt <= dix, false)) as sk,
+           coalesce(seg.nl = 0 and seg.nt - seg.e <= dix, false) as ek
+    from seg join gm on gm.c = seg.c and gm.s = seg.s join polls on polls.t = seg.s
+    order by seg.c, seg.s
+  loop
+    -- lignes déjà connues qui sont ce live : elles le chevauchent, ou il continue une ligne restée sans fin observée
+    select count(*), coalesce(sum(l.n), 0), coalesce(bool_and(l.s >= r.s and l.e <= r.e), true),
+           coalesce(bool_or(l.start_known and l.s = r.s), false), coalesce(bool_or(l.end_known and l.e = r.e), false),
+           array_agg(l.s order by l.e desc)
+      into nb, kn, inside, ksk, kek, starts
+    from lives l
+    where l.c = r.c and l.s <= r.e
+      and (l.e >= r.s or (not l.end_known and r.s - l.e <= dix
+           and not exists (select 1 from snaps z where z.c = l.c and z.t > l.e and z.t < r.s and z.live = 0)));
+
+    if inside and r.n >= kn then
+      -- version complète. Rien à réécrire si la ligne est déjà la même. Un début ou une fin observés le restent, même quand le
+      -- relevé qui le prouvait a été purgé depuis.
+      if nb = 1 and r.n = kn and exists (select 1 from lives l where l.c = r.c and l.s = r.s and l.e = r.e
+                                         and l.start_known >= r.sk and l.end_known >= r.ek) then continue; end if;
+      delete from lives l where l.c = r.c and l.s = any(starts);
+      insert into lives (c, s, e, n, vsum, avg_v, peak, peak_at, min_v, games, start_known, end_known)
+      values (r.c, r.s, r.e, r.n, r.vsum, round(r.vsum::numeric / r.n), r.peak, r.peak_at, r.min_v, r.games, r.sk or ksk, r.ek or kek);
+    else
+      -- version tronquée : on prolonge la dernière ligne connue avec les seuls relevés postérieurs à sa fin
+      select * into o from lives l where l.c = r.c and l.s = starts[1];
+      continue when r.e < o.e;
+      select count(*)::int as n, coalesce(sum(z.v), 0)::bigint as vsum, max(z.v) as peak,
+             (array_agg(z.t order by z.v desc, z.t))[1] as peak_at, min(z.v) filter (where z.t >= o.s + dix) as min_v
+        into x
+      from snaps z where z.c = r.c and z.t > o.e and z.t <= r.e and z.live = 1;
+      continue when x.n = 0 and o.end_known >= r.ek;
+      update lives l set
+        e = r.e, n = o.n + x.n, vsum = o.vsum + x.vsum, avg_v = round((o.vsum + x.vsum)::numeric / (o.n + x.n)),
+        peak = greatest(o.peak, x.peak), peak_at = case when x.peak > o.peak then x.peak_at else o.peak_at end,
+        min_v = least(o.min_v, x.min_v),
+        games = o.games || array(select y.g from (select z.g, min(z.t) as f from snaps z
+                                   where z.c = r.c and z.t > o.e and z.t <= r.e and z.live = 1 group by z.g) y
+                                 where y.g <> all (o.games) order by y.f, y.g),
+        end_known = r.ek or (o.end_known and r.e = o.e)
+      where l.c = o.c and l.s = o.s;
+    end if;
+  end loop;
+end $$;
+
+-- Rattrapage à l'exécution de ce script : les lives dont les relevés sont encore en base.
+select build_lives();
+
 -- Agrège UNE journée (heure de Paris) dans daily_switches_rollup, daily_streamer_rollup et daily_overlap_matrix, et calcule le pic
--- du réseau (daily_network_rollup).
+-- du réseau (daily_network_rollup). Quand la journée est la veille, met aussi à jour l'historique des lives (build_lives).
 -- Rejouable : chaque table est vidée pour ce jour puis remplie (pas de reste si une paire disparaît).
 -- Lancée chaque nuit par pg_cron (scripts/cron_rollup.sql) pour la veille, AVANT que cleanup() ne supprime les présences de ce
 -- jour : avec joursPresence = 1, la veille reste en base jusqu'au lendemain soir (cleanup garde d >= aujourd'hui - 1, en UTC).
@@ -534,6 +642,8 @@ begin
   if not pg_try_advisory_xact_lock(hashtext('rollup:' || jour)) then return; end if;
   -- pic du réseau : ne dépend que des relevés, avec ses propres gardes contre les journées purgées
   perform build_daily_network_peak(target_date);
+  -- historique des lives : porte sur tous les relevés en base, une seule fois suffit (pas à chaque jour d'un rattrapage)
+  if target_date = (now() at time zone 'Europe/Paris')::date - 1 then perform build_lives(); end if;
   -- jour déjà purgé par cleanup() : on garde le rollup existant au lieu de l'écraser par du vide (backfill sur une longue période)
   if not exists (select 1 from presence where presence.d = jour) then return; end if;
 
@@ -608,6 +718,18 @@ language sql stable set search_path = public, pg_catalog as $$
       select b as c, sum(switches)::int as n, sum(raid_switch_count)::int as raid from sw where a = ch group by b order by 2 desc limit 8) x), '[]'),
     'in', coalesce((select jsonb_agg(x order by x.n desc) from (
       select a as c, sum(switches)::int as n, sum(raid_switch_count)::int as raid from sw where b = ch group by a order by 2 desc limit 8) x), '[]'))
+$$;
+
+-- Lives passés d'une chaîne, du plus récent au plus ancien (27/11/2026). Lecture seule, avec les droits de l'appelant (comme
+-- channel_history). Lives commencés depuis le début du jour (heure de Paris) d'il y a « days » jours ; le live en cours n'y figure
+-- qu'à partir du calcul de nuit. s, e, peakAt en ms ; min peut être null ; tableau vide s'il n'y a rien (ou sans le bon code).
+create or replace function channel_lives(ch text, days int default 30) returns jsonb
+language sql stable set search_path = public, pg_catalog as $$
+  with p as (select (extract(epoch from (((now() at time zone 'Europe/Paris')::date - least(greatest(days, 1), 366))::timestamp
+                     at time zone 'Europe/Paris')) * 1000)::bigint as t0)
+  select coalesce(jsonb_agg(jsonb_build_object('s', l.s, 'e', l.e, 'avg', l.avg_v, 'peak', l.peak, 'peakAt', l.peak_at,
+                    'min', l.min_v, 'startKnown', l.start_known, 'endKnown', l.end_known, 'games', to_jsonb(l.games)) order by l.s desc), '[]')
+  from lives l, p where l.c = ch and l.s >= p.t0
 $$;
 
 -- Fidélité du chat d'une chaîne (« Sticky-Factor » du plan V2) pour « Par chaîne » → Historique, lue dans les rollups quotidiens.
@@ -821,6 +943,7 @@ alter table daily_streamer_rollup enable row level security;
 alter table daily_overlap_matrix enable row level security;
 alter table daily_hll enable row level security;
 alter table daily_network_rollup enable row level security;
+alter table lives enable row level security;
 alter table rosters enable row level security;
 alter table roster_streamers enable row level security;
 alter table raid_events enable row level security;
@@ -842,7 +965,7 @@ revoke all on function board_ok() from public;
 grant execute on function board_ok() to anon, authenticated, service_role;
 
 -- Droit à l'effacement : supprime les lignes d'un viewer à partir de son empreinte (voir oublier.mjs, qui la calcule avec le sel de config.json).
--- Réservé à la clé secrète. Les agrégats (esquisses HyperLogLog, matrice de chevauchement) ne contiennent aucune empreinte : rien à y retirer.
+-- Réservé à la clé secrète. Les agrégats (esquisses HyperLogLog, matrice de chevauchement, historique des lives) ne contiennent aucune empreinte : rien à y retirer.
 create or replace function forget_user(h text) returns jsonb
 language plpgsql security definer set search_path = public, pg_catalog as $$
 declare a int; b int;
@@ -881,6 +1004,7 @@ drop policy if exists read_all on daily_streamer_rollup; create policy read_all 
 drop policy if exists read_all on daily_overlap_matrix; create policy read_all on daily_overlap_matrix for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on daily_hll; create policy read_all on daily_hll for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on daily_network_rollup; create policy read_all on daily_network_rollup for select to anon, authenticated using ((select public.board_ok()));
+drop policy if exists read_all on lives; create policy read_all on lives for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on rosters; create policy read_all on rosters for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on roster_streamers; create policy read_all on roster_streamers for select to anon, authenticated using ((select public.board_ok()));
 drop policy if exists read_all on raid_events; create policy read_all on raid_events for select to anon, authenticated using ((select public.board_ok()));
@@ -915,6 +1039,11 @@ revoke all on function build_daily_network_peak(date) from public, anon, authent
 grant execute on function build_daily_network_peak(date) to service_role;
 revoke insert, update, delete on daily_network_rollup from anon, authenticated;
 grant select on daily_network_rollup to anon, authenticated;
+revoke all on function build_lives() from public, anon, authenticated;
+grant execute on function build_lives() to service_role;
+grant execute on function channel_lives(text, int) to anon, authenticated, service_role;
+revoke insert, update, delete on lives from anon, authenticated;
+grant select on lives to anon, authenticated;
 grant execute on function add_channels(text, text[]) to anon, authenticated, service_role;
 grant execute on function remove_channels(text, text[]) to anon, authenticated, service_role;
 

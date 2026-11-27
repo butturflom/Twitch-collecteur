@@ -1,7 +1,7 @@
 // Mode démo, en développement seulement : http://localhost:5173/?demo
 // Remplace les données de la vue d'ensemble par un jeu fictif, pour travailler le design sans vraie base.
 // N'est jamais inclus dans le build (main.tsx ne l'importe que si import.meta.env.DEV).
-import type { PeriodInfo, ClipTabData,ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
+import type { PeriodInfo, ClipTabData, LiveRun, LiveToday, ChannelHistory, ChannelSticky, NetworkHistory, PeriodReach, LineSpec, RostersData, ChannelData, ChatData, FlowsData, GameData, OverlapData, OverviewData, StatusData, TopStreamerRow, InvestedCommunityRow } from "@/legacy/bridge"
 
 declare global { interface Window { renderOverview?: (q: unknown) => void; renderChannel?: (q: unknown) => void; renderChat?: (q: unknown) => void; renderClip?: (q: unknown) => void; renderGame?: (q: unknown) => void; renderOverlap?: (q: unknown) => void; renderFlows?: (q: unknown) => void; renderRosters?: (q: unknown) => void; channelHistory?: (c: string, days: number) => Promise<ChannelHistory | null>; periodReach?: (chans: string[], days: number) => Promise<PeriodReach | null>; networkHistory?: (days: number) => Promise<NetworkHistory | null>; statusOf?: () => StatusData; periodInfo?: () => PeriodInfo } }
 
@@ -191,20 +191,78 @@ function many(d: OverviewData): OverviewData {
   }
 }
 
+// « Live du jour » (Par chaîne). &live=encours|termine|plusieurs|veille|debut|fin|aucun|jamais|sansreleve (par défaut : en cours pour les
+// chaînes en live, terminé pour les autres). &lives=non : fonction SQL absente ; =local : mode local, pas d'historique ; =vide : rien d'autre.
+const demoHm = (t: number) => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }).replace(":", "h")
+const demoDay = (t: number) => new Date(t).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
+function demoWhen(t: number) {
+  const k = new Date(t).toDateString()
+  return k === new Date().toDateString() ? demoHm(t) : k === new Date(Date.now() - 86400000).toDateString() ? `hier ${demoHm(t)}` : `${demoDay(t)} ${demoHm(t)}`
+}
+function runDemo(s: number, minutes: number, o: { ongoing?: boolean; startKnown?: boolean; endKnown?: boolean; peak?: number; games?: [string, number | null][] } = {}): LiveRun {
+  const e = s + minutes * MIN, ongoing = !!o.ongoing, peak = o.peak ?? 16204
+  const startKnown = o.startKnown ?? true, endKnown = ongoing ? false : o.endKnown ?? true
+  return {
+    s, e, day: demoDay(s), start: demoWhen(s), end: demoWhen(e), startH: demoHm(s),
+    endH: demoHm(e) + (new Date(e).toDateString() !== new Date(s).toDateString() ? " (le lendemain)" : ""),
+    startKnown, endKnown, ongoing,
+    dur: minutes < 1 ? "" : minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`,
+    peak, peakAt: demoWhen(s + Math.round(minutes * 0.7) * MIN), avg: Math.round(peak * 0.84), min: minutes > 10 ? Math.round(peak * 0.61) : null,
+    games: (o.games ?? [["Teamfight Tactics", Math.round(minutes * 0.75) / 60], ["Just Chatting", Math.round(minutes * 0.25) / 60]]).map(([g, hours]) => ({ g, hours })),
+  }
+}
+const liveParam = () => new URLSearchParams(location.search).get("live")
+function liveDayDemo(mode: string): LiveToday {
+  const now = Date.now(), ago = (m: number) => now - m * MIN, midnight = new Date().setHours(0, 0, 0, 0)
+  const older = () => runDemo(midnight - 26 * 3600e3, 232, { peak: 13480 })
+  const base: LiveToday = { today: [], total: null, last: null, noData: false, cloud: new URLSearchParams(location.search).get("lives") !== "local", twitchStart: "" }
+  const one = (r: LiveRun) => ({ ...base, today: [r], twitchStart: r.ongoing ? demoWhen(r.s - (r.startKnown ? MIN : 95 * MIN)) : "" })
+  if (mode === "encours") return one(runDemo(ago(164), 162, { ongoing: true }))
+  if (mode === "termine") return one(runDemo(ago(330), 262))
+  if (mode === "veille") { const s = midnight - 110 * MIN; return one(runDemo(s, Math.min(212, Math.round((now - s) / MIN) - 1))) } // commencé hier, fini cette nuit
+  if (mode === "debut") return one(runDemo(ago(96), 94, { ongoing: true, startKnown: false }))
+  if (mode === "fin") return one(runDemo(ago(400), 188, { endKnown: false }))
+  if (mode === "plusieurs") {
+    const today = [runDemo(ago(74), 72, { ongoing: true }), runDemo(ago(190), 6, { peak: 4210, games: [["Just Chatting", 0.1]] }), runDemo(ago(520), 228, { peak: 12950, games: [["VALORANT", 2.9], ["Just Chatting", 0.9]] })]
+    return { ...base, today, total: { peak: 16204, avg: 11980 }, twitchStart: demoWhen(today[0].s - MIN) }
+  }
+  if (mode === "jamais") return base
+  return { ...base, last: older(), noData: mode === "sansreleve" }
+}
+function livesDemo(c: string): LiveRun[] | null {
+  const m = new URLSearchParams(location.search).get("lives")
+  if (m === "non") return null
+  const i = CH.findIndex(([x]) => x === c)
+  const mode = liveParam() ?? (i < 2 ? "encours" : "termine")
+  if (mode === "jamais") return []
+  const d = liveDayDemo(mode), midnight = new Date().setHours(0, 0, 0, 0)
+  // la base connaît aussi les lives déjà affichés au-dessus (ici décalés d'une minute) : ils ne doivent pas être répétés
+  const same = [...d.today, ...(d.last ? [d.last] : [])].map((r) => ({ ...r, s: r.s + MIN, games: r.games.map((g) => ({ g: g.g, hours: null })) }))
+  if (m === "vide") return same
+  const past = Array.from({ length: 14 }, (_, k) => runDemo(midnight - (k * 2 + 3) * 86400000 + (18 * 60 + ((k * 17) % 50)) * MIN, 150 + ((k * 43) % 170), {
+    peak: 9800 + ((k * 1373) % 6200), startKnown: k !== 2, endKnown: k !== 4,
+    games: k % 3 ? [["Teamfight Tactics", null]] : [["Just Chatting", null], ["League of Legends", null]],
+  }))
+  return [...same, ...past]
+}
+
 function channelDemo(c: string): ChannelData {
   const [, color] = CH.find(([x]) => x === c) ?? CH[0]
   const i = CH.findIndex(([x]) => x === c)
   const now = Date.now()
-  const live = i < 2
+  const day = liveDayDemo(liveParam() ?? (i < 2 ? "encours" : "termine"))
+  const live = !!day.today[0]?.ongoing
+  const inLive = window.periodInfo?.().key === "today"
   const who = (x: string, col: string) => ({ c: x, color: col, img: "" })
   const hours = Array.from({ length: 24 }, (_, h) => ({ k: h + "h", lbl: `${h}h – ${h + 1}h`, v: Math.round(400 + 2600 * Math.max(0, Math.sin((h - 12) / 4))) }))
   return {
     ch: { ...who(c, color), langs: ["fr"], live, game: live ? "Teamfight Tactics" : "", title: live ? "TFT avec la commu, on vise le top 1" : "", viewers: live ? 14520 : null, since: live ? "18h02" : "" },
     list: CH.map(([x, col], k) => ({ ...who(x, col), live: k < 2 })),
+    live: day, gamesInLive: inLive,
     main: [
       { label: "Viewers actifs uniques", value: "6 210" },
       { label: "Messages", value: "98 432", hint: "61,3 msg/min en moyenne", trendLabel: "courbe par heure", trend: [8, 12, 9, 14, 22, 31, 27, 35, 41, 38, 46, 52] },
-      { label: "Viewers max", value: "16 204", hint: "moyenne : 13 900" },
+      ...(inLive ? [] : [{ label: "Viewers max", value: "16 204", hint: "moyenne : 13 900" }]),
       { label: "Écrivent chaque minute", value: "3,1 %", hint: "29,6 msg/min pour 1\u00a0000 viewers" },
       { label: "Followers", value: "1 030 000", hint: "1,3 % en moyenne devant le live" },
     ],
@@ -548,6 +606,7 @@ export function installDemo() {
     // &histo=non : base pas à jour ; &histo=1 : une seule journée agrégée
     const histo = () => new URLSearchParams(location.search).get("histo")
     window.channelHistory = async (c, days) => (histo() === "non" ? null : historyDemo(c, histo() === "1" ? 1 : days))
+    window.channelLives = async (c) => livesDemo(c)
     window.periodReach = async (chans, days) => {
       if (histo() === "non") return null
       if (chans[0] !== "*") return reachDemo(chans, days)

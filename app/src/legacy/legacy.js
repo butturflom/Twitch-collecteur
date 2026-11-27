@@ -2030,6 +2030,59 @@ function clipsData(q,chans){
 // bandeau d'une chaîne (onglets Par chaîne et Chat)
 function chHead(c){const I=info[c]||{};
   return {...who(c),langs:langsOf(c),live:I.live===true?true:I.live===false?false:null,game:I.live?I.g||'':'',title:I.live?I.ti||'':'',viewers:I.live?nn(I.v):null,since:I.live&&I.since?hhmm(I.since):''}}
+/* ---------- résumé des lives (Par chaîne) ----------
+   Un live = les relevés live=1 consécutifs d'une chaîne (un toutes les 2 min environ), coupés par un relevé live=0 ou par un trou
+   de plus de 10 min. Calculé sur tous les relevés gardés, jamais sur la période choisie. Formules et limites : CALCULS.md.
+   MÊME DÉFINITION que la fonction SQL build_lives (schema.sql), qui remplit l'historique : garder les deux alignées. */
+const LIVE_GAP=10*MIN,LIVE_RAMP=10*MIN; // LIVE_RAMP : début ignoré pour le minimum (le live se remplit)
+// Découpage des relevés de la chaîne c en lives, du plus ancien au plus récent.
+// Début observé : le relevé précédent de la chaîne n'est pas en live, et le collecteur tournait juste avant : soit il écoutait son
+// chat sans interruption depuis 10 min (table « ecoute »), soit son relevé précédent est hors ligne et un relevé (n'importe quelle
+// chaîne) date de moins de 10 min. Le live=0 seul ne prouve rien : écrit à la fin du live précédent (et au démarrage du collecteur),
+// il peut être ancien, et le collecteur a pu s'arrêter ensuite.
+function liveRuns(snaps,ecoute,c){
+  const runs=[];let cur=null,prev=null,oldest=Infinity;
+  for(const x of snaps)if(x.t<oldest)oldest=x.t;
+  for(const x of snaps.filter(s=>s.c===c).sort((a,b)=>a.t-b.t)){
+    if(cur&&x.t-cur.e>LIVE_GAP){runs.push(cur);cur=null} // trou : fin non observée
+    if(x.live){
+      if(!cur)cur={s:x.t,e:x.t,pts:[x],before:prev?+prev.live:null,endKnown:false};
+      else if(x.t>cur.e){cur.e=x.t;cur.pts.push(x)}} // même instant deux fois (ligne renvoyée par la synchro) : compté une fois
+    else if(cur){cur.endKnown=true;runs.push(cur);cur=null}
+    prev=x}
+  if(cur)runs.push(cur);
+  const heard=Object.values(ecoute||{}).filter(x=>x.c===c);
+  for(const r of runs){const a=r.s-LIVE_GAP;
+    // « oldest<a » : les relevés les plus anciens sont purgés ; au bord de la purge, un long live paraîtrait commencer là
+    r.startKnown=r.before!==1&&((oldest<a&&heard.some(x=>x.s<=a&&x.e>=r.s-MIN))||(r.before===0&&snaps.some(x=>x.t>=a&&x.t<r.s)))}
+  return runs}
+// Chiffres d'un live, au format de la fonction SQL channel_lives (avec en plus les heures passées sur chaque jeu).
+function liveStats(r){
+  let peak=r.pts[0],sum=0,min=null;const games=new Map();
+  for(const x of r.pts){if(x.v>peak.v)peak=x;sum+=x.v;
+    if(x.t>=r.s+LIVE_RAMP&&(min==null||x.v<min))min=x.v;
+    let o=games.get(x.g);if(!o)games.set(x.g,o=new Set());o.add(Math.floor(x.t/SLOT))} // jeux dans l'ordre du live
+  return {s:r.s,e:r.e,n:r.pts.length,avg:sum/r.pts.length,peak:peak.v,peakAt:peak.t,min,startKnown:r.startKnown,endKnown:r.endKnown,
+    games:[...games].map(([g,sl])=>({g,hours:sl.size*2/60}))}}
+// Mise en forme pour React (heure de Paris), commune aux lives calculés ici et à ceux lus dans la base (jeux sans durée).
+const liveWhen=(t,now)=>{const k=dayKey(t);return k===dayKey(now)?hhmm(t):k===dayKey(parisMidnight(now)-12*HOUR)?'hier '+hhmm(t):dayLbl(t)+' '+hhmm(t)};
+function liveView(l,now){
+  const s=+l.s,e=+l.e,num=x=>x==null?null:nn(+x),endH=hhmm(e)+(dayKey(e)!==dayKey(s)?' (le lendemain)':'');
+  return {s,e,day:dayLbl(s),start:liveWhen(s,now),end:liveWhen(e,now),startH:hhmm(s),endH,startKnown:!!l.startKnown,endKnown:!!l.endKnown,
+    ongoing:!l.endKnown&&now-e<=LIVE_GAP,dur:e-s>=MIN?dur(e-s):'',peak:num(l.peak),peakAt:l.peakAt==null?'':liveWhen(+l.peakAt,now),avg:num(l.avg),min:num(l.min),
+    games:(l.games||[]).map(g=>typeof g==='string'?{g,hours:null}:g)}}
+// Les lives qui touchent aujourd'hui (celui commencé la veille compris, avec son vrai début), du plus récent au plus ancien ;
+// sinon le dernier live encore dans les relevés gardés.
+function liveToday(c,now=Date.now()){
+  const d0=parisMidnight(now),all=liveRuns(DB.snaps,DB.ecoute,c).map(r=>{const l=liveStats(r);return {l,v:liveView(l,now)}});
+  const mine=all.filter(x=>x.v.ongoing||x.v.e>=d0).reverse(),today=mine.map(x=>x.v);
+  // plusieurs lives : le maximum et la moyenne de tous leurs relevés
+  let total=null;
+  if(mine.length>1)total={peak:maxOf(mine,x=>x.l.peak),avg:mine.reduce((s,x)=>s+x.l.avg*x.l.n,0)/mine.reduce((s,x)=>s+x.l.n,0)};
+  const I=info[c]||{},cur=today[0];
+  return {today,total,last:today.length?null:(all.length?all[all.length-1].v:null),
+    noData:!DB.snaps.some(s=>s.t>=d0)&&!Object.values(DB.ecoute||{}).some(x=>x.e>=d0),cloud:isCloud(),
+    twitchStart:cur&&cur.ongoing&&I.live&&I.since&&I.since<=cur.e?liveWhen(I.since,now):''}}
 function renderChannel(q){
   const el=$('t-channel'),sh=shown(),allChans=cfg.chans;let c=selChan;
   // Fix: initialiser selChan si pas de chaîne sélectionnée
@@ -2054,10 +2107,12 @@ function renderChannel(q){
   const counts=[...perUser.values()].sort((a,b)=>b-a),presMsgs=counts.reduce((s,x)=>s+x,0),top10=presMsgs?counts.slice(0,Math.ceil(counts.length*.1)).reduce((s,x)=>s+x,0)/presMsgs:NaN;
   const I=info[c]||{},p=participation(q,c),k=kindsOf(q,[c]),kn=ktot(k),L=metaLast(c),fol=L&&L.fol!=null?L.fol:null,tr=msgTrend(mins);
   const K=(label,value,hint='',extra={})=>({label,value,hint,...extra});
+  // Sur « Aujourd'hui », le bloc « Live du jour » porte les viewers max, la moyenne et les jeux : pas de doublon plus bas.
+  const inLive=period==='today'&&hasApi();
   const main=[
     K('Viewers actifs uniques',fmt(U.size)),
     K('Messages',fmt(msgs),activeMin?fmt1(msgs/activeMin)+' msg/min en moyenne':'',{trend:tr.trend,trendLabel:tr.label}),
-    K('Viewers max',isFinite(peakV)?fmt(peakV):'—',isFinite(avgV)?'moyenne : '+fmt(avgV):''),
+    ...(inLive?[]:[K('Viewers max',isFinite(peakV)?fmt(peakV):'—',isFinite(avgV)?'moyenne : '+fmt(avgV):'')]),
     K('Écrivent chaque minute',p?pct(p.perMin):'—',p?fmt1(p.msgK)+' msg/min pour 1\u00a0000 viewers':'pendant les lives, API Twitch requise'),
     K('Followers',fol!=null?fmt(fol):'—',fol!=null?(isFinite(avgV)?pct(avgV/fol)+' en moyenne devant le live':''):'relevé par le collecteur 1.2')];
   const modOk=isFinite(modStart(['ban','timeout','clear'])),delOk=isFinite(modStart(['del'])),nb=sum('ban'),nt=sum('timeout');
@@ -2092,6 +2147,7 @@ function renderChannel(q){
     ch:chHead(c),
     list:listFallback.map(x=>({...who(x),live:!!(info[x]&&info[x].live)})),
     main,more,hasApi:hasApi(),
+    live:hasApi()?liveToday(c):null,gamesInLive:inLive,
     talk,switches,also:also.slice(0,10),alsoBase:U.size,games,raids,
     msgChart:lineSpec([{name:c,c,color,pts:minuteSeries(q.mins,c,'m')}],{unit:' msg/min',gaps:listenGaps([c],q.t0)}),
     viewerChart:hasApi()?lineSpec([{name:c,c,color,pts:viewerSeries(q.snaps,c)}],{unit:' viewers'}):null,
@@ -2544,6 +2600,14 @@ async function channelHistory(c,days){
     return {days:h.days||[],out:(h.out||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid})),in:(h.in||[]).map(x=>({...who(x.c),n:x.n,raid:x.raid}))}}
   catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
 window.channelHistory = channelHistory
+// Lives précédents d'une chaîne (fonction SQL channel_lives, voir schema.sql), du plus récent au plus ancien. null : fonction absente
+// d'une base pas à jour. En mode local, pas d'historique : liste vide.
+async function channelLives(c,days){
+  if(!isCloud())return [];
+  try{const rows=await sbReq('rpc/channel_lives',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ch:c,days})}),now=Date.now();
+    return (rows||[]).map(l=>liveView(l,now))}
+  catch(e){if(/PGRST202|Could not find the function|404/.test(e.message))return null;throw e}}
+window.channelLives = channelLives
 // Fidélité du chat d'une chaîne (« Sticky-Factor ») : viewers actifs et viewers partis chez une autre chaîne suivie, par jour, et quartiles
 // des chaînes suivies (fonction SQL channel_stickiness, voir schema.sql). null : pas de base Supabase (mode local) ou fonction absente
 // d'une base pas à jour. Le score sur 100 se calcule dans React (components/channel/sticky.tsx).
