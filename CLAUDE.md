@@ -98,6 +98,7 @@ Un fichier, un rôle. Quand un fait change, mets à jour le fichier qui le porte
 - `DOCKER.md` : conteneurs. La copie `collecteur/` est en retard sur la racine ; la racine fait foi.
 - `DESIGN.md` et `PRODUCT.md` (racine) : design et produit, ils font foi. `.impeccable/` garde les anciens rapports de l'outil Impeccable (retiré le 26/11) : historique seulement, ne pas s'y fier sans comparaison.
 - `IDEES.md` : boîte à idées et plans, tenue par l'orchestrateur.
+- `CALCULS.md` : chaque chiffre du tableau de bord (formule, source, limite) et la hiérarchie des données. À mettre à jour quand un calcul change.
 - `CONFORMITE.md`, `COUTS-CLIENTS.md`, `VALIDATION-AGENCES.md` : vie privée et conditions Twitch, coûts par client, kit de validation des agences.
 - `ROADMAP-COMPLET.txt` : analyses prévues. Les sections 4 et 5 ne sont pas commencées.
 - `archives/` : anciens plans et ancienne copie de la mémoire. Historique seulement, à ne pas mettre à jour.
