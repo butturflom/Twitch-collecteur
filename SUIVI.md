@@ -48,7 +48,7 @@
 - `scripts/rapport-mensuel.mjs` et `roster-report.ts` recopient les mêmes chiffres et le même style : les garder alignés.
 - `DESIGN.md` : règle des « deux niveaux de lueur » (§17). Ne pas la durcir sans l'utilisateur, il l'a voulue.
 
-**Réglage de session** : un chantier par session (`/clear`), Sonnet pour le code, Opus pour décider d'un design (§7). Lire ce §0 puis le §6 en début de session.
+**Réglage de session** : un chantier à la fois ; l'orchestrateur délègue et choisit le modèle (§7). Lire ce §0 puis le §6 en début de session.
 
 ## 1. État en bref
 
@@ -154,6 +154,7 @@ Le 25/11, l'utilisateur a demandé de fusionner dans l'ordre #20, #21, #22, #24,
 - **Orchestrateur et contremaître fusionnés (26/11, demande de l'utilisateur)** : un seul agent, `orchestrateur`, tient le routage, les idées (`IDEES.md`), les plans et la délégation. Le skill `contremaitre` est archivé. Raison : deux outils qui tenaient chacun un suivi se contredisaient.
 - **Numérotation (26/11, décision de l'utilisateur)** : les entrées du tableau de bord portent un numéro, celui de `app/package.json` (2.0.0 depuis le 24/11, non modifié depuis). Les entrées du 25/11 et du 26/11 sont donc sous 2.0.0. Une modification du tableau de bord donne lieu à un nouveau numéro.
 - **Fusions (26/11, autorisation permanente de l'utilisateur)** : Claude peut fusionner les PR pour toutes les fois où c'est nécessaire, sans redemander. Confirmé le même jour. Le reste est inchangé : déploiement, écriture en base et action irréversible sur demande, pas de commit direct sur `main`, pas de `git push --force`.
+- **Modèles et contexte (27/11, demande de l'utilisateur)** : l'orchestrateur choisit seul le modèle et délègue d'office chaque tâche d'un chantier à un sous-agent au modèle du §7, sans qu'on ait à le demander. Tout ce qui exige l'intervention de l'utilisateur reste écrit dans « Commande à lancer ». `/clear` ne peut pas être lancé par Claude.
 - **Critiques** : l'utilisateur accepte qu'elles remettent en cause ses choix passés ; ces choix sont signalés « [ton choix] ».
 
 ## 5. Décisions prises le 25/11, sur délégation de l'utilisateur
@@ -178,7 +179,7 @@ Ce qui attend aujourd'hui l'utilisateur est dans le §0.
 
 ## 7. Modèles, effort et tokens
 
-Ce qui compte : un modèle par type de tâche, un effort par difficulté, une session par chantier.
+Ce qui compte : un modèle par type de tâche, un effort par difficulté, un chantier à la fois.
 
 | Tâche | Modèle | Effort |
 |---|---|---|
@@ -194,15 +195,15 @@ Ce qui compte : un modèle par type de tâche, un effort par difficulté, une se
 - Les gros fichiers : `legacy.js` (2 562 lignes, 229 Ko), `map.tsx` (38 Ko), `legacy.css` (31 Ko), `demo.ts` (30 Ko).
 - `/fast` : peut faire basculer la session sur Opus si le modèle courant ne le prend pas en charge.
 
-**Réflexes**
-1. Un chantier, une session : `/clear` ou nouvelle session.
-2. Changer de modèle (`/model`) au moment où la tâche change, pas au milieu d'une réflexion.
-3. `/compact` quand une longue lecture a rempli la session et que le chantier continue.
+**Réflexes** (27/11 : c'est l'orchestrateur qui les applique, pas l'utilisateur)
+1. Un chantier à la fois ; chaque tâche dans un sous-agent au modèle du tableau, donc avec un contexte neuf.
+2. La session principale garde les comptes rendus, pas les gros fichiers.
+3. `/clear` seulement quand l'orchestrateur le demande. `/compact` automatique : réglage « Auto-compact » de `/config` (désactivé au 27/11, au choix de l'utilisateur).
 4. `/cost` pour le coût d'une session, `/context` pour voir ce qui remplit la fenêtre.
-5. Agent du projet : `orchestrateur` en session (les gabarits inutilisés sont dans `archives/outils-claude/`). Un sous-agent seulement pour un travail indépendant et volumineux.
+5. Agent du projet : `orchestrateur` en session (les gabarits inutilisés sont dans `archives/outils-claude/`).
 
 **Réglages actuels**
-- Session d'orchestration (`lancer-orchestrateur.bat`, agent `orchestrateur`) : Sonnet 5.5. Passer en Opus 5.5 pour un chantier de design.
+- Session d'orchestration (`lancer-orchestrateur.bat`, agent `orchestrateur`) : Sonnet 5.5. Le design part en sous-agent Opus 5.5.
 - Défaut : Haiku 5.5 (choisi le 25/11 pour les nouvelles sessions). Bon pour les lectures et les petites retouches. Pour le code de l'application, Sonnet est le minimum conseillé.
 - `.claude/settings.json` refuse la lecture des fichiers générés (`twitch-overlap*.html`), des journaux, des lockfiles, de `config.json` et des `node_modules`.
 - Piste à tester avant d'appliquer : `skillOverrides` (valeur `name-only`) pour alléger la liste des skills chargée à chaque session.
