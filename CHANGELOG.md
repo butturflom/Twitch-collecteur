@@ -366,3 +366,10 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à 
 
 - **« Par chaîne » n’est plus vide** quand la chaîne choisie est en direct (erreur « shown is not a function » dans les recommandations de raid, présente depuis l’import du projet le 24/11).
 - **« Recommandations de raid » se remplit** : le calcul ne recevait que les viewers de la chaîne choisie, il ne trouvait donc jamais de cible.
+
+## Tableau de bord 2.0.12 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à rejouer.
+
+- **« Recommandations de raid » hors direct** : le bloc dit qu’il ne calcule que pendant un direct, au lieu de « Pas assez de données ». Sans l’API Twitch, il le dit aussi.
+- **Boutons « Copier la commande de raid »** à la taille de leur texte, sous le nom de la chaîne cible, qui est reprise dans leur libellé pour les lecteurs d’écran.
