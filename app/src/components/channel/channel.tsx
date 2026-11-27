@@ -150,7 +150,12 @@ export function Channel() {
       </Section>
 
       <Section className="mt-9" title="Recommandations de raid" note="Classées par les personnes passées de cette chaîne vers la cible, avec un bonus quand elles reviennent. La barre est relative : la première a toujours la plus longue. Les passages qui suivent un raid sont comptés.">
-        {!d.raids ? (
+        {/* raids vaut null sans API, hors direct, ou sans viewers actifs : trois messages différents */}
+        {!d.hasApi ? (
+          <Empty>{API_NOTE} pour recommander des raids.</Empty>
+        ) : d.ch.live !== true ? (
+          <Empty>Calculées seulement pendant un direct de la chaîne.</Empty>
+        ) : !d.raids ? (
           <Empty>Pas assez de données pour recommander des raids pour l'instant.</Empty>
         ) : d.raids.length ? (
           <div className={cn(panel, "px-4 py-2")}>
@@ -173,7 +178,8 @@ export function Channel() {
                   </button>
                 ),
                 sub: (
-                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); copyRaidCommand(r.name) }} className="mt-1 w-full justify-start">
+                  // ml-7 : aligné sous le nom (avatar de 20 px + écart)
+                  <Button size="xs" variant="outline" aria-label={`Copier la commande de raid vers ${r.name}`} onClick={(e) => { e.stopPropagation(); copyRaidCommand(r.name) }} className="ml-7 text-muted-foreground">
                     Copier la commande de raid
                   </Button>
                 ),

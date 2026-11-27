@@ -255,6 +255,8 @@ function channelDemo(c: string): ChannelData {
   const inLive = window.periodInfo?.().key === "today"
   const who = (x: string, col: string) => ({ c: x, color: col, img: "" })
   const hours = Array.from({ length: 24 }, (_, h) => ({ k: h + "h", lbl: `${h}h – ${h + 1}h`, v: Math.round(400 + 2600 * Math.max(0, Math.sin((h - 12) / 4))) }))
+  // « Recommandations de raid » : &reco=peu (en direct, pas assez de données), =vide (aucune cible), =sansapi (bloc seul, sans API)
+  const reco = new URLSearchParams(location.search).get("reco")
   return {
     ch: { ...who(c, color), langs: ["fr"], live, game: live ? "Teamfight Tactics" : "", title: live ? "TFT avec la commu, on vise le top 1" : "", viewers: live ? 14520 : null, since: live ? "18h02" : "" },
     list: CH.map(([x, col], k) => ({ ...who(x, col), live: k < 2 })),
@@ -278,7 +280,7 @@ function channelDemo(c: string): ChannelData {
       { label: "Messages supprimés", value: "133", hint: "par un modérateur ou un bot" },
       { label: "Pub déclarée", value: "Non", hint: "mode lent 3 s" },
     ],
-    hasApi: true,
+    hasApi: reco !== "sansapi",
     talk: talkDemo,
     switches: [
       { when: "mer. 19 nov. 20h15", from: "Teamfight Tactics", to: "Just Chatting", vB: 14800, vA: 12100, mB: 58.2, mA: 71.4 },
@@ -289,7 +291,7 @@ function channelDemo(c: string): ChannelData {
       ? { alsoBase: 6, also: CH.filter(([x]) => x !== c).map(([x, col], k) => ({ ...who(x, col), share: [2 / 6, 1 / 6, 1 / 6][k], n: [2, 1, 1][k] })) }
       : { alsoBase: 6210, also: CH.filter(([x]) => x !== c).map(([x, col], k) => ({ ...who(x, col), share: [0.21, 0.12, 0.05][k], n: [1304, 745, 310][k] })) }),
     games: [{ g: "Teamfight Tactics", hours: 21.5 }, { g: "Just Chatting", hours: 8.2 }, { g: "League of Legends", hours: 3.1 }],
-    raids: live ? [
+    raids: reco === "vide" ? [] : live && reco !== "peu" && reco !== "sansapi" ? [
       { to: who(CH[1][0], CH[1][1]), name: CH[1][0], live: true, score: 87, viewers: 1304, share: 21, organicAB: 612 },
       { to: who(CH[2][0], CH[2][1]), name: CH[2][0], live: false, score: 64, viewers: 745, share: 12, organicAB: 288 },
       { to: who(CH[3][0], CH[3][1]), name: CH[3][0], live: false, score: 42, viewers: 310, share: 5, organicAB: 92 },
