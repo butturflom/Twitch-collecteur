@@ -99,7 +99,9 @@ Réponses de l'utilisateur (27/11), elles priment sur les hypothèses plus haut 
 - **96 %** : à mettre en avant, libellé « des viewers actifs n'écrivent que sur une seule de tes chaînes suivies », en tête d'« Audiences ».
 - **« Tout »** : confirmé, le bloc d'activité « Tout · du … au … ».
 
-En attente : l'emplacement des « jeux du moment » et « streamers du moment » (hypothèse : un bloc « En ce moment » au-dessus de « Les chaînes »).
+Confirmé ensuite (27/11) : sur la Carte, les hors ligne sont masqués ; « jeux du moment » et « streamers du moment » forment un bloc « En ce moment » au-dessus de « Les chaînes ».
+
+**R1 livré (27/11)** : `CALCULS.md`. Huit problèmes classés (§1) et trois décisions à prendre (§4), avant les corrections (R1 corr).
 
 **Carte en direct** (nouveau, reprend E3 sans attendre les planètes 3D) : valeur 4 (la Carte dit le présent), cohérence 5 (règle validée le 26/11), faisabilité 4 (direct et viewers déjà connus), risque 3 (moteur de la Carte). Plus-value 20/25, coût M, **Faire**.
 
@@ -107,6 +109,7 @@ En attente : l'emplacement des « jeux du moment » et « streamers du moment »
 |---|---|---|---|---|---|
 | R0 (S, d'abord) | **Bug constaté le 27/11** : aucun raid ne s'affiche (« Dernier raid », Flux, communautés investies, Par chaîne). Le collecteur écrit les raids dans `raid_events` (68 le 26/11, 36 le 27/11 à 15 h 32), le tableau de bord les lit dans `events`, où il n'y en a aucun | `app/src/legacy/legacy.js` | Sonnet 5.5, high | `/verifier`, puis lecture sur les vraies données | Aucun |
 | R1 (1 session) | Audit des calculs : chaque chiffre, sa formule, sa source, sa limite ; hiérarchie des données ; raids dans les migrations | `CALCULS.md` (neuf), lecture de `legacy.js` et `schema.sql` | Opus 5.5, high | Relu avec l'utilisateur | Aucun |
+| R1 corr (1 à 2 sessions, avant la Carte) | Corrections de `CALCULS.md` §1 : heures, fenêtre commune, raids hors interactions, un seul comptage des migrations, « part en commun » ; fidélité (`schema.sql`) en second | `legacy.js`, `overview/`, `flows/`, `schema.sql` | Sonnet 5.5, high | Chiffres comparés à la base avant et après, `/verifier` | La table `switches` ne couvre pas la période : garder l'estimation et le dire |
 | R1 bis (1 session) | Carte en direct : en live par défaut, taille = viewers en direct, filtres audience et jeu sur le direct, sélecteur de période retiré de la Carte, liens sur tout le détail (date de début dans l'aide) | `legacy.js` (`renderMap`, `liveR`), `map/map.tsx`, `map/menu.tsx`, `DESIGN.md` | Sonnet 5.5, high | `/verifier`, Carte dense dans un vrai navigateur | Carte saccadée ou presque vide hors des heures de live |
 | R2 (1 à 2 sessions) | « Aujourd'hui » par défaut, rangement rapide, légende dans l'aide, bandeau des raids, constellation centrée au-dessus du texte, viewers max | `legacy.js`, `legacy-markup.html`, `overview/`, `chat/`, `channel/`, `game/`, `map/map.tsx`, onglet Clip | Sonnet 5.5, medium | `/verifier` | Un bloc vide sur « Aujourd'hui » garde sa période |
 | R3 (2 sessions) | Onglet Audiences, activité jour par jour en haut | `overlap/`, `flows/`, `overview/`, `app-sidebar.tsx`, `legacy.js` | Opus 5.5 high (maquette), puis Sonnet 5.5 high | Prototype choisi, `/verifier` | Page illisible : deux sections repliables |
@@ -383,3 +386,4 @@ Critère de réussite : on reconnaît la chaîne sans lire son nom à 40 px, et 
 | G · Suggestions d'après les raids | 1 à 2 | 1 | Sonnet 5.5 | 96 chaînes proposées sur la base (26/11, 4 jours de raids) ; à juger : combien sont réellement ajoutées. Doublons de raids découverts au passage |
 | C · Carte des migrations | 2 à 3 | non relevé | | Passages par jour dans Flux (#53), à juger vers le 8/12 |
 | R0 · Raids invisibles | moins d'1 | moins d'1 | Sonnet 5.5, dans la session | Raids de nouveau affichés (2.0.4) ; légendes fausses de Flux corrigées au passage |
+| R1 · Audit des calculs | 1 | moins d'1 | Sonnet 5.5, dans la session (Opus prévu) | `CALCULS.md` : heures environ ×3, fenêtres différentes sous « Tout », raids dominant les interactions, trois comptages des migrations |
