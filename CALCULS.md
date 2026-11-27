@@ -16,7 +16,7 @@ Corrigés dans le tableau de bord 2.0.5 (27/11), sauf mention.
 | 4 | Trois comptages des migrations | 5 109 estimés contre 7 141 comptés | ✅ source unique `switches` ; les rollups l'utilisaient déjà |
 | 5 | Part « raid » des migrations en nombres | | ✅ plus de nombre, un signe sur le trajet. Les rollups gardent leurs colonnes, non affichées |
 | 6 | Quatre définitions de « part en commun » | | ✅ « part des viewers actifs de A vus chez B », A étant la plus petite des deux ; ressemblance pour classer |
-| 7 | Fidélité du chat : un partant vers deux chaînes compte deux fois | | ⏳ dit à l'écran. La correction demande `schema.sql` (colonne dans le rollup) : sur « oui » |
+| 7 | Fidélité du chat : un partant vers deux chaînes compte deux fois | 26/11 : 5 396 départs comptés, 5 068 partants distincts parmi les actifs | ✅ dans `schema.sql` (2.0.6) ; effectif une fois rejoué en base, pour les journées agrégées ensuite |
 | 8 | Recommandations de raid : score relatif, passages après raid compris | | ✅ dit à l'écran, passages affichés |
 | 9 | « N h de données » : somme des durées de tous les viewers | trouvé pendant la correction | ✅ retiré |
 
@@ -86,7 +86,7 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Jeux streamés | tranches de 2 min | ✅ |
 | Avant et après un changement de jeu | 20 min de chaque côté | ⚠️ messages divisés par 20 même si le live vient de commencer |
 | Son univers | uniques sur 30 jours (esquisses) | ✅ |
-| Fidélité du chat | 100 × (1 − partants ÷ actifs), 200 actifs au moins | ⚠️ n° 7 |
+| Fidélité du chat | 100 × (1 − partants distincts ÷ actifs), 200 actifs au moins ; journées anciennes : somme des trajets | ✅ n° 7 ; un départ après un raid compte aussi |
 | Recommandations de raid | personnes A→B × (1 + retour ÷ actifs de A), relatif à la première | ✅ dit à l'écran |
 | Par jeu : viewers moyens | moyenne par chaîne et par relevé | ⚠️ pas l'audience de la catégorie |
 | Types de messages, ambiance | règles, tranches de 10 min | ⚠️ précision non mesurée |

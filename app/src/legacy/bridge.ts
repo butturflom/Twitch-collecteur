@@ -279,7 +279,8 @@ export interface ChannelHistory { days: HistoryDay[]; out: HistoryRoute[]; in: H
 export interface StickyDay { d: string; actives: number; leavers: number }
 /** Quartiles du score parmi les chaînes suivies assez actives sur la période (n : leur nombre) ; null tant qu'aucune chaîne ne compte. */
 export interface StickyNet { n: number; q1: number | null; med: number | null; q3: number | null }
-export interface ChannelSticky { days: StickyDay[]; actives: number; leavers: number; net: StickyNet }
+/** old : journées de la période dont les partants sont encore la somme des trajets (absent : base pas à jour). */
+export interface ChannelSticky { days: StickyDay[]; actives: number; leavers: number; net: StickyNet; old?: number }
 
 /** Rythme d'une chaîne : viewers actifs par jour, moyenne des 7 derniers jours agrégés (recent) et des jours d'avant (base, écart type sd). */
 export interface RhythmRow extends Who { nr: number; nb: number; recent: number; base: number; sd: number }

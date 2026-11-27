@@ -303,3 +303,10 @@ Rien à changer côté collecteur (version 1.6.13), `schema.sql` n’est pas à 
 - **Raids** : plus de part « due aux raids » en nombres ; les trajets qui ont eu un raid portent la mention « raid ». Le filtre Organique / Raids de Flux est retiré.
 - **Communautés investies** : classées par la part des viewers qui écrivent chaque minute, puis les messages pour 1 000 viewers (au moins 50 viewers en moyenne). Les raids ne sont plus additionnés aux subs.
 - **Part en commun** : partout, la part des viewers actifs de la première chaîne aussi vus chez la seconde.
+
+## Tableau de bord 2.0.6 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejouer** pour que la correction prenne effet.
+
+- **Fidélité du chat** : un viewer parti vers deux chaînes ne compte plus deux fois. La base garde chaque nuit le nombre de partants distincts (colonne `leavers` de `daily_streamer_rollup`).
+- Les journées agrégées avant l’ajout gardent l’ancienne estimation ; l’écran dit combien. Sans `schema.sql` rejoué, rien ne change et l’écran le dit.
