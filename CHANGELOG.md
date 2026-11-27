@@ -310,3 +310,13 @@ Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejoue
 
 - **Fidélité du chat** : un viewer parti vers deux chaînes ne compte plus deux fois. La base garde chaque nuit le nombre de partants distincts (colonne `leavers` de `daily_streamer_rollup`).
 - Les journées agrégées avant l’ajout gardent l’ancienne estimation ; l’écran dit combien. Sans `schema.sql` rejoué, rien ne change et l’écran le dit.
+
+## Tableau de bord 2.0.7 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13), `schema.sql` n'est pas à rejouer.
+
+- **La Carte montre le direct** : seules les chaînes en direct sont affichées, et la taille d'une planète suit leurs viewers en ce moment.
+- **Hors ligne sur demande** (Menu, Statut, « Avec les hors ligne ») : petites planètes éteintes.
+- **Plus de période sur la Carte** : les traits, les groupes, les étoiles et les passages portent sur tout le détail gardé ; la date de début est écrite dans le bandeau, la légende et l'aide.
+- **Filtres sur le direct** : « Jeu en cours » (le jeu du live) et « Audience minimale » (50, 200 ou 1 000 viewers en direct).
+- Moins de 3 chaînes en direct : la Carte le dit et propose d'afficher les hors ligne.

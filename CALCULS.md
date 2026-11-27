@@ -93,7 +93,8 @@ Verdict : ✅ juste ; ⚠️ juste mais à libeller mieux ; ❌ faux.
 | Moments à clipper | au moins 2,5 fois la médiane des 20 min d'avant, 10 messages au moins | ✅ |
 | Net Reach, cannibalisation (Rosters) | réunion ; 1 − réunion ÷ somme | ✅ |
 | Comparaison : viewers moyens | moyenne des moyennes quotidiennes | ⚠️ un jour court pèse autant qu'un long |
-| Carte : taille, liens | actifs de la période ; liens choisis par ressemblance, épaisseur = communs ÷ la plus petite | ✅ passe au direct avec le chantier « Carte en direct » |
+| Carte : taille | viewers en direct (nombre annoncé par Twitch, relu toutes les 10 s) ; rayon = racine, par rapport à la chaîne la plus regardée de la carte ; hors ligne : taille fixe (2.0.7) | ✅ rafraîchi au rythme des relevés du collecteur (2 min) |
+| Carte : liens, groupes, étoile, passages | viewers actifs de tout le détail gardé, depuis le début commun (sans période) ; liens choisis par ressemblance, épaisseur = communs ÷ la plus petite (2.0.7) | ⚠️ la profondeur dépend de la rétention de `config.json` |
 
 ## 4. Décisions prises le 27/11
 
