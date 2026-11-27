@@ -174,6 +174,9 @@ create table if not exists daily_streamer_rollup (
   avg_viewers int not null default 0,       -- viewers moyens
   primary key (d, c)
 );
+-- Viewers actifs DISTINCTS partis vers une autre chaîne suivie ce jour-là (27/11/2026), pour la fidélité du chat : la somme des
+-- trajets comptait deux fois un viewer parti vers deux chaînes. null : journée agrégée avant l'ajout, ou sans « switches ».
+alter table daily_streamer_rollup add column if not exists leavers int;
 create index if not exists daily_streamer_rollup_d on daily_streamer_rollup (d);
 create index if not exists daily_streamer_rollup_c on daily_streamer_rollup (c);
 
@@ -508,11 +511,15 @@ begin
   --    minutes_live = minutes où le chat de la chaîne a été lu (une ligne par minute dans « minutes ») ;
   --    pic et moyenne de viewers sur les relevés « en live » seulement.
   delete from daily_streamer_rollup where daily_streamer_rollup.d = jour;
-  insert into daily_streamer_rollup (d, c, unique_chatters, total_messages, minutes_live, peak_viewers, avg_viewers)
-  select jour, p.c, p.chatters, p.msgs, coalesce(m.mins, 0), coalesce(s.peak, 0), coalesce(s.avg, 0)
+  insert into daily_streamer_rollup (d, c, unique_chatters, total_messages, minutes_live, peak_viewers, avg_viewers, leavers)
+  select jour, p.c, p.chatters, p.msgs, coalesce(m.mins, 0), coalesce(s.peak, 0), coalesce(s.avg, 0),
+         case when exists (select 1 from switches where switches.d = jour) then coalesce(l.n, 0) end
   from (select c, count(distinct u) as chatters, sum(n) as msgs from presence where presence.d = jour group by c) p
   left join (select c, count(*) as mins from minutes where t >= t0 and t < t1 group by c) m on m.c = p.c
-  left join (select c, max(v) as peak, round(avg(v))::int as avg from snaps where t >= t0 and t < t1 and live = 1 group by c) s on s.c = p.c;
+  left join (select c, max(v) as peak, round(avg(v))::int as avg from snaps where t >= t0 and t < t1 and live = 1 group by c) s on s.c = p.c
+  -- partants : seulement des viewers actifs de la chaîne ce jour-là (un changement juste après minuit est daté du lendemain)
+  left join (select w.a as c, count(distinct w.u) as n from switches w where w.d = jour
+             and exists (select 1 from presence q where q.u = w.u and q.c = w.a and q.d = jour) group by w.a) l on l.c = p.c;
 
   -- 3. Viewers communs par paire (a < b), uniquement les paires qui en ont au moins un.
   --    On part des couples (viewer, chaîne) du jour ; un viewer présent sur k chaînes donne k(k-1)/2 paires.
@@ -573,7 +580,9 @@ create or replace function channel_stickiness(ch text, days int default 30) retu
 language sql stable set search_path = public, pg_catalog as $$
   with p as (select to_char((now() at time zone 'Europe/Paris')::date - least(greatest(days, 1), 366), 'YYYY-MM-DD') as d0),
   lv as (select s.d, s.a, sum(s.viewers)::int as v from daily_switches_rollup s, p where s.d >= p.d0 group by s.d, s.a),
-  pd as (select r.d, r.c, r.unique_chatters as actives, least(coalesce(lv.v, 0), r.unique_chatters) as leavers
+  -- partants distincts du rollup ; pour les journées agrégées avant le 27/11, somme des trajets (« approx »)
+  pd as (select r.d, r.c, r.unique_chatters as actives, least(coalesce(r.leavers, lv.v, 0), r.unique_chatters) as leavers,
+                (r.leavers is null) as approx
          from daily_streamer_rollup r join p on r.d >= p.d0 left join lv on lv.d = r.d and lv.a = r.c
          where r.unique_chatters > 0),
   pc as (select c, sum(actives)::int as actives, sum(leavers)::int as leavers from pd group by c),
@@ -582,6 +591,7 @@ language sql stable set search_path = public, pg_catalog as $$
     'days', coalesce((select jsonb_agg(jsonb_build_object('d', d, 'actives', actives, 'leavers', leavers) order by d) from pd where c = ch), '[]'),
     'actives', coalesce((select actives from pc where c = ch), 0),
     'leavers', coalesce((select leavers from pc where c = ch), 0),
+    'old', (select count(*) from pd where c = ch and approx),
     'net', jsonb_build_object(
       'n', (select count(*) from net),
       'q1', (select round(percentile_cont(0.25) within group (order by score)::numeric, 1) from net),

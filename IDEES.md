@@ -387,4 +387,4 @@ Critère de réussite : on reconnaît la chaîne sans lire son nom à 40 px, et 
 | C · Carte des migrations | 2 à 3 | non relevé | | Passages par jour dans Flux (#53), à juger vers le 8/12 |
 | R0 · Raids invisibles | moins d'1 | moins d'1 | Sonnet 5.5, dans la session | Raids de nouveau affichés (2.0.4) ; légendes fausses de Flux corrigées au passage |
 | R1 · Audit des calculs | 1 | moins d'1 | Sonnet 5.5, dans la session (Opus prévu) | `CALCULS.md` : heures environ ×3, fenêtres différentes sous « Tout », raids dominant les interactions, trois comptages des migrations |
-| R1 corr · Calculs corrigés | 1 à 2 | 1 | Sonnet 5.5, dans la session | Tableau de bord 2.0.5 ; fidélité du chat reportée (`schema.sql`) |
+| R1 corr · Calculs corrigés | 1 à 2 | 1 | Sonnet 5.5, dans la session | Tableau de bord 2.0.5 ; fidélité du chat corrigée ensuite (2.0.6, `schema.sql`) |
