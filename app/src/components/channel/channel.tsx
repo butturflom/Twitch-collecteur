@@ -10,6 +10,7 @@ import { API_NOTE, ChannelPicker, ClipLink, Hero, KindBar, Kpis, Two } from "@/c
 import { fmt, fmt1, pct } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { History } from "./history"
+import { LiveDay } from "./live"
 import { MoreKpis } from "./more"
 import { ALSO_BASE_MIN, Universe } from "./universe"
 import { useChannelData, type ChannelData, type SwitchRow } from "@/legacy/bridge"
@@ -83,6 +84,35 @@ function Talk({ t }: { t: ChannelData["talk"] }) {
   )
 }
 
+function HourActivity({ spec, className }: { spec: ChannelData["hourChart"]; className?: string }) {
+  return (
+    <Section className={className} title="Activité selon l'heure" note="Messages par heure de la journée sur la période.">
+      <BarChart spec={spec} label="Activité selon l'heure" />
+    </Section>
+  )
+}
+
+function Games({ games }: { games: ChannelData["games"] }) {
+  return (
+    <Section title="Jeux streamés">
+      {!games ? (
+        <Empty>{API_NOTE} pour savoir quels jeux sont streamés.</Empty>
+      ) : games.length ? (
+        <ul className="flex flex-wrap gap-2">
+          {games.map((g) => (
+            <li key={g.g} className="inline-flex max-w-full items-center gap-2 rounded-full border border-input bg-secondary py-1 pr-2.5 pl-3 text-[12.5px] font-medium">
+              <span className="truncate" title={g.g}>{g.g}</span>
+              <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{fmt1(g.hours)} h</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Empty>Pas encore de live relevé sur cette période.</Empty>
+      )}
+    </Section>
+  )
+}
+
 export function Channel() {
   const d = useChannelData()
   if (d === undefined) return null
@@ -90,7 +120,9 @@ export function Channel() {
   return (
     <div key={d.ch.c} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       <ChannelPicker list={d.list} current={d.ch.c} attr="data-open" />
-      <Hero ch={d.ch} />
+      {/* live en cours dans le bloc du dessous : l'heure annoncée par Twitch y est, le bandeau ne la répète pas */}
+      <Hero ch={d.live?.twitchStart ? { ...d.ch, since: "" } : d.ch} />
+      {d.live && <LiveDay ch={d.ch.c} color={d.ch.color} live={d.live} />}
       <Kpis items={d.main} />
 
       <MoreKpis items={d.more} />
@@ -100,27 +132,15 @@ export function Channel() {
         <Section title="Viewers">{d.viewerChart ? <LineChart spec={d.viewerChart} label="Viewers" /> : <Empty>{API_NOTE} pour suivre les viewers.</Empty>}</Section>
       </Two>
 
-      <Two>
-        <Section title="Activité selon l'heure" note="Messages par heure de la journée sur la période.">
-          <BarChart spec={d.hourChart} label="Activité selon l'heure" />
-        </Section>
-        <Section title="Jeux streamés">
-          {!d.games ? (
-            <Empty>{API_NOTE} pour savoir quels jeux sont streamés.</Empty>
-          ) : d.games.length ? (
-            <ul className="flex flex-wrap gap-2">
-              {d.games.map((g) => (
-                <li key={g.g} className="inline-flex max-w-full items-center gap-2 rounded-full border border-input bg-secondary py-1 pr-2.5 pl-3 text-[12.5px] font-medium">
-                  <span className="truncate" title={g.g}>{g.g}</span>
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">{fmt1(g.hours)} h</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty>Pas encore de live relevé sur cette période.</Empty>
-          )}
-        </Section>
-      </Two>
+      {/* sur « Aujourd'hui », les jeux sont en pastilles dans le bloc du live : l'activité prend toute la largeur */}
+      {d.gamesInLive ? (
+        <HourActivity spec={d.hourChart} className="mt-9" />
+      ) : (
+        <Two>
+          <HourActivity spec={d.hourChart} />
+          <Games games={d.games} />
+        </Two>
+      )}
 
       <Talk t={d.talk} />
       <ClipLink chan={d.ch.c} className="mt-4" />

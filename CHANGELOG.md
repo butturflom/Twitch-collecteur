@@ -349,3 +349,13 @@ Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejoue
 - **Vue d'ensemble** : l'activité de la période en tête (nombres annoncés par Twitch, puis le chat) ; « Jour par jour » (pic de viewers et viewers actifs séparés, 7, 30 ou 90 jours) remplace « Historique du réseau » ; bandeau des raids remonté ; « En ce moment » (« Les jeux du moment », « Les streamers montants ») au-dessus des chaînes.
 - **Retirés avec « Historique du réseau »** : l'audience moyenne cumulée et sa courbe, le total des messages sur 30 et 90 jours.
 - **Base** : nouvelle table `daily_network_rollup` (pic simultané par jour, non purgée) ; `network_history` renvoie aussi les viewers actifs, le pic et son heure. Le pic ne se remplit que si `joursReleves` vaut au moins 2.
+
+## Tableau de bord 2.0.10 (27/11/2026)
+
+Rien à changer côté collecteur (version 1.6.13). **`schema.sql` est à rejouer** pour l’historique des lives : avant cela, la page le dit, et le bloc du jour marche quand même.
+
+- **« Live du jour »** en tête de « Par chaîne » : viewers max (avec son heure), début et fin, viewers moyens, minimum après les 10 premières minutes, durée et jeux en pastilles. Les lives qui touchent aujourd’hui, même commencés la veille ; plusieurs lives le même jour, avec leur total ; sans live aujourd’hui, il le dit et montre le dernier connu. La période choisie ne le filtre pas.
+- **Ce qui n’est pas observé est écrit** : « Premier relevé » quand le début n’a pas été vu, « fin non observée » quand le collecteur s’est interrompu.
+- **Lives précédents** (30 jours) dans une liste repliée sous le bloc.
+- **Sur « Aujourd’hui »**, la case « Viewers max » et le bloc « Jeux streamés » laissent leur place à ce bloc ; ils reviennent sur les autres périodes.
+- **Base** : historique des lives (table `lives`, fonction `channel_lives`), rempli chaque nuit, non purgé.
