@@ -104,7 +104,7 @@ Confirmé ensuite (27/11) : sur la Carte, les hors ligne sont masqués ; « jeux
 
 **R3, choix de l'utilisateur (27/11)** sur la maquette (Opus 5.5, high ; prototype jetable, non versionné) : Audiences en **A** (une page, « En commun » puis « Qui va où ») ; « En ce moment » avec **B**, nommé « Les streamers montants » (hausse sur 30 min) ; **oui** aux viewers actifs et au pic de viewers par jour dans `schema.sql` (application en base seulement sur « applique »). Paires les plus proches triées sur le pourcentage affiché ; « emplacement sur capture » : capture manquante, rien déplacé.
 
-**R4 livré (27/11, 2.0.10)** : coût réel 1 session, deux agents Sonnet 5.5 high en parallèle (SQL, interface), environ 490 000 tokens d’agents (estimé : 2 sessions). Apporte début, fin, moyenne, pic et minimum de chaque live, et un historique qui survit à la purge des relevés. Base à appliquer sur « applique ».
+**R4 livré (27/11, 2.0.10)** : coût réel 1 session, deux agents Sonnet 5.5 high en parallèle (SQL, interface), environ 490 000 tokens d’agents (estimé : 2 sessions). Apporte début, fin, moyenne, pic et minimum de chaque live, et un historique qui survit à la purge des relevés. Base appliquée le 27/11.
 
 **R2 livré (27/11, 2.0.8)** : coût réel 1 session, Sonnet 5.5, sans sous-agent (estimé : 1 à 2). Vérifié en démo et avec le vrai code sur une base locale fictive, pas sur les vraies données. **Oublié du plan** : le bloc « En ce moment » (jeux et streamers du moment, au-dessus de « Les chaînes »), confirmé par l'utilisateur mais rangé dans aucun chantier ; pas fait, à rattacher (proposé : R3).
 
